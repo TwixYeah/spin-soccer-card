@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin Soccer Card</title>
+<title>Spin Soccer Card v23</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -189,12 +189,20 @@ async function sGetSafe(key, shared) {
   } catch (e) { return { ok: false, value: undefined }; }
 }
 async function sSet(key, value, shared) {
-  if (shared === false) { try { localStorage.setItem("ssc_" + key, JSON.stringify(value)); } catch (e) { console.error("local set failed", e); } return; }
-  try {
-    const body = { fields: { v: { stringValue: JSON.stringify(value) }, t: { integerValue: String(Date.now()) } } };
-    const res = await fetchWithRetry(fsDocUrl(key), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-  } catch (e) { console.error("sSet failed", key, e); }
+  if (shared === false) { try { localStorage.setItem("ssc_" + key, JSON.stringify(value)); return true; } catch (e) { console.error("local set failed", e); return false; } }
+  const body = { fields: { v: { stringValue: JSON.stringify(value) }, t: { integerValue: String(Date.now()) } } };
+  // до 3 спроб: одиничний невдалий запит (мережа/тимчасовий збій) не має тихо "губити" прогрес гравця,
+  // саме це і було причиною того, що картки чи бали зберігалися то 50/50
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetchWithRetry(fsDocUrl(key), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (res.ok) return true;
+      if (res.status < 500 && res.status !== 429) { console.error("sSet failed", key, "HTTP " + res.status); return false; }
+    } catch (e) { console.error("sSet attempt failed", key, e); }
+    if (attempt < 2) await sleep(400 + attempt * 500);
+  }
+  console.error("sSet gave up after retries", key);
+  return false;
 }
 async function sList(prefix, shared) {
   try {
@@ -401,11 +409,20 @@ function ThoughtBubble({ msg }) {
   const [visible, setVisible] = useState(false);
   const seenIdRef = useRef(null);
   useEffect(() => {
-    if (msg && msg.ts !== seenIdRef.current) {
+    if (!msg) return;
+    // broadcast_msg лежить в базі назавжди (адмін не "видаляє" повідомлення після відправки),
+    // тому без локальної позначки "вже бачив" воно виринало б знову при КОЖНОМУ оновленні сторінки
+    // навіть у того, хто його надіслав. Позначку зберігаємо в localStorage на цей пристрій.
+    let lastSeenTs = null;
+    try { lastSeenTs = Number(localStorage.getItem("ssc_broadcast_seen_ts")) || null; } catch (e) { }
+    if (msg.ts !== seenIdRef.current && msg.ts !== lastSeenTs) {
       seenIdRef.current = msg.ts;
+      try { localStorage.setItem("ssc_broadcast_seen_ts", String(msg.ts)); } catch (e) { }
       setVisible(true);
       const t = setTimeout(() => setVisible(false), 15000);
       return () => clearTimeout(t);
+    } else {
+      seenIdRef.current = msg.ts;
     }
   }, [msg && msg.ts]);
   if (!msg || !visible) return null;
@@ -736,8 +753,10 @@ function App() {
   function showToast(msg, kind) { setToast({ msg, kind: kind || "info", id: Math.random() }); setTimeout(() => setToast(null), 3400); }
 
   function allCards() {
-    const active = customCards.filter(c => !c.tempEvent || c.expiresAt > Date.now());
-    return [...BASE_CARDS, ...active];
+    // ВАЖЛИВО: тут НЕ фільтруємо прострочені тимчасові картки — інакше вони зникали б
+    // повністю (навіть з колекції гравця, який вже нею володіє). Прострочені картки просто
+    // більше не мають випадати в рулетці — це перевіряється окремо, в місцях видачі картки.
+    return [...BASE_CARDS, ...customCards];
   }
 
   async function enterSession(key, u) {
@@ -773,7 +792,8 @@ function App() {
   async function saveWallet(w) {
     walletRef.current = w;
     setWallet({ ...w });
-    await sSet("wallet_" + nick, w, true);
+    const ok = await sSet("wallet_" + nick, w, true);
+    if (!ok) showToast("Не вдалося зберегти прогрес — перевірте з'єднання й спробуйте ще раз", "err");
   }
   async function saveProfile(p) {
     setProfile({ ...p });
@@ -1084,7 +1104,7 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
       const won = [];
       for (let i = 0; i < 3; i++) {
         const rarity = weightedPick(rng, weights);
-        const tempPool = pool.filter((c) => c.tempEvent);
+        const tempPool = pool.filter((c) => c.tempEvent && c.expiresAt > Date.now());
         const rarityPool = pool.filter((c) => c.rarity === rarity && !c.tempEvent);
         let card = null;
         for (const tc of tempPool) { if (rng() < (tc.dropChance != null ? tc.dropChance : 0.02)) { card = tc; break; } }
@@ -1142,7 +1162,7 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
           <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>{result.map((c, i) => <CardFace key={i} card={c} small />)}</div>
         </div>
       )}
-      <RaritySummary weights={effectiveWeights(rarityOverride, abuseEvent, wallet)} tempCards={allCards().filter((c) => c.tempEvent)} />
+      <RaritySummary weights={effectiveWeights(rarityOverride, abuseEvent, wallet)} tempCards={allCards().filter((c) => c.tempEvent && c.expiresAt > Date.now())} />
       <DailyRouletteSection wallet={wallet} saveWallet={saveWallet} allCards={allCards} showToast={showToast} abuseEvent={abuseEvent} />
     </div>
   );
@@ -1232,8 +1252,8 @@ function RaritySummary({ weights, tempCards }) {
         </div>
       ))}
       {(tempCards || []).map((tc) => (
-        <div key={tc.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#f87171" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dc2626", display: "inline-block" }} />
+        <div key={tc.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#22d3ee" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#06b6d4", display: "inline-block" }} />
           Тимчасова ("{tc.name}"{tc.season ? `, ${tc.season}` : ""}): 2%
         </div>
       ))}
@@ -1659,20 +1679,28 @@ function CustomAvatarInput({ profile, saveProfile }) {
   );
 }
 function ChatModal({ nick, friend, onClose }) {
-  const roomKey = "dm_" + [nick, friend.nick].sort().join("_");
+  // КРИТИЧНО: кожне повідомлення зберігається в ОКРЕМОМУ ключі dm_<room>_<msgid>, а не в одному
+  // спільному масиві. Раніше коли обидва співрозмовники писали майже одночасно, це був класичний
+  // read-modify-write race: хто зберіг останнім — стирав повідомлення іншого. Саме тому повідомлення
+  // "не показувались" або показувалось лише одне. Той самий підхід вже використовується для user_/card_.
+  const roomPrefix = "dm_" + [nick, friend.nick].sort().join("_") + "_";
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const endRef = useRef(null);
-  const load = useCallback(async () => { setMessages((await sGet(roomKey, true)) || []); }, [roomKey]);
+  const load = useCallback(async () => {
+    const keys = await sList(roomPrefix, true);
+    const loaded = await Promise.all(keys.map((k) => sGet(k, true)));
+    const valid = loaded.filter(Boolean).sort((a, b) => a.ts - b.ts);
+    setMessages(valid);
+  }, [roomPrefix]);
   useEffect(() => { load(); const t = setInterval(load, 2500); return () => clearInterval(t); }, [load]);
   useEffect(() => { endRef.current && endRef.current.scrollIntoView({ behavior: "smooth" }); }, [messages]);
   async function send() {
     const v = text.trim(); if (!v) return;
     setText("");
-    const fresh = (await sGet(roomKey, true)) || [];
-    fresh.push({ id: "m" + Date.now() + Math.random().toString(36).slice(2, 6), from: nick, text: v.slice(0, 300), ts: Date.now() });
-    await sSet(roomKey, fresh, true);
-    setMessages(fresh);
+    const msg = { id: "m" + Date.now() + Math.random().toString(36).slice(2, 6), from: nick, text: v.slice(0, 300), ts: Date.now() };
+    await sSet(roomPrefix + msg.id, msg, true);
+    setMessages((prev) => [...prev, msg]);
   }
   return (
     <div style={sx.modalOverlay} onClick={onClose}>
@@ -2682,7 +2710,7 @@ function ThemeParticles({ theme }) {
     size: 14 + Math.random() * 14,
   })), [theme.label]);
   return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: -1, overflow: "hidden" }}>
+    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 3, overflow: "hidden" }}>
       {items.map((p) => (
         <span key={p.id} style={{
           position: "absolute", top: -30, left: p.left + "%", fontSize: p.size, opacity: 0.35,
