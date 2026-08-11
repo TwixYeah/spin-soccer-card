@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin Soccer Card v23</title>
+<title>Spin a Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -128,21 +128,28 @@ function fsDocUrl(key) {
   return `${FS_BASE}/${col}/${encodeURIComponent(id)}?key=${FS_API_KEY}`;
 }
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
-// ГЛОБАЛЬНА ЧЕРГА: усі запити до Firestore йдуть по черзі з паузою між ними, а не пачками.
-// Це головний захист від 429 — навіть якщо код хоче зробити 8 запитів одночасно,
-// вони підуть один за одним з інтервалом, а не всі разом.
-let __fsQueue = Promise.resolve();
-const FS_MIN_GAP = 130; // мс між будь-якими двома запитами до бази, на весь застосунок
+// ПУЛ ІЗ ОБМЕЖЕНОЮ ПАРАЛЕЛЬНІСТЮ: раніше УСІ запити до Firestore йшли по одному, суворо
+// послідовно, з паузою між кожним — тому список із сотні карток вантажився десятки секунд.
+// Кількість запитів (і тому квота читань) від цього НЕ змінюється, змінюється лише те,
+// що незалежні запити можуть виконуватись одночасно (до FS_MAX_CONCURRENT штук), а не по черзі.
+const FS_MAX_CONCURRENT = 6;
+let __fsActive = 0;
+const __fsPending = [];
 function throttledFetch(url, opts) {
-  const run = async () => {
-    await sleep(FS_MIN_GAP);
-    return fetch(url, opts);
-  };
-  const p = __fsQueue.then(run, run);
-  __fsQueue = p.then(() => {}, () => {});
-  return p;
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      __fsActive++;
+      fetch(url, opts).then(resolve, reject).finally(() => {
+        __fsActive--;
+        const next = __fsPending.shift();
+        if (next) next();
+      });
+    };
+    if (__fsActive < FS_MAX_CONCURRENT) run(); else __fsPending.push(run);
+  });
 }
-// при 429 чекаємо довше і не більше 1 повтору — retry не повинен сам створювати ще більше навантаження
+// при 429 (забагато запитів одночасно) чекаємо довше і не більше 1 повтору — retry не повинен
+// сам створювати ще більше навантаження
 async function fetchWithRetry(url, opts) {
   const res = await throttledFetch(url, opts);
   if (res.status !== 429) return res;
@@ -406,26 +413,15 @@ function AdminAbuseBanner({ event }) {
   );
 }
 function ThoughtBubble({ msg }) {
-  const [visible, setVisible] = useState(false);
-  const seenIdRef = useRef(null);
+  const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    if (!msg) return;
-    // broadcast_msg лежить в базі назавжди (адмін не "видаляє" повідомлення після відправки),
-    // тому без локальної позначки "вже бачив" воно виринало б знову при КОЖНОМУ оновленні сторінки
-    // навіть у того, хто його надіслав. Позначку зберігаємо в localStorage на цей пристрій.
-    let lastSeenTs = null;
-    try { lastSeenTs = Number(localStorage.getItem("ssc_broadcast_seen_ts")) || null; } catch (e) { }
-    if (msg.ts !== seenIdRef.current && msg.ts !== lastSeenTs) {
-      seenIdRef.current = msg.ts;
-      try { localStorage.setItem("ssc_broadcast_seen_ts", String(msg.ts)); } catch (e) { }
-      setVisible(true);
-      const t = setTimeout(() => setVisible(false), 15000);
-      return () => clearTimeout(t);
-    } else {
-      seenIdRef.current = msg.ts;
-    }
+    if (!msg || !msg.expiresAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
   }, [msg && msg.ts]);
-  if (!msg || !visible) return null;
+  const [dismissed, setDismissed] = useState(null);
+  const visible = msg && msg.expiresAt && now < msg.expiresAt && dismissed !== msg.ts;
+  if (!visible) return null;
   return (
     <div style={sx.broadcastCard}>
       <div style={sx.broadcastAvatar}>{msg.avatar || "👑"}</div>
@@ -433,7 +429,7 @@ function ThoughtBubble({ msg }) {
         <div style={{ fontWeight: 800, fontSize: 12, color: "#fbbf24" }}>{msg.from}</div>
         <div style={{ fontSize: 13, color: "#fff" }}>{msg.text}</div>
       </div>
-      <span onClick={() => setVisible(false)} style={{ cursor: "pointer", color: "#9ca3af", fontSize: 15, padding: 4 }}>✕</span>
+      <span onClick={() => setDismissed(msg.ts)} style={{ cursor: "pointer", color: "#9ca3af", fontSize: 15, padding: 4 }}>✕</span>
     </div>
   );
 }
@@ -511,9 +507,8 @@ function App() {
       if (document.visibilityState !== "visible") return; // не опитуємо базу, коли вкладка згорнута/у фоні
       // адмінські налаштування (тема, банер, шанси, подія, список карток) — міняються рідко,
       // тому опитуємо їх нечасто, це найважчі запити (список карток читає всю колекцію)
-      const [abuseR, broadcastV, rarityR, customR, themeR, shopNonceV, maintV, adBannerV] = await Promise.all([
+      const [abuseR, rarityR, customR, themeR, shopNonceV, maintV, adBannerV] = await Promise.all([
         sGetSafe("abuse_event", true),
-        sGet("broadcast_msg", true),
         sGetSafe("rarity_override", true),
         getAllCustomCards().then(v => ({ ok: true, value: v })).catch(() => ({ ok: false })),
         sGetSafe("site_theme", true),
@@ -522,7 +517,6 @@ function App() {
         sGet("ad_banner", true),
       ]);
       if (abuseR.ok) setAbuseEvent(abuseR.value);
-      setBroadcast(broadcastV);
       if (rarityR.ok) setRarityOverride(rarityR.value);
       if (customR.ok) setCustomCards(customR.value || []);
       if (themeR.ok) setSiteTheme(themeR.value);
@@ -533,6 +527,7 @@ function App() {
     const pollTick = async () => {
       if (document.visibilityState !== "visible") return; // не опитуємо базу, коли вкладка згорнута/у фоні
       // швидкий потік — усе, що стосується прямих дій гравця (подарунки, гранти, дуель, голосування)
+      sGet("broadcast_msg", true).then((v) => { if (v) setBroadcast(v); });
       const dr = duelRoomRef.current;
       if (dr) { const duelV = await sGet("duel_" + dr.code, true); if (duelV) setDuelRoom(duelV); }
       const curNick = nickRef.current;
@@ -695,6 +690,7 @@ function App() {
       }
     };
     slowTick();
+    pollTick();
     const t = setInterval(pollTick, 4000);
     const tSlow = setInterval(slowTick, 25000);
     const onVis = () => { if (document.visibilityState === "visible") { pollTick(); slowTick(); } };
@@ -1550,7 +1546,6 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
   const [showDuel, setShowDuel] = useState(false);
   const [viewFriend, setViewFriend] = useState(null);
   const [giftTarget, setGiftTarget] = useState(null);
-  const [chatFriend, setChatFriend] = useState(null);
   const loadFriends = useCallback(async () => {
     const list = [];
     await Promise.all((wallet.friends || []).map(async (f) => {
@@ -1644,7 +1639,6 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
               <div style={{ fontSize: 12, display: "flex", alignItems: "center" }}>{f.nick}<VerBadge v={f.verified} /></div>
               <div style={{ fontSize: 10, color: "#6b7280" }}>{Date.now() - f.lastSeen < 120000 ? "🟢 в мережі" : "востаннє " + timeAgo(f.lastSeen)}</div>
             </div>
-            <button onClick={() => setChatFriend(f)} style={{ ...sx.smallBtn, background: "#2563eb", fontSize: 10 }}>💬</button>
             <button onClick={() => setGiftTarget(f)} style={{ ...sx.smallBtn, background: "#7c3aed", fontSize: 10 }}>🎁</button>
             <button onClick={() => removeFriend(f.nick)} style={{ ...sx.smallBtn, background: "#7f1d1d", fontSize: 10 }}>✕</button>
           </div>
@@ -1655,7 +1649,6 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
       {showStreak && <StreakModal wallet={wallet} onClose={() => setShowStreak(false)} />}
       {viewFriend && <FriendProfileModal friend={viewFriend} onClose={() => setViewFriend(null)} />}
       {giftTarget && <GiftCardModal wallet={wallet} saveWallet={saveWallet} nick={nick} friend={giftTarget} allCards={allCards} onClose={() => setGiftTarget(null)} showToast={showToast} />}
-      {chatFriend && <ChatModal nick={nick} friend={chatFriend} onClose={() => setChatFriend(null)} />}
       {showDuel && <DuelSetupModal wallet={wallet} saveWallet={saveWallet} nick={nick} friendsData={friendsData} onClose={() => setShowDuel(false)} onEnterDuel={onEnterDuel} showToast={showToast} allCards={allCards} />}
     </div>
   );
@@ -1675,60 +1668,6 @@ function CustomAvatarInput({ profile, saveProfile }) {
     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
       <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="Свій емодзі (напр. 🌟 або 💩)" style={{ ...sx.input, marginBottom: 0, flex: 1 }} onKeyDown={(e) => e.key === "Enter" && apply()} />
       <button style={sx.smallBtn} onClick={apply}>Встановити</button>
-    </div>
-  );
-}
-function ChatModal({ nick, friend, onClose }) {
-  // КРИТИЧНО: кожне повідомлення зберігається в ОКРЕМОМУ ключі dm_<room>_<msgid>, а не в одному
-  // спільному масиві. Раніше коли обидва співрозмовники писали майже одночасно, це був класичний
-  // read-modify-write race: хто зберіг останнім — стирав повідомлення іншого. Саме тому повідомлення
-  // "не показувались" або показувалось лише одне. Той самий підхід вже використовується для user_/card_.
-  const roomPrefix = "dm_" + [nick, friend.nick].sort().join("_") + "_";
-  const [messages, setMessages] = useState([]);
-  const [text, setText] = useState("");
-  const endRef = useRef(null);
-  const load = useCallback(async () => {
-    const keys = await sList(roomPrefix, true);
-    const loaded = await Promise.all(keys.map((k) => sGet(k, true)));
-    const valid = loaded.filter(Boolean).sort((a, b) => a.ts - b.ts);
-    setMessages(valid);
-  }, [roomPrefix]);
-  useEffect(() => { load(); const t = setInterval(load, 2500); return () => clearInterval(t); }, [load]);
-  useEffect(() => { endRef.current && endRef.current.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-  async function send() {
-    const v = text.trim(); if (!v) return;
-    setText("");
-    const msg = { id: "m" + Date.now() + Math.random().toString(36).slice(2, 6), from: nick, text: v.slice(0, 300), ts: Date.now() };
-    await sSet(roomPrefix + msg.id, msg, true);
-    setMessages((prev) => [...prev, msg]);
-  }
-  return (
-    <div style={sx.modalOverlay} onClick={onClose}>
-      <div style={{ ...sx.modal, maxWidth: 340, display: "flex", flexDirection: "column", height: 460, padding: 0, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "12px 14px", borderBottom: "1px solid #1f2937", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 22 }}>{friend.avatar}</span>
-          <div style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>{friend.nick}<VerBadge v={friend.verified} /></div>
-          <span onClick={onClose} style={{ cursor: "pointer", color: "#9ca3af" }}>✕</span>
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-          {messages.length === 0 && <p style={{ textAlign: "center", color: "#6b7280", fontSize: 12, marginTop: 20 }}>Повідомлень ще немає. Напишіть перше!</p>}
-          {messages.map((m) => (
-            <div key={m.id} style={{ alignSelf: m.from === nick ? "flex-end" : "flex-start", maxWidth: "78%" }}>
-              <div style={{
-                background: m.from === nick ? "linear-gradient(135deg,#2563eb,#1d4ed8)" : "#1f2937",
-                color: "#fff", borderRadius: 12, padding: "7px 11px", fontSize: 13, wordBreak: "break-word",
-                borderBottomRightRadius: m.from === nick ? 3 : 12, borderBottomLeftRadius: m.from === nick ? 12 : 3,
-              }}>{m.text}</div>
-              <div style={{ fontSize: 9, color: "#6b7280", textAlign: m.from === nick ? "right" : "left", marginTop: 2 }}>{new Date(m.ts).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}</div>
-            </div>
-          ))}
-          <div ref={endRef} />
-        </div>
-        <div style={{ display: "flex", gap: 6, padding: 10, borderTop: "1px solid #1f2937" }}>
-          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Написати повідомлення..." style={{ ...sx.input, marginBottom: 0, flex: 1 }} />
-          <button style={sx.smallBtn} onClick={send}>➤</button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -1856,7 +1795,6 @@ function DuelSetupModal({ wallet, saveWallet, nick, friendsData, onClose, onEnte
   );
 }
 function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, abuseEvent, onFinish, onExit, showToast }) {
-  const isCreator = room.creator === nick;
   const [countdown, setCountdown] = useState(3);
   const [started, setStarted] = useState(false);
   const [myScore, setMyScore] = useState(0);
@@ -1886,9 +1824,9 @@ function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, 
   useEffect(() => {
     if (!started || room.opponentIsBot) return;
     const t = setInterval(async () => {
-      const fresh = await sGet("duel_" + room.code, true);
-      if (fresh) setOppScore(isCreator ? fresh.opponentScore : fresh.creatorScore);
-    }, 2000);
+      const s = await sGet("duel_" + room.code + "_score_" + room.opponent, true);
+      if (s && typeof s.score === "number") setOppScore(s.score);
+    }, 1500);
     return () => clearInterval(t);
   }, [started]);
   useEffect(() => {
@@ -1930,9 +1868,11 @@ function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, 
     const newScore = myScore + rarityScore;
     setMyScore(newScore);
     if (!room.opponentIsBot) {
-      const fresh = (await sGet("duel_" + room.code, true)) || room;
-      if (isCreator) fresh.creatorScore = newScore; else fresh.opponentScore = newScore;
-      await sSet("duel_" + room.code, fresh, true);
+      // КРИТИЧНО: рахунок пишеться у СВІЙ окремий ключ, а не в спільний документ кімнати —
+      // раніше обидва гравці читали-модифікували-писали ОДИН документ, і одночасний спін
+      // суперника міг стерти щойно записаний рахунок (race condition). Тому дуель "не працювала":
+      // рахунки губились або не оновлювались.
+      await sSet("duel_" + room.code + "_score_" + nick, { score: newScore, ts: Date.now() }, true);
     }
     setTimeout(() => setSpinning(false), 500);
   }
@@ -1949,7 +1889,17 @@ function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, 
   }
   async function finish() {
     if (finishedRef.current) return; finishedRef.current = true;
-    const myFinal = myScore, oppFinal = oppScore;
+    let myFinal = myScoreRef.current, oppFinal = oppScoreRef.current;
+    if (!room.opponentIsBot) {
+      // читаємо ОБИДВА рахунки напряму з їх власних ключів перед підбиттям підсумку,
+      // а не покладаємось на локальні (можливо трохи застарілі через опитування раз в 1.5с) значення
+      const [mine, opp] = await Promise.all([
+        sGet("duel_" + room.code + "_score_" + nick, true),
+        sGet("duel_" + room.code + "_score_" + room.opponent, true),
+      ]);
+      if (mine && typeof mine.score === "number") myFinal = mine.score;
+      if (opp && typeof opp.score === "number") oppFinal = opp.score;
+    }
     const winner = myFinal === oppFinal ? "draw" : (myFinal > oppFinal ? nick : room.opponent);
     const fresh = { ...room, status: "finished", winner };
     if (!room.opponentIsBot) await sSet("duel_" + room.code, fresh, true);
@@ -2313,7 +2263,7 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
     if (broadcastBusy) return;
     if (!msgText.trim()) { showToast("Ви нічого не написали!", "err"); return; }
     setBroadcastBusy(true);
-    const msg = { from: senderName || "Адмін", avatar: profile ? profile.avatar : "👑", text: msgText.trim(), ts: Date.now() };
+    const msg = { from: senderName || "Адмін", avatar: profile ? profile.avatar : "👑", text: msgText.trim(), ts: Date.now(), expiresAt: Date.now() + 15000 };
     await sSet("broadcast_msg", msg, true);
     setBroadcastSent(true); setMsgText("");
     setTimeout(() => setBroadcastSent(false), 4000);
@@ -2693,8 +2643,8 @@ function ThemeCorners({ theme }) {
   if (!theme || !theme.corner) return null;
   return (
     <>
-      <div style={{ position: "fixed", top: 0, left: 0, fontSize: 40, opacity: 0.5, pointerEvents: "none", zIndex: 5 }}>{theme.corner}</div>
-      <div style={{ position: "fixed", top: 0, right: 0, fontSize: 40, opacity: 0.5, pointerEvents: "none", zIndex: 5, transform: "scaleX(-1)" }}>{theme.corner}</div>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${theme.a}, ${theme.b}, ${theme.a})`, backgroundSize: "200% 100%", animation: "gradientShift 6s linear infinite", pointerEvents: "none", zIndex: 90 }} />
+      <div style={{ position: "fixed", bottom: 60, right: 8, fontSize: 22, opacity: 0.4, pointerEvents: "none", zIndex: 3 }}>{theme.corner}</div>
       <ThemeParticles theme={theme} />
     </>
   );
