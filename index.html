@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin Soccer Card</title>
+<title>Spin a Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -73,6 +73,7 @@ const THEME_PRESETS = {
   newyear: { key: "newyear", a: "#3b82f6", b: "#ef4444", corner: "❄️", label: "Новий рік", particles: ["❄️"], glow: "#60a5fa" },
   valentine: { key: "valentine", a: "#ec4899", b: "#db2777", corner: "💘", label: "День закоханих", particles: ["💗", "💌", "💖"], glow: "#ec4899" },
   april: { key: "april", a: "#facc15", b: "#f97316", corner: "🤡", label: "1 квітня", particles: ["🤪", "🎭", "🃏"], glow: "#facc15" },
+  festive: { key: "festive", a: "#facc15", b: "#ec4899", corner: "🎉", label: "Святкова (відкриття)", particles: ["🎈", "🎊", "✨", "🎇"], glow: "#facc15", fireworks: true },
 };
 let ACTIVE_THEME_KEY = "default";
 function jokeCardName(name) {
@@ -397,6 +398,19 @@ function CardFace({ card, count, hidden, small, onClick }) {
   );
 }
 
+function TileBanner({ banner }) {
+  if (!banner || !banner.active) return null;
+  return (
+    <div style={{
+      marginTop: 16, padding: 14, borderRadius: 12, textAlign: "center", border: "1px solid #fbbf24",
+      background: banner.img ? `linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)), url(${banner.img}) center/cover` : "linear-gradient(135deg,#1d4ed8,#7c3aed)",
+      cursor: banner.link ? "pointer" : "default",
+    }} onClick={() => banner.link && window.open(banner.link, "_blank")}>
+      <p style={{ margin: 0, fontWeight: 800, fontSize: 14, color: banner.textColor || "#ffffff" }}>{banner.text}</p>
+      {banner.link && <p style={{ margin: "4px 0 0", fontSize: 10, color: "#fde68a" }}>Натисніть, щоб дізнатись більше →</p>}
+    </div>
+  );
+}
 function AdBanner({ banner }) {
   const [dismissedId, setDismissedId] = useState(null);
   if (!banner || !banner.active) return null;
@@ -524,6 +538,7 @@ function App() {
   const [event, setEvent] = useState(null);
   const [abuseEvent, setAbuseEvent] = useState(null);
   const [adBanner, setAdBanner] = useState(null);
+  const [tileBanner, setTileBanner] = useState(null);
   const [broadcast, setBroadcast] = useState(null);
   const [toast, setToast] = useState(null);
   const [globalShopNonce, setGlobalShopNonce] = useState(0);
@@ -545,7 +560,7 @@ function App() {
       if (document.visibilityState !== "visible") return; // не опитуємо базу, коли вкладка згорнута/у фоні
       // адмінські налаштування (тема, банер, шанси, подія, список карток) — міняються рідко,
       // тому опитуємо їх нечасто, це найважчі запити (список карток читає всю колекцію)
-      const [abuseR, rarityR, customR, themeR, shopNonceV, maintV, adBannerV] = await Promise.all([
+      const [abuseR, rarityR, customR, themeR, shopNonceV, maintV, adBannerV, tileBannerV] = await Promise.all([
         sGetSafe("abuse_event", true),
         sGetSafe("rarity_override", true),
         getAllCustomCards().then(v => ({ ok: true, value: v })).catch(() => ({ ok: false })),
@@ -553,6 +568,7 @@ function App() {
         sGet("shop_nonce", true),
         sGetSafe("maintenance_state", true),
         sGet("ad_banner", true),
+        sGet("tile_banner", true),
       ]);
       if (abuseR.ok) setAbuseEvent(abuseR.value);
       if (rarityR.ok) setRarityOverride(rarityR.value);
@@ -561,6 +577,7 @@ function App() {
       setGlobalShopNonce(shopNonceV || 0);
       if (maintV.ok) setMaintState(maintV.value);
       setAdBanner(adBannerV);
+      setTileBanner(tileBannerV);
     };
     const pollTick = async () => {
       if (document.visibilityState !== "visible") return; // не опитуємо базу, коли вкладка згорнута/у фоні
@@ -976,7 +993,7 @@ function App() {
       <PersonalBoostBanner wallet={wallet} />
       <div style={sx.body}>
         {tab === "casino" && <CasinoTab wallet={wallet} saveWallet={saveWallet} profile={profile} nick={nick}
-          abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} showToast={showToast} busyRef={busyRef} />}
+          abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} showToast={showToast} busyRef={busyRef} tileBanner={tileBanner} />}
         {tab === "shop" && <ShopTab wallet={wallet} saveWallet={saveWallet} showToast={showToast}
           globalShopNonce={globalShopNonce} abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} nick={nick} busyRef={busyRef} />}
         {tab === "collection" && <CollectionTab wallet={wallet} saveWallet={saveWallet} showToast={showToast} allCards={allCards} abuseEvent={abuseEvent} />}
@@ -1162,7 +1179,7 @@ function effectiveWeights(rarityOverride, abuseEvent, wallet) {
   if (wallet.pityExclusive > 0) w["Ексклюзивна"] /= 8;
   return w;
 }
-function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverride, allCards, showToast, busyRef }) {
+function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverride, allCards, showToast, busyRef, tileBanner }) {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
   const [reels, setReels] = useState([null, null, null]);
@@ -1266,6 +1283,7 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
       )}
       <RaritySummary weights={effectiveWeights(rarityOverride, abuseEvent, wallet)} tempCards={allCards().filter((c) => c.tempEvent && c.expiresAt > Date.now() && c.dropChance > 0)} />
       <DailyRouletteSection wallet={wallet} saveWallet={saveWallet} allCards={allCards} showToast={showToast} abuseEvent={abuseEvent} />
+      <TileBanner banner={tileBanner} />
     </div>
   );
 }
@@ -2272,6 +2290,24 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
     await sSet("ad_banner", null, true);
     showToast("Рекламний банер знято", "ok");
   }
+  const [tileBannerText, setTileBannerText] = useState("");
+  const [tileBannerImg, setTileBannerImg] = useState("");
+  const [tileBannerTextColor, setTileBannerTextColor] = useState("#ffffff");
+  const [tileBannerLink, setTileBannerLink] = useState("");
+  function onTileBannerImgFile(e) {
+    const file = e.target.files[0]; if (!file) return;
+    compressImageFile(file, 900, 0.7).then(setTileBannerImg);
+  }
+  async function publishTileBanner() {
+    if (!tileBannerText.trim()) { showToast("Введіть текст банера", "err"); return; }
+    const banner = { id: "tile_" + Date.now(), text: tileBannerText, textColor: tileBannerTextColor, img: tileBannerImg || null, link: tileBannerLink || null, active: true };
+    await sSet("tile_banner", banner, true);
+    showToast("Прямокутний банер опубліковано для всіх!", "ok");
+  }
+  async function removeTileBanner() {
+    await sSet("tile_banner", null, true);
+    showToast("Прямокутний банер знято", "ok");
+  }
   const [maintWarnMin, setMaintWarnMin] = useState(5);
   const [maintMessage, setMaintMessage] = useState("Плануємо оновлення сайту, скоро повернемось!");
   const [maintMiniGame, setMaintMiniGame] = useState(true);
@@ -2669,6 +2705,21 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
         <button style={{ ...sx.smallBtn, background: "#7f1d1d" }} onClick={removeAdBanner}>Зняти банер</button>
       </div>
 
+      <h3 style={{ color: "#fbbf24", fontSize: 14 }}>Прямокутний банер (як «Щоденна рулетка»)</h3>
+      <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 8px" }}>Показується в казино-вкладці, під щоденною рулеткою. Другий, окремий від верхнього, варіант для реклами.</p>
+      <textarea value={tileBannerText} onChange={(e) => setTileBannerText(e.target.value)} placeholder="Текст банера" style={{ ...sx.input, minHeight: 50 }} />
+      <input placeholder="Посилання (необов'язково)" value={tileBannerLink} onChange={(e) => setTileBannerLink(e.target.value)} style={sx.input} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+        <input type="color" value={tileBannerTextColor} onChange={(e) => setTileBannerTextColor(e.target.value)} style={{ width: 44, height: 40, border: "none", borderRadius: 6 }} title="Колір тексту" />
+        <span style={{ fontSize: 11, color: "#9ca3af" }}>Колір тексту (фон — картинка або градієнт)</span>
+      </div>
+      <input type="file" accept="image/*" onChange={onTileBannerImgFile} style={{ marginBottom: 6 }} />
+      {tileBannerImg && <img src={tileBannerImg} style={{ width: 80, borderRadius: 6, marginBottom: 6 }} />}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <button style={sx.primaryBtn} onClick={publishTileBanner}>Опублікувати для всіх</button>
+        <button style={{ ...sx.smallBtn, background: "#7f1d1d" }} onClick={removeTileBanner}>Зняти банер</button>
+      </div>
+
       <h3 style={{ color: "#fbbf24", fontSize: 14 }}>Повідомлення всім гравцям</h3>
       <input placeholder="Ваше ім'я/нік для підпису" value={senderName} onChange={(e) => setSenderName(e.target.value)} style={sx.input} />
       <input placeholder="Текст повідомлення" value={msgText} onChange={(e) => setMsgText(e.target.value)} style={sx.input} />
@@ -2692,6 +2743,7 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
         <option value="newyear">❄️ Новий рік (лише сніг)</option>
         <option value="valentine">💘 День закоханих</option>
         <option value="april">🤡 1 квітня (жартівливі назви карток)</option>
+        <option value="festive">🎉 Святкова (відкриття) — феєрверки</option>
         <option value="custom">Своя (обрати колір)</option>
       </select>
       {themeChoice === "custom" && (
@@ -2872,7 +2924,7 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
 /* ============================== STYLES ============================== */
 const sx = {
   bootScreen: { color: "#9ca3af", display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#0b0f1a" },
-  app: { display: "flex", flexDirection: "column", height: "100vh", background: "#0b0f1a", fontFamily: "system-ui,sans-serif", color: "#e5e7eb" },
+  app: { display: "flex", flexDirection: "column", height: "100vh", background: "radial-gradient(ellipse 120% 60% at 50% -10%, #16213a 0%, #0b0f1a 55%), radial-gradient(ellipse 90% 50% at 100% 100%, #131c2e 0%, transparent 60%), #0b0f1a", fontFamily: "system-ui,sans-serif", color: "#e5e7eb" },
   appEventActive: { background: "linear-gradient(160deg,#78350f,#7c2d12,#4c1d95,#0b0f1a)", backgroundSize: "400% 400%", animation: "eventGlow 5s ease infinite" },
   topbar: { display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#111827", borderBottom: "1px solid #1f2937" },
   bucksPill: { background: "#1f2937", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#fbbf24" },
@@ -2888,7 +2940,7 @@ const sx = {
   authTabBtn: { flex: 1, padding: "9px 0", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: 13, borderRadius: 9 },
   authTabActive: { background: "linear-gradient(135deg,var(--primary-a,#22c55e),var(--primary-b,#16a34a))", color: "#052e16", fontWeight: 700 },
   input: { width: "100%", boxSizing: "border-box", padding: "11px 14px", marginBottom: 10, borderRadius: 10, border: "1px solid #374151", background: "#0b0f1acc", color: "#e5e7eb", fontSize: 14 },
-  primaryBtn: { width: "100%", padding: "11px 0", borderRadius: 10, border: "none", background: "linear-gradient(135deg,var(--primary-a,#22c55e),var(--primary-b,#16a34a))", color: "#052e16", fontWeight: 800, fontSize: 14, cursor: "pointer" },
+  primaryBtn: { width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "linear-gradient(135deg,var(--primary-a,#22c55e),var(--primary-b,#16a34a))", color: "#052e16", fontWeight: 800, fontSize: 14, cursor: "pointer", boxShadow: "0 3px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25)" },
   smallBtn: { padding: "6px 10px", borderRadius: 8, border: "none", background: "#374151", color: "#e5e7eb", fontSize: 11, cursor: "pointer" },
   toast: { position: "fixed", top: 54, left: "50%", transform: "translateX(-50%)", background: "#1f2937", padding: "8px 16px", borderRadius: 10, fontSize: 12, zIndex: 50, border: "1px solid #374151" },
   toastErr: { borderColor: "#dc2626", color: "#fca5a5" },
@@ -2956,12 +3008,55 @@ function GlobalStyles({ theme }) {
     `}</style>
   );
 }
+function FireworksCanvas() {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let w = (canvas.width = window.innerWidth);
+    let h = (canvas.height = window.innerHeight);
+    const onResize = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; };
+    window.addEventListener("resize", onResize);
+    let particles = [];
+    const colors = ["#facc15", "#ec4899", "#22d3ee", "#a855f7", "#4ade80", "#f97316", "#ffffff"];
+    function spawnFirework() {
+      const x = w * 0.15 + Math.random() * w * 0.7;
+      const y = h * 0.1 + Math.random() * h * 0.35;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const count = 26 + Math.floor(Math.random() * 16);
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = 1.4 + Math.random() * 2.6;
+        particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1, color, size: 1.5 + Math.random() * 1.7 });
+      }
+    }
+    let lastSpawn = 0, raf;
+    function loop(t) {
+      ctx.clearRect(0, 0, w, h);
+      if (t - lastSpawn > 850 + Math.random() * 900) { spawnFirework(); lastSpawn = t; }
+      particles.forEach((p) => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.025; p.life -= 0.011;
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+      });
+      particles = particles.filter((p) => p.life > 0);
+      ctx.globalAlpha = 1;
+      raf = requestAnimationFrame(loop);
+    }
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onResize); };
+  }, []);
+  return <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 2 }} />;
+}
 function ThemeCorners({ theme }) {
-  if (!theme || !theme.corner) return null;
+  if (!theme || (!theme.corner && !theme.fireworks)) return null;
   return (
     <>
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${theme.a}, ${theme.b}, ${theme.a})`, backgroundSize: "200% 100%", animation: "gradientShift 6s linear infinite", pointerEvents: "none", zIndex: 90 }} />
-      <div style={{ position: "fixed", bottom: 60, right: 8, fontSize: 22, opacity: 0.4, pointerEvents: "none", zIndex: 3 }}>{theme.corner}</div>
+      {theme.corner && <div style={{ position: "fixed", bottom: 60, right: 8, fontSize: 22, opacity: 0.4, pointerEvents: "none", zIndex: 3 }}>{theme.corner}</div>}
+      {theme.fireworks && <FireworksCanvas />}
       <ThemeParticles theme={theme} />
     </>
   );
