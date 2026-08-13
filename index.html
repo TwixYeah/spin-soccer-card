@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin a Soccer Card</title>
+<title>Spin Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -452,13 +452,31 @@ function PersonalBoostBanner({ wallet }) {
     return () => clearInterval(t);
   }, [wallet && wallet.boost && wallet.boost.expiresAt]);
   if (!wallet || !wallet.boost || wallet.boost.expiresAt < now) return null;
-  const label = wallet.boost.type === "bucks" ? "БАКСИ" : "ШАНСИ";
-  const mins = Math.max(0, Math.ceil((wallet.boost.expiresAt - now) / 60000));
-  const text = `⚡ ${wallet.boost.mult}x ${label}! ЩЕ ${mins} ХВ ⚡`;
-  const repeated = Array(10).fill(text).join("          •          ");
+  const b = wallet.boost;
+  const label = b.type === "bucks" ? "БАКСИ" : "ШАНСИ";
+  const icon = b.type === "bucks" ? "💰" : "🎯";
+  const mins = Math.floor(Math.max(0, b.expiresAt - now) / 60000);
+  const secs = Math.floor((Math.max(0, b.expiresAt - now) % 60000) / 1000);
+  const total = Math.max(1, (b.expiresAt - (b.startedAt || now)));
+  const progress = Math.max(0, Math.min(1, (b.expiresAt - now) / total));
   return (
-    <div style={{ ...sx.marqueeWrap, background: "linear-gradient(90deg,#7c3aed,#db2777)" }}>
-      <div style={sx.marqueeRowTop}><div style={{ ...sx.marqueeTrackLTR, color: "#fff" }}>{repeated}</div></div>
+    <div style={{ display: "flex", justifyContent: "center", padding: "8px 10px 0" }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10, padding: "7px 14px", borderRadius: 999,
+        background: "linear-gradient(135deg,#312e81,#701a75)", border: "1px solid #a855f7",
+        boxShadow: "0 0 16px #a855f788", maxWidth: 340, width: "100%",
+      }}>
+        <span style={{ fontSize: 20, animation: "boostPulse 1.1s ease-in-out infinite" }}>{icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 800, color: "#f0abfc" }}>
+            <span>{b.mult}x {label}</span>
+            <span style={{ color: "#e9d5ff" }}>{mins}:{String(secs).padStart(2, "0")}</span>
+          </div>
+          <div style={{ height: 5, borderRadius: 4, background: "#1e1b4b", marginTop: 4, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${progress * 100}%`, background: "linear-gradient(90deg,#e879f9,#a855f7)", borderRadius: 4, transition: "width 1s linear" }} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -818,7 +836,7 @@ function App() {
       }
     }
     if (reward.lucky && reward.boost) {
-      w.boost = { type: reward.boost.type, mult: reward.boost.mult, expiresAt: Date.now() + reward.boost.minutes * 60000 };
+      w.boost = { type: reward.boost.type, mult: reward.boost.mult, startedAt: Date.now(), expiresAt: Date.now() + reward.boost.minutes * 60000 };
     }
     w.pendingStreakReward = null;
     await saveWallet(w);
@@ -1341,7 +1359,7 @@ function DailyRouletteModal({ wallet, saveWallet, allCards, showToast, abuseEven
           if (card) { w.collection[card.id] = (w.collection[card.id] || 0) + 1; if (!w.obtainedAt[card.id]) w.obtainedAt[card.id] = Date.now(); w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[card.id] = "Джекпот щоденної рулетки 🎉"; }
         }
       } else if (won.type === "boost") {
-        w.boost = { type: won.boostType, mult: won.mult, expiresAt: Date.now() + won.minutes * 60000 };
+        w.boost = { type: won.boostType, mult: won.mult, startedAt: Date.now(), expiresAt: Date.now() + won.minutes * 60000 };
       }
       await saveWallet(w);
       showToast(won.type === "jackpot" ? "ДЖЕКПОТ!! 🎉🎉🎉" : `Виграно: ${won.label}`, "ok");
@@ -1452,9 +1470,16 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
   }
 
   const SPECIAL_RARITIES = ["Рідкісна", "Епічна", "Міфічна", "Легендарна"]; // без Ексклюзивної
-  const [specialPick, setSpecialPick] = useState(null); // { rarity, options, cost }
+  const RANDOM_RARITY_PRICE = { "Рідкісна": 700, "Епічна": 1800, "Міфічна": 3500, "Легендарна": 7000 };
+  const CHOICE_RARITY_PRICE = { "Рідкісна": 500, "Епічна": 1300, "Міфічна": 2500, "Легендарна": 5000 };
+  const specialBought = (wallet.specialBought && wallet.specialBought.bucket === bucket) ? wallet.specialBought.keys : [];
+  const [specialPick, setSpecialPick] = useState(null); // { rarity, options, cost, key }
   const [revealCard, setRevealCard] = useState(null);
-  async function grantCard(card, cost, originText) {
+  async function markSpecialBought(w, key) {
+    const keys = (w.specialBought && w.specialBought.bucket === bucket) ? w.specialBought.keys : [];
+    w.specialBought = { bucket, keys: [...keys, key] };
+  }
+  async function grantCard(card, cost, originText, specialKey) {
     if (!wallet.bucksInfinite && wallet.bucks < cost) { showToast("Недостатньо баксів", "err"); return false; }
     const w = JSON.parse(JSON.stringify(wallet));
     if (!w.bucksInfinite) w.bucks -= cost;
@@ -1462,30 +1487,36 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
     if (!w.obtainedAt[card.id]) w.obtainedAt[card.id] = Date.now();
     w.maxCount[card.id] = Math.max(w.maxCount[card.id] || 0, w.collection[card.id]);
     w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[card.id] = originText;
+    if (specialKey) markSpecialBought(w, specialKey);
     await saveWallet(w);
     return true;
   }
   async function buyRandomRarity(rarity) {
-    const cost = 1000;
+    const key = "random_" + rarity;
+    if (specialBought.includes(key)) { showToast("Вже куплено — чекайте оновлення магазину", "err"); return; }
+    const cost = RANDOM_RARITY_PRICE[rarity];
     const rp = allCards().filter(c => c.rarity === rarity && !c.tempEvent);
     if (!rp.length) return;
     const card = rp[Math.floor(Math.random() * rp.length)];
-    const ok = await grantCard(card, cost, `Рандомна ${rarity.toLowerCase()} картка 🎲`);
+    const ok = await grantCard(card, cost, `Рандомна ${rarity.toLowerCase()} картка 🎲`, key);
     if (ok) setRevealCard(card);
   }
   function openChoiceModal(rarity) {
-    const cost = 500;
+    const key = "choice_" + rarity;
+    if (specialBought.includes(key)) { showToast("Вже куплено — чекайте оновлення магазину", "err"); return; }
+    const cost = CHOICE_RARITY_PRICE[rarity];
     if (!wallet.bucksInfinite && wallet.bucks < cost) { showToast("Недостатньо баксів", "err"); return; }
     const rp = allCards().filter(c => c.rarity === rarity && !c.tempEvent);
     const shuffled = [...rp].sort(() => Math.random() - 0.5).slice(0, Math.min(3, rp.length));
-    setSpecialPick({ rarity, options: shuffled, cost });
+    setSpecialPick({ rarity, options: shuffled, cost, key });
   }
   async function confirmChoice(card) {
-    const { rarity, cost } = specialPick;
+    const { rarity, cost, key } = specialPick;
     setSpecialPick(null);
-    const ok = await grantCard(card, cost, `${rarity} картка на вибір 🎯`);
+    const ok = await grantCard(card, cost, `${rarity} картка на вибір 🎯`, key);
     if (ok) showToast(`Отримано: ${card.name}!`, "ok");
   }
+
 
   async function buy(slot, isCatalog) {
     if (busyRef.current) return; busyRef.current = true;
@@ -1539,16 +1570,20 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
             </div>
           )}
           <h3 style={{ color: "#fbbf24", fontSize: 14, marginTop: 20 }}>🎯 Спецпропозиції</h3>
-          <p style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>Гарантований результат за фіксовану ціну (без Ексклюзивних карток).</p>
-          {SPECIAL_RARITIES.map((rarity) => (
-            <div key={rarity} style={{ background: "#111827", borderRadius: 10, padding: 12, marginBottom: 10, border: `1px solid ${RARITY_COLOR[rarity]}55` }}>
-              <p style={{ margin: "0 0 8px", fontWeight: 800, color: RARITY_COLOR[rarity] }}>{rarity}</p>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...sx.smallBtn, flex: 1 }} onClick={() => buyRandomRarity(rarity)}>🎲 Рандомна (1000)</button>
-                <button style={{ ...sx.smallBtn, flex: 1 }} onClick={() => openChoiceModal(rarity)}>🎯 На вибір (500)</button>
+          <p style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>Гарантований результат за фіксовану ціну (без Ексклюзивних карток). По одному разу до оновлення магазину.</p>
+          {SPECIAL_RARITIES.map((rarity) => {
+            const randomBought = specialBought.includes("random_" + rarity);
+            const choiceBought = specialBought.includes("choice_" + rarity);
+            return (
+              <div key={rarity} style={{ background: "#111827", borderRadius: 10, padding: 12, marginBottom: 10, border: `1px solid ${RARITY_COLOR[rarity]}55` }}>
+                <p style={{ margin: "0 0 8px", fontWeight: 800, color: RARITY_COLOR[rarity] }}>{rarity}</p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button disabled={randomBought} style={{ ...sx.smallBtn, flex: 1, opacity: randomBought ? 0.4 : 1 }} onClick={() => buyRandomRarity(rarity)}>{randomBought ? "Куплено" : `🎲 Рандомна (${RANDOM_RARITY_PRICE[rarity]})`}</button>
+                  <button disabled={choiceBought} style={{ ...sx.smallBtn, flex: 1, opacity: choiceBought ? 0.4 : 1 }} onClick={() => openChoiceModal(rarity)}>{choiceBought ? "Куплено" : `🎯 На вибір (${CHOICE_RARITY_PRICE[rarity]})`}</button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </>
       )}
       {sub === "catalog" && (
@@ -3000,6 +3035,7 @@ function GlobalStyles({ theme }) {
       @keyframes exclusiveShift { 0% { border-color: #a855f7; box-shadow: 0 0 14px #a855f7aa; } 33% { border-color: #ef4444; box-shadow: 0 0 14px #ef4444aa; } 66% { border-color: #fbbf24; box-shadow: 0 0 14px #fbbf24aa; } 100% { border-color: #a855f7; box-shadow: 0 0 14px #a855f7aa; } }
       @keyframes tempShift { 0%,100% { border-color: #3b82f6; box-shadow: 0 0 14px #3b82f6aa; } 50% { border-color: #22d3ee; box-shadow: 0 0 14px #22d3eeaa; } }
       @keyframes themeFall { 0% { transform: translateY(-5vh) rotate(0deg); opacity: 0; } 10% { opacity: 0.9; } 100% { transform: translateY(105vh) rotate(360deg); opacity: 0.7; } }
+      @keyframes boostPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
       .card-legendary-shine { animation: goldShine 1.8s ease-in-out infinite; }
       .card-exclusive-shimmer { animation: exclusiveShift 2.4s linear infinite; }
       .card-temp-shimmer { animation: tempShift 1.5s ease-in-out infinite; }
