@@ -29,66 +29,6 @@ const BASE_CARDS = [{id:"6410",name:"Роналдіньйо",rarity:"Екскл�
 
 /* ============================== CONSTANTS ============================== */
 const RARITY_ORDER = ["Рідкісна", "Епічна", "Міфічна", "Легендарна", "Ексклюзивна"];
-// ===== SOCCER PASS (v1) =====
-// XP, потрібний щоб дійти ДО рівня N (індекс масиву = рівень-1, тобто PASS_XP_STEPS[0] = скільки треба для рівня 1)
-const PASS_XP_STEPS = [
-  50, 200, 200, 200, 200, 200, 200, 200, 350, 350,
-  500, 950, 950, 950, 950, 950, 950, 950, 950, 950,
-  950, 950, 950, 950, 950, 950, 950, 950, 950, 950,
-  1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250,
-];
-const PASS_MAX_LEVEL = 40;
-const PASS_PRICE = 20000;
-// типи нагород: bucks(amount) | boost(boostType,mult,minutes) | card_random(rarity) | card_choice(rarity) | avatar(emoji) | key(amount) — key поки що заглушка під v2
-const PASS_LEVELS = [
-  { level: 0, free: { type: "card_random", rarity: "Міфічна" }, premium: { type: "card_choice", rarity: "Легендарна" } },
-  { level: 1, free: { type: "bucks", amount: 1000 }, premium: { type: "bucks", amount: 2000 } },
-  { level: 2, free: { type: "boost", boostType: "bucks", mult: 1.2, minutes: 5 }, premium: { type: "boost", boostType: "bucks", mult: 1.2, minutes: 15 } },
-  { level: 3, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 800 } },
-  { level: 4, free: { type: "bucks", amount: 600 }, premium: { type: "bucks", amount: 900 } },
-  { level: 5, free: { type: "boost", boostType: "chance", mult: 1.2, minutes: 5 }, premium: { type: "boost", boostType: "chance", mult: 1.2, minutes: 10 } },
-  { level: 6, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 900 } },
-  { level: 7, free: { type: "bucks", amount: 400 }, premium: { type: "bucks", amount: 950 } },
-  { level: 8, free: { type: "card_random", rarity: "Епічна" }, premium: { type: "bucks", amount: 1000 } },
-  { level: 9, free: { type: "bucks", amount: 200 }, premium: { type: "bucks", amount: 500 } },
-  { level: 10, free: { type: "bucks", amount: 500 }, premium: { type: "key", amount: 1 } }, // key — заглушка до v2 (див. redeemPassReward)
-  { level: 11, free: { type: "boost", boostType: "bucks", mult: 1.2, minutes: 5 }, premium: { type: "boost", boostType: "bucks", mult: 1.2, minutes: 10 } },
-  { level: 12, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 300 } },
-  { level: 13, free: { type: "bucks", amount: 350 }, premium: { type: "bucks", amount: 400 } },
-  { level: 14, free: { type: "card_choice", rarity: "Епічна" }, premium: { type: "card_choice", rarity: "Міфічна" } },
-  { level: 15, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 250 } },
-  { level: 16, free: { type: "bucks", amount: 200 }, premium: { type: "bucks", amount: 250 } },
-  { level: 17, free: { type: "card_choice", rarity: "Міфічна" }, premium: { type: "bucks", amount: 500 } },
-  { level: 18, free: { type: "bucks", amount: 300 }, premium: { type: "bucks", amount: 300 } },
-  { level: 19, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 350 } },
-  { level: 20, free: { type: "boost", boostType: "chance", mult: 1.2, minutes: 5 }, premium: { type: "avatar" } },
-  { level: 21, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 300 } },
-  { level: 22, free: { type: "bucks", amount: 200 }, premium: { type: "bucks", amount: 250 } },
-  { level: 23, free: { type: "card_random", rarity: "Епічна" }, premium: { type: "card_choice", rarity: "Епічна" } },
-  { level: 24, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 750 } },
-  { level: 25, free: { type: "bucks", amount: 1000 }, premium: { type: "bucks", amount: 1000 } },
-  { level: 26, free: { type: "card_choice", rarity: "Епічна" }, premium: { type: "bucks", amount: 500 } },
-  { level: 27, free: { type: "bucks", amount: 500 }, premium: { type: "card_choice", rarity: "Легендарна" } },
-  { level: 28, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 250 } },
-  { level: 29, free: { type: "card_random", rarity: "Міфічна" }, premium: { type: "bucks", amount: 450 } },
-  { level: 30, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 450 } },
-  { level: 31, free: { type: "bucks", amount: 200 }, premium: { type: "bucks", amount: 200 } },
-  { level: 32, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 250 } },
-  { level: 33, free: { type: "boost", boostType: "bucks", mult: 2, minutes: 10 }, premium: { type: "boost", boostType: "bucks", mult: 2, minutes: 20 } },
-  { level: 34, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 500 } },
-  { level: 35, free: { type: "card_random", rarity: "Легендарна" }, premium: { type: "bucks", amount: 500 } },
-  { level: 36, free: { type: "bucks", amount: 400 }, premium: { type: "bucks", amount: 500 } },
-  { level: 37, free: { type: "bucks", amount: 350 }, premium: { type: "bucks", amount: 400 } },
-  { level: 38, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 450 } },
-  { level: 39, free: { type: "card_random", rarity: "Легендарна" }, premium: { type: "bucks", amount: 1000 } }, // TODO v1.1: замінити на конкретну картку сезону
-  { level: 40, free: { type: "bucks", amount: 1500 }, premium: { type: "bucks", amount: 2000 } },
-];
-const PASS_NICK_COLORS_FREE = ["#e5e7eb", "#60a5fa", "#4ade80", "#f87171", "#fbbf24"];
-const PASS_NICK_COLORS_PREMIUM = [
-  "linear-gradient(90deg,#f87171,#fbbf24)", "linear-gradient(90deg,#4ade80,#22d3ee)",
-  "linear-gradient(90deg,#a855f7,#ec4899)", "linear-gradient(90deg,#60a5fa,#818cf8)",
-  "linear-gradient(90deg,#fbbf24,#f97316)", "linear-gradient(90deg,#22d3ee,#3b82f6)",
-];
 const RARITY_COLOR = {
   "Рідкісна": "#22c55e", "Епічна": "#a855f7", "Міфічна": "#ef4444", "Легендарна": "#fbbf24", "Ексклюзивна": "#f59e0b",
 };
@@ -201,17 +141,6 @@ function updatePityCounters(w, won) {
   w.pityCountLegendary = hitLegendary2 ? 0 : (w.pityCountLegendary || 0) + 1;
   w.pityCountExclusive = hitExclusive2 ? 0 : (w.pityCountExclusive || 0) + 1;
 }
-function bumpPassQuest(w, eventId, amount) {
-  amount = amount || 1;
-  if (w.passDailyQuests && w.passDailyQuests.quests) {
-    w.passDailyQuests.quests.forEach((q) => { if (!q.claimed && q.id === eventId) q.progress = Math.min(q.target, q.progress + amount); });
-  }
-  w.passSeasonQuestProgress = w.passSeasonQuestProgress || {};
-  DEFAULT_SEASON_QUESTS.forEach((q) => {
-    if ((w.passSeasonClaimedQuests || []).includes(q.id)) return;
-    if (q.type === eventId) w.passSeasonQuestProgress[q.id] = Math.min(q.target, (w.passSeasonQuestProgress[q.id] || 0) + amount);
-  });
-}
 function simpleHash(str) {
   let h = 5381;
   for (let i = 0; i < str.length; i++) h = (h * 33) ^ str.charCodeAt(i);
@@ -222,41 +151,6 @@ function fmtBucks(n, isInfinite) {
   return Math.round(n).toLocaleString("uk-UA") + " 💵";
 }
 function todayStr() { return new Date().toISOString().slice(0, 10); }
-function currentSeasonId() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
-function passXPForLevel(level) { let sum = 0; for (let i = 0; i < level; i++) sum += PASS_XP_STEPS[i] || 0; return sum; }
-function passLevelFromTotalXP(xp) {
-  let lvl = 0, acc = 0;
-  for (let i = 0; i < PASS_XP_STEPS.length; i++) { if (xp < acc + PASS_XP_STEPS[i]) break; acc += PASS_XP_STEPS[i]; lvl++; }
-  return Math.min(lvl, PASS_MAX_LEVEL);
-}
-const PASS_DAILY_QUEST_POOL = [
-  { id: "spins", label: (n) => `Зроби ${n} прокрутів у казино`, min: 5, max: 15 },
-  { id: "duel_win", label: (n) => `Виграй ${n} дуел${n === 1 ? "ь" : "і"}`, min: 1, max: 2 },
-  { id: "duel_play", label: (n) => `Зіграй ${n} дуел${n === 1 ? "ь" : "і"}`, min: 1, max: 3 },
-  { id: "card_mythic", label: () => `Отримай Міфічну картку`, min: 1, max: 1 },
-];
-function generateDailyQuests(nick) {
-  const rng = seededRandom(parseInt(simpleHash(nick + "_passday_" + todayStr()), 16) % 2147483646);
-  const pool = [...PASS_DAILY_QUEST_POOL];
-  const picked = [];
-  for (let i = 0; i < 3 && pool.length > 0; i++) {
-    const idx = Math.floor(rng() * pool.length);
-    const def = pool.splice(idx, 1)[0];
-    const target = def.min + Math.floor(rng() * (def.max - def.min + 1));
-    picked.push({ id: def.id, target, progress: 0, xp: 200, claimed: false, label: def.label(target) });
-  }
-  return { date: todayStr(), quests: picked };
-}
-const DEFAULT_SEASON_QUESTS = [
-  { id: "sq1", label: "Зроби 50 прокрутів у казино", type: "spins", target: 50, xp: 700, premiumOnly: false },
-  { id: "sq2", label: "Виграй 5 дуелей", type: "duel_win", target: 5, xp: 800, premiumOnly: false },
-  { id: "sq3", label: "Отримай 3 Епічні картки", type: "card_epic", target: 3, xp: 600, premiumOnly: false },
-  { id: "sq4", label: "Зіграй 10 дуелей", type: "duel_play", target: 10, xp: 700, premiumOnly: false },
-  { id: "sq5", label: "Зроби 150 прокрутів у казино", type: "spins", target: 150, xp: 1000, premiumOnly: false },
-  { id: "sq6", label: "Виграй 15 дуелей", type: "duel_win", target: 15, xp: 1000, premiumOnly: true },
-  { id: "sq7", label: "Отримай Легендарну картку", type: "card_legendary", target: 1, xp: 900, premiumOnly: true },
-  { id: "sq8", label: "Зроби 300 прокрутів у казино", type: "spins", target: 300, xp: 1000, premiumOnly: true },
-];
 const DAILY_ROULETTE_TABLE = [
   { type: "bucks", amount: 200, weight: 26, label: "200 💵" },
   { type: "bucks", amount: 500, weight: 19, label: "500 💵" },
@@ -498,10 +392,6 @@ function newWallet() {
     freeSpinsDate: "", freeSpinsLeft: 3, streak: 0, lastLogin: "",
     spinLevel: 0, lastPaidSpinAt: 0, pityLegendary: 0, pityExclusive: 0,
     pityCountMythic: 0, pityCountLegendary: 0, pityCountExclusive: 0,
-    passXP: 0, passLevel: 0, passPremium: false, passSeasonId: "",
-    passClaimedFree: [], passClaimedPremium: [], passDailyQuests: null,
-    passSeasonQuestProgress: {}, passSeasonClaimedQuests: [], passFirstPurchaseUsed: false,
-    nickColor: null,
     friends: [], auctionAbuseCount: 0, auctionBanUntil: 0, shopNonce: 0, claimedStreakDay: "",
     dealsBought: { bucket: 0, indices: [] }, lastRewardSeen: null, processedGrantIds: [],
     processedGiftIds: [], processedFriendEventIds: [], cardOrigin: {}, pollSeen: [], lastDailyRoulette: "",
@@ -514,13 +404,6 @@ function withDefaults(w) {
 }
 
 /* ============================== BADGE ============================== */
-function ColoredNick({ nick, color }) {
-  if (!color) return <>{nick}</>;
-  if (color.startsWith("linear-gradient")) {
-    return <span style={{ background: color, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontWeight: 800 }}>{nick}</span>;
-  }
-  return <span style={{ color, fontWeight: 700 }}>{nick}</span>;
-}
 function VerBadge({ v }) {
   if (!v || v === "none") return null;
   const map = {
@@ -772,7 +655,6 @@ function App() {
   const [globalShopNonce, setGlobalShopNonce] = useState(0);
   const [rarityOverride, setRarityOverride] = useState(null);
   const [siteSettings, setSiteSettings] = useState({});
-  const [passSeason, setPassSeason] = useState(null);
   const [customCards, setCustomCards] = useState([]);
   const [duelRoom, setDuelRoom] = useState(null);
   const [rematchOpponent, setRematchOpponent] = useState(null);
@@ -790,17 +672,15 @@ function App() {
     const slowTick = async () => {
       if (document.visibilityState !== "visible") return; // не опитуємо базу, коли вкладка згорнута/у фоні
       // адмінські налаштування (тема, банер, шанси, подія) — міняються рідко, тому опитуємо їх нечасто
-      const [rarityR, themeR, shopNonceV, adBannerV, tileBannerV, settingsV, passSeasonV] = await Promise.all([
+      const [rarityR, themeR, shopNonceV, adBannerV, tileBannerV, settingsV] = await Promise.all([
         sGetSafe("rarity_override", true),
         sGetSafe("site_theme", true),
         sGet("shop_nonce", true),
         sGet("ad_banner", true),
         sGet("tile_banner", true),
         sGet("site_settings", true),
-        sGet("pass_season", true),
       ]);
       setSiteSettings(settingsV || {});
-      setPassSeason(passSeasonV);
       if (rarityR.ok) setRarityOverride(rarityR.value);
       if (themeR.ok) setSiteTheme(themeR.value);
       setGlobalShopNonce(shopNonceV || 0);
@@ -1057,33 +937,19 @@ function App() {
     // eslint-disable-next-line
   }, [kickNotice]);
 
-  function checkDailyReset(w, forNick) {
+  function checkDailyReset(w) {
     const today = todayStr();
-    let changed = false;
     if (w.freeSpinsDate !== today) {
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       w.streak = w.lastLogin === yesterday ? (w.streak || 0) + 1 : (w.lastLogin === today ? w.streak : 1);
-      w.freeSpinsLeft = w.passPremium ? 5 : 3; w.freeSpinsDate = today; w.lastLogin = today;
+      w.freeSpinsLeft = 3; w.freeSpinsDate = today; w.lastLogin = today;
       // нагороду більше не нараховуємо автоматично — гравець сам тисне "Забрати" в профілі,
       // щоб бачити за що саме отримав приз (і щоб не втратити рідкісний "щасливий день")
       w.pendingStreakReward = { day: w.streak, claimed: false };
       w._lastRewardText = `Серія: ${w.streak} дн. — заберіть нагороду в профілі 🎁`;
-      changed = true;
+      return true;
     }
-    // SOCCER PASS: новий сезон (календарний місяць) — скидаємо прогрес пасу повністю (новий пас = чистий старт)
-    const seasonId = currentSeasonId();
-    if (w.passSeasonId !== seasonId) {
-      w.passSeasonId = seasonId; w.passXP = 0; w.passLevel = 0; w.passPremium = false;
-      w.passClaimedFree = []; w.passClaimedPremium = []; w.passSeasonQuestProgress = {}; w.passSeasonClaimedQuests = [];
-      w.passDailyQuests = null;
-      changed = true;
-    }
-    // денні квести пасу — те саме "новий день" скидання, окремо від freeSpinsDate на випадок різних часових поясів
-    if (!w.passDailyQuests || w.passDailyQuests.date !== today) {
-      w.passDailyQuests = generateDailyQuests(forNick || nick);
-      changed = true;
-    }
-    return changed;
+    return false;
   }
 
   async function claimStreakReward() {
@@ -1112,102 +978,7 @@ function App() {
     showToast(`+${bucksGiven} 💵 ${reward.medal} (серія ${day} дн.)${extra}${reward.lucky ? " 🍀 Щасливий день!" : reward.boost ? ` ⚡ ${reward.boost.mult}x ${reward.boost.type === "bucks" ? "бакси" : "шанси"} на ${reward.boost.minutes} хв!` : ""}`, "ok");
   }
 
-  function grantPassXP(w, amount) {
-    w.passXP = (w.passXP || 0) + amount;
-    w.passLevel = passLevelFromTotalXP(w.passXP);
-  }
-  async function claimPassQuest(questId, isDaily) {
-    const w = JSON.parse(JSON.stringify(wallet));
-    if (isDaily) {
-      const q = (w.passDailyQuests && w.passDailyQuests.quests || []).find((x) => x.id === questId);
-      if (!q || q.claimed || q.progress < q.target) return;
-      q.claimed = true;
-      grantPassXP(w, q.xp);
-      showToast(`+${q.xp} XP (пропуск)`, "ok");
-    } else {
-      const qd = DEFAULT_SEASON_QUESTS.find((x) => x.id === questId);
-      if (!qd) return;
-      if (qd.premiumOnly && !w.passPremium) return;
-      const progress = (w.passSeasonQuestProgress || {})[questId] || 0;
-      if (progress < qd.target || (w.passSeasonClaimedQuests || []).includes(questId)) return;
-      w.passSeasonClaimedQuests = [...(w.passSeasonClaimedQuests || []), questId];
-      grantPassXP(w, qd.xp);
-      showToast(`+${qd.xp} XP (пропуск)`, "ok");
-    }
-    await saveWallet(w);
-  }
-  const [passCardChoice, setPassCardChoice] = useState(null);
-  function redeemPassRewardInto(w, reward) {
-    if (reward.type === "bucks") { if (!w.bucksInfinite) w.bucks += reward.amount; return { text: `+${reward.amount} 💵` }; }
-    if (reward.type === "boost") {
-      w.boost = { type: reward.boostType, mult: reward.mult, startedAt: Date.now(), expiresAt: Date.now() + reward.minutes * 60000 };
-      return { text: `⚡ ${reward.mult}x ${reward.boostType === "bucks" ? "бакси" : "шанси"} на ${reward.minutes} хв` };
-    }
-    if (reward.type === "card_random") {
-      const pool = allCards().filter((c) => c.rarity === reward.rarity && !c.tempEvent);
-      const card = pool[Math.floor(Math.random() * pool.length)];
-      if (card) {
-        w.collection[card.id] = (w.collection[card.id] || 0) + 1;
-        if (!w.obtainedAt[card.id]) w.obtainedAt[card.id] = Date.now();
-        w.maxCount[card.id] = Math.max(w.maxCount[card.id] || 0, w.collection[card.id]);
-        w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[card.id] = "SOCCER PASS 🎫";
-      }
-      return { text: card ? `🃏 ${card.name}` : "", card };
-    }
-    if (reward.type === "avatar") { w.passSeasonAvatarUnlocked = true; return { text: "🎓 Нова аватарка розблокована!" }; }
-    if (reward.type === "key") { if (!w.bucksInfinite) w.bucks += 300; return { text: "+300 💵 (ключі з'являться пізніше)" }; } // заглушка до v2
-    return { text: "" };
-  }
-  async function claimPassLevel(level, track) {
-    const def = PASS_LEVELS[level];
-    if (!def) return;
-    const reward = track === "free" ? def.free : def.premium;
-    if (track === "premium" && !wallet.passPremium) return;
-    const claimedList = track === "free" ? (wallet.passClaimedFree || []) : (wallet.passClaimedPremium || []);
-    if (claimedList.includes(level) || wallet.passLevel < level) return;
-    if (reward.type === "card_choice") {
-      const pool = allCards().filter((c) => c.rarity === reward.rarity && !c.tempEvent);
-      const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(3, pool.length));
-      setPassCardChoice({ level, track, rarity: reward.rarity, options: shuffled });
-      return;
-    }
-    const w = JSON.parse(JSON.stringify(wallet));
-    const listField = track === "free" ? "passClaimedFree" : "passClaimedPremium";
-    w[listField] = [...(w[listField] || []), level];
-    const res = redeemPassRewardInto(w, reward);
-    await saveWallet(w);
-    showToast(`Рівень ${level} (${track === "free" ? "безкоштовний" : "преміум"}): ${res.text}`, "ok");
-  }
-  async function confirmPassCardChoice(card) {
-    const { level, track } = passCardChoice;
-    setPassCardChoice(null);
-    const w = JSON.parse(JSON.stringify(wallet));
-    const listField = track === "free" ? "passClaimedFree" : "passClaimedPremium";
-    w[listField] = [...(w[listField] || []), level];
-    w.collection[card.id] = (w.collection[card.id] || 0) + 1;
-    if (!w.obtainedAt[card.id]) w.obtainedAt[card.id] = Date.now();
-    w.maxCount[card.id] = Math.max(w.maxCount[card.id] || 0, w.collection[card.id]);
-    w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[card.id] = "SOCCER PASS 🎫";
-    await saveWallet(w);
-    showToast(`Рівень ${level}: 🃏 ${card.name}`, "ok");
-  }
-  async function buyPassPremium() {
-    const firstTime = !wallet.passFirstPurchaseUsed;
-    const price = firstTime ? Math.round(PASS_PRICE * 0.75) : PASS_PRICE;
-    if (!wallet.bucksInfinite && wallet.bucks < price) { showToast("Недостатньо баксів", "err"); return; }
-    const w = JSON.parse(JSON.stringify(wallet));
-    if (!w.bucksInfinite) w.bucks -= price;
-    w.passPremium = true;
-    if (firstTime) w.passFirstPurchaseUsed = true;
-    grantPassXP(w, passXPForLevel(Math.min(PASS_MAX_LEVEL, w.passLevel + 10)) - passXPForLevel(w.passLevel)); // +10 рівнів одразу
-    await saveWallet(w);
-    showToast(`SOCCER PASS придбано! +10 рівнів одразу 🎉`, "ok");
-  }
-  async function setNickColor(color) {
-    await saveProfile({ ...profile, nickColor: color });
-  }
   function showToast(msg, kind) { setToast({ msg, kind: kind || "info", id: Math.random() }); setTimeout(() => setToast(null), 3400); }
-
 
   function allCards() {
     // ВАЖЛИВО: тут НЕ фільтруємо прострочені тимчасові картки — інакше вони зникали б
@@ -1223,7 +994,7 @@ function App() {
     setNick(key); setProfile(u);
     await sSet("session_nick", key, false);
     let w = withDefaults((await sGet("wallet_" + key, true)) || newWallet());
-    checkDailyReset(w, key);
+    checkDailyReset(w);
     if (isSuperAdmin(key)) w.bucksInfinite = true;
     setWallet(w);
     await sSet("wallet_" + key, w, true);
@@ -1417,16 +1188,12 @@ function App() {
       <div style={sx.body}>
         {tab === "casino" && <CasinoTab wallet={wallet} saveWallet={saveWallet} profile={profile} nick={nick}
           abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} showToast={showToast} busyRef={busyRef} tileBanner={tileBanner} />}
-        {tab === "casino" && <PassWidget wallet={wallet} nick={nick} allCards={allCards} showToast={showToast}
-          claimPassLevel={claimPassLevel} claimPassQuest={claimPassQuest} buyPassPremium={buyPassPremium}
-          passCardChoice={passCardChoice} confirmPassCardChoice={confirmPassCardChoice} setPassCardChoice={setPassCardChoice}
-          passSeason={passSeason} />}
         {tab === "shop" && <ShopTab wallet={wallet} saveWallet={saveWallet} showToast={showToast}
           globalShopNonce={globalShopNonce} abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} nick={nick} busyRef={busyRef} />}
         {tab === "collection" && <CollectionTab wallet={wallet} saveWallet={saveWallet} showToast={showToast} allCards={allCards} abuseEvent={abuseEvent} />}
         {tab === "achievements" && <AchievementsTab wallet={wallet} saveWallet={saveWallet} allCards={allCards} showToast={showToast} />}
         {tab === "profile" && <ProfileTab profile={profile} saveProfile={saveProfile} wallet={wallet} saveWallet={saveWallet}
-          nick={nick} onLogout={doLogout} showToast={showToast} onEnterDuel={setDuelRoom} allCards={allCards} siteSettings={siteSettings} maintState={maintState} claimStreakReward={claimStreakReward} setNickColor={setNickColor} />}
+          nick={nick} onLogout={doLogout} showToast={showToast} onEnterDuel={setDuelRoom} allCards={allCards} siteSettings={siteSettings} maintState={maintState} claimStreakReward={claimStreakReward} />}
         {tab === "admin" && isSuperAdmin(nick) && <AdminTab showToast={showToast} setGlobalShopNonce={setGlobalShopNonce}
           setAbuseEvent={setAbuseEvent} setRarityOverride={setRarityOverride} customCards={customCards} setCustomCards={setCustomCards} profile={profile} myNick={nick} allCards={allCards} siteSettings={siteSettings} setSiteSettings={setSiteSettings} />}
       </div>
@@ -1503,7 +1270,7 @@ function TopBar({ profile, wallet, abuseEvent, onLogout }) {
     <div style={sx.topbar}>
       <div style={sx.textLogoSmall}>⚽ SSC</div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, position: "relative" }}>
-        <span style={{ fontSize: 20 }}>{profile.avatar}</span><ColoredNick nick={profile.nick} color={profile.nickColor} /><VerBadge v={profile.verified} />
+        <span style={{ fontSize: 20 }}>{profile.avatar}</span>{profile.nick}<VerBadge v={profile.verified} />
       </div>
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
         <span style={sx.bucksPill}>{fmtBucks(wallet.bucks, wallet.bucksInfinite)}</span>
@@ -1745,16 +1512,6 @@ function effectiveWeights(rarityOverride, abuseEvent, wallet) {
   if (wallet.pityExclusive > 0) w["Ексклюзивна"] /= 8;
   return w;
 }
-function passRewardLabel(r) {
-  if (!r) return "";
-  if (r.type === "bucks") return `💵 ${r.amount}`;
-  if (r.type === "boost") return `⚡ ${r.mult}x ${r.boostType === "bucks" ? "бакси" : "шанси"} ${r.minutes}хв`;
-  if (r.type === "card_random") return `🃏 Рандом: ${r.rarity}`;
-  if (r.type === "card_choice") return `🃏 ${r.rarity} на вибір`;
-  if (r.type === "avatar") return `🎓 Аватарка сезону`;
-  if (r.type === "key") return `🔑 Ключ`;
-  return "";
-}
 function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverride, allCards, showToast, busyRef, tileBanner }) {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
@@ -1826,10 +1583,6 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
       if (hitLegendary) w.pityLegendary = 5;
       else if (w.pityLegendary > 0) w.pityLegendary -= 1;
       updatePityCounters(w, won);
-      bumpPassQuest(w, "spins");
-      if (won.some((c) => c.rarity === "Міфічна")) bumpPassQuest(w, "card_mythic");
-      if (won.some((c) => c.rarity === "Епічна")) bumpPassQuest(w, "card_epic");
-      if (won.some((c) => c.rarity === "Легендарна")) bumpPassQuest(w, "card_legendary");
       if (active && abuseEvent.bucksX2 && !freeLeft) w.bucks += Math.round(liveCost * 0.2 * bucksMult(abuseEvent, w)); // кешбек під час події, реально помножений
       setResult(won);
       await saveWallet(w);
@@ -1883,10 +1636,6 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
         if (!c.tempEvent) w.cardOrigin[c.id] = "Виграно в казино 🎰";
       });
       updatePityCounters(w, spinWon);
-      bumpPassQuest(w, "spins");
-      if (spinWon.some((c) => c.rarity === "Міфічна")) bumpPassQuest(w, "card_mythic");
-      if (spinWon.some((c) => c.rarity === "Епічна")) bumpPassQuest(w, "card_epic");
-      if (spinWon.some((c) => c.rarity === "Легендарна")) bumpPassQuest(w, "card_legendary");
       const hitLegendary = spinWon.some((c) => c.rarity === "Легендарна");
       const hitExclusive = spinWon.some((c) => c.rarity === "Ексклюзивна");
       if (hitExclusive) w.pityExclusive = 8; else if (w.pityExclusive > 0) w.pityExclusive -= 1;
@@ -1980,170 +1729,6 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
             <button style={{ ...sx.primaryBtn, marginTop: 14 }} onClick={() => setBulkResults(null)}>Забрати все</button>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-function PassWidget({ wallet, nick, allCards, showToast, claimPassLevel, claimPassQuest, buyPassPremium, passCardChoice, confirmPassCardChoice, setPassCardChoice, passSeason }) {
-  const [open, setOpen] = useState(false);
-  const [innerTab, setInnerTab] = useState("levels");
-  const level = wallet.passLevel || 0;
-  const xp = wallet.passXP || 0;
-  const xpBase = passXPForLevel(level);
-  const xpForNext = level < PASS_MAX_LEVEL ? PASS_XP_STEPS[level] : 0;
-  const xpIntoLevel = xp - xpBase;
-  const pct = level >= PASS_MAX_LEVEL ? 100 : Math.min(100, Math.round((xpIntoLevel / xpForNext) * 100));
-  const seasonName = (passSeason && passSeason.name) || "SOCCER PASS";
-  const seasonEmoji = (passSeason && passSeason.avatarEmoji) || "🎫";
-  const daysLeft = passSeason && passSeason.endDate ? Math.max(0, Math.ceil((new Date(passSeason.endDate).getTime() - Date.now()) / 86400000)) : null;
-
-  return (
-    <>
-      <div onClick={() => setOpen(true)} style={{
-        position: "fixed", bottom: 76, right: 12, zIndex: 150, cursor: "pointer",
-        background: "linear-gradient(135deg,#1e293b,#0b0f1a)", border: "1px solid #fbbf24", borderRadius: 14,
-        padding: "8px 12px", boxShadow: "0 4px 16px #000a", minWidth: 120,
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "#fbbf24", display: "flex", alignItems: "center", gap: 4 }}>{seasonEmoji} PASS · Lv.{level}</div>
-        <div style={{ height: 5, borderRadius: 4, background: "#1f2937", marginTop: 4, overflow: "hidden", width: 96 }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#fbbf24,#f59e0b)" }} />
-        </div>
-      </div>
-      {open && (
-        <div style={sx.modalOverlay} onClick={() => setOpen(false)}>
-          <div style={{ ...sx.modal, maxWidth: 460, maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ textAlign: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 32 }}>{seasonEmoji}</div>
-              <h3 style={{ margin: "2px 0", color: "#fbbf24" }}>{seasonName}</h3>
-              {daysLeft != null && <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>Залишилось {daysLeft} дн.</p>}
-              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e5e7eb" }}>Рівень {level}/{PASS_MAX_LEVEL} {level < PASS_MAX_LEVEL && `· ${xpIntoLevel}/${xpForNext} XP`}</p>
-              <div style={{ height: 8, borderRadius: 4, background: "#1f2937", margin: "6px auto", maxWidth: 300, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#fbbf24,#f59e0b)" }} />
-              </div>
-              {!wallet.passPremium && (
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#a78bfa" }}>🔒 Преміум-нагороди заблоковано — придбайте PASS у вкладці нижче</p>
-              )}
-            </div>
-            <div style={sx.authTabs}>
-              <button onClick={() => setInnerTab("levels")} style={{ ...sx.authTabBtn, ...(innerTab === "levels" ? sx.authTabActive : {}) }}>Рівні</button>
-              <button onClick={() => setInnerTab("quests")} style={{ ...sx.authTabBtn, ...(innerTab === "quests" ? sx.authTabActive : {}) }}>Квести</button>
-              <button onClick={() => setInnerTab("premium")} style={{ ...sx.authTabBtn, ...(innerTab === "premium" ? sx.authTabActive : {}) }}>PASS</button>
-            </div>
-            {innerTab === "levels" && (
-              <div>
-                {PASS_LEVELS.map((def) => {
-                  const unlocked = level >= def.level;
-                  const freeClaimed = (wallet.passClaimedFree || []).includes(def.level);
-                  const premClaimed = (wallet.passClaimedPremium || []).includes(def.level);
-                  return (
-                    <div key={def.level} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid #1f2937" }}>
-                      <div style={{ width: 28, textAlign: "center", fontSize: 12, fontWeight: 800, color: unlocked ? "#fbbf24" : "#4b5563" }}>{def.level}</div>
-                      <div style={{ flex: 1, opacity: unlocked ? 1 : 0.4 }}>
-                        <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>Безкоштовний</p>
-                        <p style={{ margin: 0, fontSize: 12, color: "#e5e7eb" }}>{passRewardLabel(def.free)}</p>
-                      </div>
-                      <button disabled={!unlocked || freeClaimed} onClick={() => claimPassLevel(def.level, "free")} style={{ ...sx.smallBtn, fontSize: 10, opacity: !unlocked ? 0.3 : freeClaimed ? 0.5 : 1 }}>{freeClaimed ? "✅" : "Забрати"}</button>
-                      <div style={{ flex: 1, opacity: unlocked && wallet.passPremium ? 1 : 0.4 }}>
-                        <p style={{ margin: 0, fontSize: 11, color: "#a78bfa" }}>Преміум</p>
-                        <p style={{ margin: 0, fontSize: 12, color: "#e5e7eb" }}>{passRewardLabel(def.premium)}</p>
-                      </div>
-                      <button disabled={!unlocked || !wallet.passPremium || premClaimed} onClick={() => claimPassLevel(def.level, "premium")} style={{ ...sx.smallBtn, fontSize: 10, background: "#7c3aed", opacity: (!unlocked || !wallet.passPremium) ? 0.3 : premClaimed ? 0.5 : 1 }}>{premClaimed ? "✅" : !wallet.passPremium ? "🔒" : "Забрати"}</button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {innerTab === "quests" && (
-              <PassQuestsPane wallet={wallet} claimPassQuest={claimPassQuest} />
-            )}
-            {innerTab === "premium" && (
-              <PassPremiumPane wallet={wallet} buyPassPremium={buyPassPremium} />
-            )}
-            <button style={{ ...sx.smallBtn, width: "100%", marginTop: 10 }} onClick={() => setOpen(false)}>Закрити</button>
-          </div>
-        </div>
-      )}
-      {passCardChoice && (
-        <div style={sx.modalOverlay} onClick={() => setPassCardChoice(null)}>
-          <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: RARITY_COLOR[passCardChoice.rarity] }}>Оберіть {passCardChoice.rarity.toLowerCase()} картку</h3>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-              {passCardChoice.options.map((c) => (
-                <div key={c.id} style={{ textAlign: "center" }}>
-                  <CardFace card={c} />
-                  <button style={{ ...sx.smallBtn, marginTop: 6, width: "100%" }} onClick={() => confirmPassCardChoice(c)}>Обрати</button>
-                </div>
-              ))}
-            </div>
-            <button style={{ ...sx.smallBtn, marginTop: 12, width: "100%" }} onClick={() => setPassCardChoice(null)}>Скасувати</button>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-function PassQuestsPane({ wallet, claimPassQuest }) {
-  const daily = (wallet.passDailyQuests && wallet.passDailyQuests.quests) || [];
-  const seasonProgress = wallet.passSeasonQuestProgress || {};
-  const seasonClaimed = wallet.passSeasonClaimedQuests || [];
-  return (
-    <div>
-      <p style={{ fontSize: 12, color: "#fbbf24", fontWeight: 700, margin: "8px 0 4px" }}>Квести дня</p>
-      {daily.map((q) => (
-        <div key={q.id} style={{ background: "#111827", borderRadius: 8, padding: 8, marginBottom: 6 }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12 }}>{q.label} <span style={{ color: "#4ade80" }}>+{q.xp} XP</span></p>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ flex: 1, height: 6, borderRadius: 4, background: "#1f2937", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${Math.min(100, (q.progress / q.target) * 100)}%`, background: "#4ade80" }} />
-            </div>
-            <span style={{ fontSize: 10, color: "#9ca3af" }}>{q.progress}/{q.target}</span>
-            <button disabled={q.claimed || q.progress < q.target} style={{ ...sx.smallBtn, fontSize: 10 }} onClick={() => claimPassQuest(q.id, true)}>{q.claimed ? "✅" : "Забрати"}</button>
-          </div>
-        </div>
-      ))}
-      <p style={{ fontSize: 12, color: "#fbbf24", fontWeight: 700, margin: "12px 0 4px" }}>Квести сезону</p>
-      {DEFAULT_SEASON_QUESTS.map((q) => {
-        const locked = q.premiumOnly && !wallet.passPremium;
-        const progress = seasonProgress[q.id] || 0;
-        const claimed = seasonClaimed.includes(q.id);
-        return (
-          <div key={q.id} style={{ background: "#111827", borderRadius: 8, padding: 8, marginBottom: 6, opacity: locked ? 0.5 : 1 }}>
-            <p style={{ margin: "0 0 4px", fontSize: 12 }}>
-              {locked && "🔒 "}{q.label} <span style={{ color: "#4ade80" }}>+{q.xp} XP</span>
-              {q.premiumOnly && <span style={{ fontSize: 9, color: "#a78bfa", marginLeft: 4 }}>SOCCER PASS</span>}
-            </p>
-            {!locked && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ flex: 1, height: 6, borderRadius: 4, background: "#1f2937", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${Math.min(100, (progress / q.target) * 100)}%`, background: "#a78bfa" }} />
-                </div>
-                <span style={{ fontSize: 10, color: "#9ca3af" }}>{progress}/{q.target}</span>
-                <button disabled={claimed || progress < q.target} style={{ ...sx.smallBtn, fontSize: 10 }} onClick={() => claimPassQuest(q.id, false)}>{claimed ? "✅" : "Забрати"}</button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-function PassPremiumPane({ wallet, buyPassPremium }) {
-  const firstTime = !wallet.passFirstPurchaseUsed;
-  const price = firstTime ? Math.round(PASS_PRICE * 0.75) : PASS_PRICE;
-  return (
-    <div style={{ textAlign: "center", padding: "10px 0" }}>
-      {wallet.passPremium ? (
-        <p style={{ color: "#4ade80", fontWeight: 700 }}>✅ У вас є SOCCER PASS цього сезону</p>
-      ) : (
-        <>
-          <p style={{ fontSize: 13, color: "#e5e7eb", marginBottom: 4 }}>Відкрийте преміум-нагороди, +10 рівнів одразу, 2 додаткові щоденні прокрути та ексклюзивні кольори ніку.</p>
-          {firstTime && <p style={{ fontSize: 11, color: "#4ade80", marginBottom: 8 }}>🎉 Знижка -25% на перший пропуск!</p>}
-          <p style={{ fontSize: 22, fontWeight: 900, color: "#fbbf24" }}>
-            {firstTime && <span style={{ textDecoration: "line-through", color: "#6b7280", fontSize: 14, marginRight: 6 }}>{fmtBucks(PASS_PRICE)}</span>}
-            {fmtBucks(price, wallet.bucksInfinite)}
-          </p>
-          <button style={sx.primaryBtn} onClick={buyPassPremium}>Придбати SOCCER PASS</button>
-        </>
       )}
     </div>
   );
@@ -2814,7 +2399,7 @@ function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
     </div>
   );
 }
-function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, showToast, onEnterDuel, allCards, siteSettings, maintState, claimStreakReward, setNickColor }) {
+function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, showToast, onEnterDuel, allCards, siteSettings, maintState, claimStreakReward }) {
   const maintSoon = maintState && maintState.phase && maintState.phase !== "off";
   const [showStreak, setShowStreak] = useState(false);
   const [friendInput, setFriendInput] = useState("");
@@ -2831,7 +2416,7 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
       const [u, fw] = await Promise.all([getUser(f), sGet("wallet_" + f, true)]);
       if (!u) return;
       const cardCount = fw ? Object.values(fw.collection || {}).filter((c) => c > 0).length : 0;
-      list.push({ nick: u.nick, avatar: u.avatar, verified: u.verified, lastSeen: u.lastSeen, createdAt: u.createdAt, cardCount, nickColor: u.nickColor });
+      list.push({ nick: u.nick, avatar: u.avatar, verified: u.verified, lastSeen: u.lastSeen, createdAt: u.createdAt, cardCount });
     }));
     setFriendsData(list);
     setIncomingRequests((await sGet("friend_requests_" + nick, true)) || []);
@@ -2881,7 +2466,7 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
     <div style={sx.tabWrap}>
       <h2 style={sx.h2}>Профіль</h2>
       <div style={{ fontSize: 48, textAlign: "center" }}>{profile.avatar}</div>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, display: "flex", justifyContent: "center", alignItems: "center", gap: 2 }}><ColoredNick nick={profile.nick} color={profile.nickColor} /><VerBadge v={profile.verified} /></div>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, display: "flex", justifyContent: "center", alignItems: "center" }}>{profile.nick}<VerBadge v={profile.verified} /></div>
       <p style={{ textAlign: "center", color: "#6b7280", fontSize: 12 }}>Акаунт з {new Date(profile.createdAt).toLocaleDateString("uk-UA")}</p>
       <div onClick={() => setShowStreak(true)} style={{ cursor: "pointer", textAlign: "center", background: "#1f2937", borderRadius: 10, padding: 10, marginBottom: 12 }}>
         <p style={{ margin: 0, color: "#fbbf24", fontWeight: 700 }}>🔥 Серія входів: {wallet.streak} дн.</p>
@@ -2894,27 +2479,6 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
           {isSuperAdmin(nick) && (<button key={DEV_AVATAR} title="Лише для розробника" onClick={() => saveProfile({ ...profile, avatar: DEV_AVATAR })} style={{ ...sx.avatarBtn, ...(profile.avatar === DEV_AVATAR ? sx.avatarBtnActive : {}), border: "1px solid #fbbf24" }}>{DEV_AVATAR}</button>)}
         </div>
         <CustomAvatarInput profile={profile} saveProfile={saveProfile} />
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <p style={{ fontSize: 12, color: "#9ca3af" }}>Колір ніку:</p>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-          <button onClick={() => setNickColor(null)} style={{ ...sx.smallBtn, fontSize: 10, ...(!profile.nickColor ? { border: "2px solid #fbbf24" } : {}) }}>Звичайний</button>
-          {PASS_NICK_COLORS_FREE.map((c) => (
-            <button key={c} onClick={() => setNickColor(c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, border: profile.nickColor === c ? "2px solid #fbbf24" : "1px solid #374151", cursor: "pointer" }} />
-          ))}
-        </div>
-        {wallet.passPremium ? (
-          <>
-            <p style={{ fontSize: 11, color: "#a78bfa", margin: "6px 0 4px" }}>🎫 Ексклюзивні (SOCCER PASS):</p>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {PASS_NICK_COLORS_PREMIUM.map((c) => (
-                <button key={c} onClick={() => setNickColor(c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, border: profile.nickColor === c ? "2px solid #fbbf24" : "1px solid #374151", cursor: "pointer" }} />
-              ))}
-            </div>
-          </>
-        ) : (
-          <p style={{ fontSize: 10, color: "#6b7280", margin: "4px 0 0" }}>Градієнтні кольори доступні з SOCCER PASS 🎫</p>
-        )}
       </div>
       <div style={{ marginBottom: 14 }}>
         <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>👥 Друзі ({friendsData.length}) <span onClick={loadFriends} style={{ cursor: "pointer", color: "#60a5fa" }}>{friendsBusy ? <span style={{ display: "inline-block", animation: "spin 0.8s linear infinite" }}>⟳</span> : "⟳"} оновити</span></p>
@@ -2938,7 +2502,7 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
           <div key={f.nick} style={{ display: "flex", alignItems: "center", gap: 8, background: "#111827", borderRadius: 8, padding: 8, marginBottom: 6 }}>
             <span onClick={() => setViewFriend(f)} style={{ fontSize: 20, cursor: "pointer" }}>{f.avatar}</span>
             <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setViewFriend(f)}>
-              <div style={{ fontSize: 12, display: "flex", alignItems: "center" }}><ColoredNick nick={f.nick} color={f.nickColor} /><VerBadge v={f.verified} /></div>
+              <div style={{ fontSize: 12, display: "flex", alignItems: "center" }}>{f.nick}<VerBadge v={f.verified} /></div>
               <div style={{ fontSize: 10, color: "#6b7280" }}>{Date.now() - f.lastSeen < 120000 ? "🟢 в мережі" : "востаннє " + timeAgo(f.lastSeen)}</div>
             </div>
             <button onClick={() => setGiftTarget(f)} style={{ ...sx.smallBtn, background: "#7c3aed", fontSize: 10 }}>🎁</button>
@@ -3265,23 +2829,35 @@ function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, 
     }
     setTimeout(() => setSpinning(false), 500);
   }
-  function applyPayout(w, winner) {
+  async function payoutIfWinner(winner) {
     if (!room.stake) return;
-    if (winner === "draw") { w.bucks += room.stake.amount; setStakeResult({ kind: "draw", amount: room.stake.amount }); return; }
+    if (winner === "draw") {
+      // нічия — кожному повертається його власна повна ставка
+      const w = JSON.parse(JSON.stringify(wallet));
+      w.bucks += room.stake.amount;
+      await saveWallet(w);
+      setStakeResult({ kind: "draw", amount: room.stake.amount });
+      return;
+    }
     if (winner === nick) {
-      const won = Math.round(room.stake.amount * 2 * bucksMult(abuseEvent, w));
+      const w = JSON.parse(JSON.stringify(wallet));
+      const won = Math.round(room.stake.amount * 2 * bucksMult(abuseEvent, wallet));
       w.bucks += won;
+      await saveWallet(w);
       setStakeResult({ kind: "win", amount: won });
     } else {
-      setStakeResult({ kind: "lose", amount: room.stake.amount }); // програш вже списаний на старті матчу — тут лише показуємо підсумкове вікно
+      // програш вже списаний на старті матчу — тут лише показуємо підсумкове вікно
+      setStakeResult({ kind: "lose", amount: room.stake.amount });
     }
   }
-  function applyDuelStats(w, winner) {
+  async function recordDuelStats(winner) {
+    const w = JSON.parse(JSON.stringify(wallet));
     const s = w.duelStats || { wins: 0, losses: 0, draws: 0, streak: 0, bestStreak: 0 };
     if (winner === "draw") { s.draws++; s.streak = 0; }
     else if (winner === nick) { s.wins++; s.streak++; s.bestStreak = Math.max(s.bestStreak, s.streak); }
     else { s.losses++; s.streak = 0; }
     w.duelStats = s;
+    await saveWallet(w);
   }
   const [emergencyEnd, setEmergencyEnd] = useState(false);
   async function finish(emergency) {
@@ -3301,12 +2877,8 @@ function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, 
     const winner = myFinal === oppFinal ? "draw" : (myFinal > oppFinal ? nick : otherNick);
     const fresh = { ...room, status: "finished", winner };
     if (!room.opponentIsBot) await sSet("duel_" + room.code, fresh, true);
-    const w = JSON.parse(JSON.stringify(wallet));
-    applyPayout(w, winner);
-    if (!room.opponentIsBot) applyDuelStats(w, winner);
-    bumpPassQuest(w, "duel_play");
-    if (winner === nick) bumpPassQuest(w, "duel_win");
-    await saveWallet(w);
+    await payoutIfWinner(winner);
+    if (!room.opponentIsBot) await recordDuelStats(winner);
     onFinish(fresh);
     const RARE_PLUS = ["Міфічна", "Легендарна", "Ексклюзивна"];
     const myTotal = Object.values(wallet.collection || {}).filter((c) => c > 0).length;
@@ -3673,17 +3245,6 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
   async function forceReloadAll() {
     await sSet("force_reload", { ts: Date.now() }, true);
     showToast("Усім гравцям показано пропозицію оновити сторінку", "ok");
-  }
-  const [passSeasonName, setPassSeasonName] = useState("Back to School");
-  const [passSeasonEmoji, setPassSeasonEmoji] = useState("🎓");
-  const [passSeasonEnd, setPassSeasonEnd] = useState("");
-  useEffect(() => { sGet("pass_season", true).then((s) => { if (s) { setPassSeasonName(s.name || ""); setPassSeasonEmoji(s.avatarEmoji || ""); setPassSeasonEnd(s.endDate ? s.endDate.slice(0, 10) : ""); } }); }, []);
-  async function savePassSeason() {
-    const d = new Date();
-    const defaultEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString(); // останній день поточного місяця
-    const season = { name: passSeasonName, avatarEmoji: passSeasonEmoji, endDate: passSeasonEnd ? new Date(passSeasonEnd).toISOString() : defaultEnd };
-    await sSet("pass_season", season, true);
-    showToast("Сезон SOCCER PASS оновлено", "ok");
   }
   async function scheduleMaintenance() {
     const state = { phase: "warning", effectiveAt: Date.now() + Number(maintWarnMin) * 60000, message: maintMessage, miniGameEnabled: maintMiniGame, activatedAt: Date.now() };
@@ -4171,14 +3732,6 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
       <button style={sx.smallBtn} onClick={forceShopRefresh}>Примусово оновити магазин акцій для всіх</button>
 
       <button style={{ ...sx.primaryBtn, marginBottom: 14, background: "linear-gradient(135deg,#1d4ed8,#7c3aed)" }} onClick={forceReloadAll}>🔄 Оновити сайт у всіх гравців</button>
-
-      <div style={{ background: "#1f2937", border: "1px solid #fbbf24", borderRadius: 10, padding: 12, marginBottom: 14 }}>
-        <p style={{ fontSize: 12, color: "#fbbf24", margin: "0 0 8px", fontWeight: 700 }}>🎫 SOCCER PASS — сезон</p>
-        <input placeholder="Назва сезону" value={passSeasonName} onChange={(e) => setPassSeasonName(e.target.value)} style={sx.input} />
-        <input placeholder="Емодзі аватарки (напр. 🎓)" value={passSeasonEmoji} onChange={(e) => setPassSeasonEmoji(e.target.value)} style={sx.input} />
-        <input type="date" value={passSeasonEnd} onChange={(e) => setPassSeasonEnd(e.target.value)} style={sx.input} />
-        <button style={{ ...sx.smallBtn, width: "100%" }} onClick={savePassSeason}>Зберегти сезон</button>
-      </div>
 
       <h3 style={{ color: "#fbbf24", fontSize: 14, marginTop: 18 }}>🛠️ Технічна перерва</h3>
       <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 8px" }}>
