@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin a Soccer Card</title>
+<title>Spin Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -2114,10 +2114,12 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
   const seasonName = (passSeason && passSeason.name) || "BACK TO SCHOOL";
   const seasonEmoji = (passSeason && passSeason.avatarEmoji) || "🎓";
   const daysLeft = passSeason && passSeason.endDate ? Math.max(0, Math.ceil((new Date(passSeason.endDate).getTime() - Date.now()) / 86400000)) : null;
+  const seasonEndTarget = (passSeason && passSeason.endDate) || "2026-10-01T00:00:00";
+  const countdown = useCountdownTo(seasonEndTarget);
 
   return (
     <>
-      <div onClick={() => setOpen(true)} style={{
+      {!open && <div onClick={() => setOpen(true)} style={{
         position: "fixed", bottom: 80, right: 12, zIndex: 150, cursor: "pointer",
         background: "linear-gradient(135deg,#1e293b,#0b0f1a)", border: "2px solid #fbbf24", borderRadius: 18,
         padding: "15px 20px", boxShadow: "0 4px 22px #000c, 0 0 16px #fbbf2455", minWidth: 188,
@@ -2128,7 +2130,7 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
         <div style={{ height: 8, borderRadius: 4, background: "#1f2937", marginTop: 7, overflow: "hidden", width: 156 }}>
           <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#fbbf24,#f59e0b)" }} />
         </div>
-      </div>
+      </div>}
       {open && (
         <div style={sx.modalOverlay} onClick={() => setOpen(false)}>
           <div style={{
@@ -2152,7 +2154,21 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
             <div style={{ textAlign: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 32 }}>{seasonEmoji}</div>
               <h3 style={{ margin: "2px 0", color: "#fbbf24" }}>{seasonName}</h3>
-              {daysLeft != null && <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>Залишилось {daysLeft} дн.</p>}
+              {countdown && (
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: 6, margin: "4px 0 2px", padding: "5px 12px",
+                  borderRadius: 10, background: "#16281c", border: "1px dashed #fbbf24",
+                }}>
+                  <span style={{ fontSize: 13 }}>🔔</span>
+                  {countdown.ended ? (
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#f87171" }}>Сезон завершено</span>
+                  ) : (
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#fde68a", fontVariantNumeric: "tabular-nums" }}>
+                      До кінця сезону: {countdown.d}д {String(countdown.h).padStart(2, "0")}г {String(countdown.m).padStart(2, "0")}х {String(countdown.s).padStart(2, "0")}с
+                    </span>
+                  )}
+                </div>
+              )}
               <p style={{ margin: "4px 0 0", fontSize: 12, color: "#e5e7eb" }}>Рівень {level}/{PASS_MAX_LEVEL} {level < PASS_MAX_LEVEL && `· ${xpIntoLevel}/${xpForNext} XP`}</p>
               <div style={{ height: 8, borderRadius: 4, background: "#1f2937", margin: "6px auto", maxWidth: 300, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#fbbf24,#f59e0b)" }} />
@@ -2162,18 +2178,28 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
               )}
             </div>
             <div style={sx.authTabs}>
-              <button onClick={() => setInnerTab("levels")} style={{ ...sx.authTabBtn, ...(innerTab === "levels" ? sx.authTabActive : {}) }}>Рівні</button>
+              <button onClick={() => setInnerTab("levels")} style={{ ...sx.authTabBtn, ...(innerTab === "levels" ? sx.authTabActive : {}) }}>📖 Рівні</button>
               <button onClick={() => setInnerTab("premium")} style={{ ...sx.authTabBtn, ...(innerTab === "premium" ? sx.authTabActive : {}), ...(wallet.passPremium ? { background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400" } : {}) }}>👑 PASS</button>
             </div>
             {innerTab === "levels" && (
-              <div>
+              <div style={{
+                background: "repeating-linear-gradient(#16281c 0px, #16281c 27px, #1f3a2833 28px)",
+                border: "1px solid #3f6212", borderRadius: 10, padding: "2px 8px", marginTop: 4,
+              }}>
                 {PASS_LEVELS.map((def) => {
                   const unlocked = level >= def.level;
                   const freeClaimed = (wallet.passClaimedFree || []).includes(def.level);
                   const premClaimed = (wallet.passClaimedPremium || []).includes(def.level);
                   return (
-                    <div key={def.level} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid #1f2937" }}>
-                      <div style={{ width: 28, textAlign: "center", fontSize: 12, fontWeight: 800, color: unlocked ? "#fbbf24" : "#4b5563" }}>{def.level}</div>
+                    <div key={def.level} style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "8px 6px",
+                      borderBottom: "1px dashed #2d4a35", background: def.level % 5 === 0 ? "#14231a55" : "transparent", borderRadius: 6,
+                    }}>
+                      <div style={{
+                        width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 11, fontWeight: 900, color: unlocked ? "#1a1400" : "#9ca3af",
+                        background: unlocked ? "linear-gradient(135deg,#fbbf24,#f59e0b)" : "#1f2937", border: "1px solid #3f6212",
+                      }}>{def.level}</div>
                       {!unlocked && (
                         <button onClick={() => askSkipLevel(def.level)} title={`Купити рівень ${def.level} за ${Math.max(1, def.level - (wallet.passLevel || 0)) * SKIP_LEVEL_PRICE} баксів`} style={{ ...sx.smallBtn, fontSize: 9, padding: "3px 5px", background: "#166534" }}>⏭ {Math.max(1, def.level - (wallet.passLevel || 0)) * SKIP_LEVEL_PRICE}💵</button>
                       )}
@@ -2245,6 +2271,25 @@ function useMidnightCountdown() {
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, []);
+  return left;
+}
+function useCountdownTo(targetDate) {
+  const [left, setLeft] = useState(null);
+  useEffect(() => {
+    if (!targetDate) { setLeft(null); return; }
+    function tick() {
+      const ms = new Date(targetDate).getTime() - Date.now();
+      if (ms <= 0) { setLeft({ ended: true, d: 0, h: 0, m: 0, s: 0 }); return; }
+      const d = Math.floor(ms / 86400000);
+      const h = Math.floor((ms % 86400000) / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      setLeft({ ended: false, d, h, m, s });
+    }
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [targetDate]);
   return left;
 }
 function PassQuestsPane({ wallet, claimPassQuest }) {
