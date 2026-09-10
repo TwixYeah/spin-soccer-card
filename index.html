@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin Soccer Card</title>
+<title>Spin a Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -512,7 +512,7 @@ function newWallet() {
     friends: [], auctionAbuseCount: 0, auctionBanUntil: 0, shopNonce: 0, claimedStreakDay: "",
     dealsBought: { bucket: 0, indices: [] }, lastRewardSeen: null, processedGrantIds: [],
     processedGiftIds: [], processedFriendEventIds: [], cardOrigin: {}, pollSeen: [], lastDailyRoulette: "",
-    keys: 0, boosts: {}, passSeasonAvatarUnlocked: false,
+    keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [],
   };
 }
 // доповнює старі гаманці (створені до v10) новими полями, щоб нічого не падало
@@ -525,7 +525,7 @@ function withDefaults(w) {
 function ColoredNick({ nick, color }) {
   if (!color) return <>{nick}</>;
   if (color.startsWith("linear-gradient")) {
-    return <span style={{ background: color, backgroundSize: "300% auto", animation: "nickShimmer 3s linear infinite", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent", fontWeight: 800, display: "inline-block" }}>{nick}</span>;
+    return <span style={{ background: color, backgroundSize: "160% auto", animation: "nickShimmer 5s ease-in-out infinite", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent", fontWeight: 800, display: "inline-block" }}>{nick}</span>;
   }
   return <span style={{ color, fontWeight: 700 }}>{nick}</span>;
 }
@@ -558,6 +558,45 @@ function VerBadge({ v }) {
   );
 }
 
+function StarsOverlay({ config, wallet, saveWallet, showToast }) {
+  const [popped, setPopped] = useState({});
+  if (!config || !config.active || !config.count) return null;
+  const rng = seededRandom(config.seed || 1);
+  const stars = [];
+  for (let i = 0; i < config.count; i++) {
+    const id = `star_${config.seed}_${i}`;
+    const top = 8 + rng() * 78;
+    const corner = Math.floor(rng() * 4);
+    const horiz = 6 + rng() * 30;
+    stars.push({ id, top, corner, horiz });
+  }
+  const claimed = wallet.starsClaimed || {};
+  async function claimStar(id) {
+    if (claimed[id] || popped[id]) return;
+    setPopped((s) => ({ ...s, [id]: true }));
+    const w = JSON.parse(JSON.stringify(wallet));
+    w.starsClaimed = { ...(w.starsClaimed || {}), [id]: true };
+    if (!w.bucksInfinite) w.bucks += (config.reward || 0);
+    await saveWallet(w);
+    showToast(`⭐ Зірка! +${config.reward || 0} 💵`, "ok");
+  }
+  return (
+    <>
+      {stars.map((s) => {
+        if (claimed[s.id]) return null;
+        const isPopped = popped[s.id];
+        const style = {
+          position: "fixed", top: `${s.top}%`, zIndex: 140, cursor: "pointer",
+          fontSize: 26, filter: "drop-shadow(0 0 6px #fbbf24aa)",
+          animation: isPopped ? "starPop 0.5s ease-out forwards" : "starFloat 2.6s ease-in-out infinite",
+          userSelect: "none", pointerEvents: isPopped ? "none" : "auto",
+          ...(s.corner < 2 ? { left: `${s.horiz}%` } : { right: `${s.horiz}%` }),
+        };
+        return <span key={s.id} onClick={() => claimStar(s.id)} style={style}>⭐</span>;
+      })}
+    </>
+  );
+}
 /* ============================== CARD FACE ============================== */
 function CardFace({ card, count, hidden, small, onClick }) {
   const w = small ? 74 : 120;
@@ -687,7 +726,7 @@ function PersonalBoostBanner({ wallet }) {
   const boosts = activeBoosts(wallet);
   if (!boosts.length) return null;
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 10px 0" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 10px 0", position: "relative", zIndex: 5, background: "#0b0f1a" }}>
       {boosts.map((b) => <SingleBoostBar key={b.type} b={b} />)}
     </div>
   );
@@ -806,6 +845,22 @@ function App() {
     const passEnded = passSeason && passSeason.endDate && new Date(passSeason.endDate).getTime() < Date.now();
     if (passEnded && tab === "quests") setTab("casino");
   }, [passSeason, tab]);
+  const [starsConfig, setStarsConfig] = useState(null);
+  const [partyConfig, setPartyConfig] = useState(null);
+  useEffect(() => {
+    const load = () => { sGet("stars_config", true).then(setStarsConfig).catch(() => {}); sGet("party_config", true).then(setPartyConfig).catch(() => {}); };
+    load();
+    const t = setInterval(load, 10000);
+    return () => clearInterval(t);
+  }, []);
+  const [autoStreakShown, setAutoStreakShown] = useState(false);
+  const [showAutoStreak, setShowAutoStreak] = useState(false);
+  useEffect(() => {
+    if (!wallet || autoStreakShown) return;
+    const pending = wallet.pendingStreakReward && !wallet.pendingStreakReward.claimed && wallet.pendingStreakReward.day === (wallet.streak || 1);
+    if (pending) setShowAutoStreak(true);
+    setAutoStreakShown(true);
+  }, [wallet, autoStreakShown]);
   const [customCards, setCustomCards] = useState([]);
   const [duelRoom, setDuelRoom] = useState(null);
   const [rematchOpponent, setRematchOpponent] = useState(null);
@@ -1504,6 +1559,9 @@ function App() {
       <AdminAbuseBanner event={abuseEvent} />
       <PersonalBoostBanner wallet={wallet} />
       <div style={sx.body}>
+        {tab === "party" && (
+          <PartyTab wallet={wallet} saveWallet={saveWallet} allCards={allCards} showToast={showToast} partyConfig={partyConfig} grantPassXP={grantPassXP} />
+        )}
         {tab === "quests" && (
           <div style={{ ...sx.tabWrap, position: "relative", overflow: "hidden" }}>
             <div aria-hidden="true" style={{
@@ -1522,7 +1580,7 @@ function App() {
               <span>📋 Квести</span>
               <span style={{ fontSize: 11, fontWeight: 800, color: "#1a1400", background: "linear-gradient(90deg,#fbbf24,#f59e0b)", padding: "2px 8px", borderRadius: 999 }}>BACK TO SCHOOL 🎓</span>
             </h2>
-            <PassQuestsPane wallet={wallet} claimPassQuest={claimPassQuest} />
+            <PassQuestsPane wallet={wallet} claimPassQuest={claimPassQuest} partyConfig={partyConfig} setTab={setTab} />
             </div>
           </div>
         )}
@@ -1542,7 +1600,9 @@ function App() {
         {tab === "admin" && isSuperAdmin(nick) && <AdminTab showToast={showToast} setGlobalShopNonce={setGlobalShopNonce}
           setAbuseEvent={setAbuseEvent} setRarityOverride={setRarityOverride} customCards={customCards} setCustomCards={setCustomCards} profile={profile} myNick={nick} allCards={allCards} siteSettings={siteSettings} setSiteSettings={setSiteSettings} />}
       </div>
-      <BottomNav tab={tab} setTab={setTab} isAdmin={isSuperAdmin(nick)} passSeason={passSeason} />
+      <BottomNav tab={tab} setTab={setTab} isAdmin={isSuperAdmin(nick)} passSeason={passSeason} partyConfig={partyConfig} hasNewPartyQuest={partyConfig && partyConfig.questActive && !(wallet.partyQuestsClaimed || []).includes("party_visit")} />
+      <StarsOverlay config={starsConfig} wallet={wallet} saveWallet={saveWallet} showToast={showToast} />
+      {showAutoStreak && <StreakModal wallet={wallet} nick={nick} claimStreakReward={claimStreakReward} onClose={() => setShowAutoStreak(false)} />}
     </div>
   );
 }
@@ -1623,14 +1683,17 @@ function TopBar({ profile, wallet, abuseEvent, onLogout }) {
     </div>
   );
 }
-function BottomNav({ tab, setTab, isAdmin, passSeason }) {
+function BottomNav({ tab, setTab, isAdmin, passSeason, partyConfig, hasNewPartyQuest }) {
   const passEnded = passSeason && passSeason.endDate && new Date(passSeason.endDate).getTime() < Date.now();
-  const items = [["casino", "🎰", "Крутити"], ["shop", "🛒", "Магазин"], ...(passEnded ? [] : [["quests", "📋", "Квести"]]), ["collection", "📚", "Колекція"], ["achievements", "🏅", "Досягнення"], ["profile", "👤", "Профіль"]];
+  const items = [["casino", "🎰", "Крутити"], ...(partyConfig && partyConfig.active ? [["party", "🎉", "Party"]] : []), ["shop", "🛒", "Магазин"], ...(passEnded ? [] : [["quests", "📋", "Квести"]]), ["collection", "📚", "Колекція"], ["achievements", "🏅", "Досягнення"], ["profile", "👤", "Профіль"]];
   if (isAdmin) items.push(["admin", "🛠️", "Адмін"]);
   return (
     <div style={sx.bottomNav}>
       {items.map(([id, icon, label]) => (
-        <button key={id} onClick={() => setTab(id)} style={{ ...sx.navBtn, ...(tab === id ? sx.navBtnActive : {}) }}>
+        <button key={id} onClick={() => setTab(id)} style={{ ...sx.navBtn, ...(tab === id ? sx.navBtnActive : {}), position: "relative" }}>
+          {id === "party" && hasNewPartyQuest && (
+            <span style={{ position: "absolute", top: 2, right: "50%", marginRight: -18, background: "#dc2626", color: "#fff", fontSize: 7, fontWeight: 800, padding: "1px 4px", borderRadius: 999 }}>НОВЕ</span>
+          )}
           <div style={{ fontSize: 18 }}>{icon}</div><div style={{ fontSize: 10 }}>{label}</div>
         </button>
       ))}
@@ -2157,13 +2220,13 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
               {countdown && (
                 <div style={{
                   display: "inline-flex", alignItems: "center", gap: 6, margin: "4px 0 2px", padding: "5px 12px",
-                  borderRadius: 10, background: "#16281c", border: "1px dashed #fbbf24",
+                  borderRadius: 10, background: "#16281c", border: `1px dashed ${countdown.ended ? "#f87171" : countdownColor(countdown.ms)}`,
                 }}>
                   <span style={{ fontSize: 13 }}>🔔</span>
                   {countdown.ended ? (
                     <span style={{ fontSize: 11, fontWeight: 800, color: "#f87171" }}>Сезон завершено</span>
                   ) : (
-                    <span style={{ fontSize: 12, fontWeight: 800, color: "#fde68a", fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: countdownColor(countdown.ms), fontVariantNumeric: "tabular-nums" }}>
                       До кінця сезону: {countdown.d}д {String(countdown.h).padStart(2, "0")}г {String(countdown.m).padStart(2, "0")}х {String(countdown.s).padStart(2, "0")}с
                     </span>
                   )}
@@ -2179,7 +2242,7 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
             </div>
             <div style={sx.authTabs}>
               <button onClick={() => setInnerTab("levels")} style={{ ...sx.authTabBtn, ...(innerTab === "levels" ? sx.authTabActive : {}) }}>📖 Рівні</button>
-              <button onClick={() => setInnerTab("premium")} style={{ ...sx.authTabBtn, ...(innerTab === "premium" ? sx.authTabActive : {}), ...(wallet.passPremium ? { background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400" } : {}) }}>👑 PASS</button>
+              <button onClick={() => setInnerTab("premium")} style={{ ...sx.authTabBtn, ...(innerTab === "premium" ? (wallet.passPremium ? { background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400", fontWeight: 700 } : sx.authTabActive) : {}) }}>👑 PASS</button>
             </div>
             {innerTab === "levels" && (
               <div style={{
@@ -2279,12 +2342,12 @@ function useCountdownTo(targetDate) {
     if (!targetDate) { setLeft(null); return; }
     function tick() {
       const ms = new Date(targetDate).getTime() - Date.now();
-      if (ms <= 0) { setLeft({ ended: true, d: 0, h: 0, m: 0, s: 0 }); return; }
+      if (ms <= 0) { setLeft({ ended: true, d: 0, h: 0, m: 0, s: 0, ms: 0 }); return; }
       const d = Math.floor(ms / 86400000);
       const h = Math.floor((ms % 86400000) / 3600000);
       const m = Math.floor((ms % 3600000) / 60000);
       const s = Math.floor((ms % 60000) / 1000);
-      setLeft({ ended: false, d, h, m, s });
+      setLeft({ ended: false, d, h, m, s, ms });
     }
     tick();
     const t = setInterval(tick, 1000);
@@ -2292,11 +2355,23 @@ function useCountdownTo(targetDate) {
   }, [targetDate]);
   return left;
 }
-function PassQuestsPane({ wallet, claimPassQuest }) {
+// Колір відліку: золотий, поки лишається більше тижня; далі поступово червоніє
+// і "застигає" на повністю червоному за 6 годин до кінця (далі вже нікуди червонішати).
+function countdownColor(ms) {
+  const WEEK = 7 * 24 * 3600000, FREEZE = 6 * 3600000;
+  if (ms == null || ms >= WEEK) return "#fde68a";
+  const clamped = Math.max(FREEZE, ms);
+  const ratio = 1 - (clamped - FREEZE) / (WEEK - FREEZE);
+  const g = [253, 230, 138], r = [248, 113, 113];
+  const c = g.map((gv, i) => Math.round(gv + (r[i] - gv) * ratio));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function PassQuestsPane({ wallet, claimPassQuest, partyConfig, setTab }) {
   const daily = (wallet.passDailyQuests && wallet.passDailyQuests.quests) || [];
   const seasonProgress = wallet.passSeasonQuestProgress || {};
   const seasonClaimed = wallet.passSeasonClaimedQuests || [];
   const resetIn = useMidnightCountdown();
+  const partyQuestDone = (wallet.partyQuestsClaimed || []).includes("party_visit");
   const notebookCard = {
     background: "repeating-linear-gradient(#16281c 0px, #16281c 22px, #1f3a28 23px)",
     borderLeft: "3px solid #dc2626", borderRadius: "2px 8px 8px 2px", padding: "8px 8px 8px 12px", marginBottom: 8,
@@ -2304,6 +2379,16 @@ function PassQuestsPane({ wallet, claimPassQuest }) {
   };
   return (
     <div>
+      {partyConfig && partyConfig.questActive && (
+        <div style={{ ...notebookCard, borderLeft: "3px solid #a855f7", marginBottom: 12 }}>
+          <p style={{ margin: "0 0 4px", fontSize: 12 }}>🎉 {partyConfig.questLabel || "Зайди у вкладку Party"} <span style={{ color: "#4ade80" }}>+{partyConfig.questXP || 0} XP</span></p>
+          {partyQuestDone ? (
+            <p style={{ margin: 0, fontSize: 11, color: "#4ade80" }}>✅ Виконано</p>
+          ) : (
+            <button style={{ ...sx.smallBtn, fontSize: 10, background: "#7c3aed" }} onClick={() => setTab && setTab("party")}>Перейти в Party →</button>
+          )}
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "8px 0 4px" }}>
         <p style={{ fontSize: 12, color: "#fbbf24", fontWeight: 800, margin: 0, display: "flex", alignItems: "center", gap: 5 }}>✏️ Квести дня</p>
         <p style={{ fontSize: 10, color: "#9ca3af", margin: 0, fontVariantNumeric: "tabular-nums" }}>🔔 оновлення через {resetIn}</p>
@@ -2467,11 +2552,19 @@ function DailyRouletteSection({ wallet, saveWallet, allCards, showToast, abuseEv
   const [open, setOpen] = useState(false);
   const usedToday = wallet.lastDailyRoulette === todayStr();
   return (
-    <div style={{ marginTop: 16, padding: 12, borderRadius: 12, background: "linear-gradient(135deg,#1e1b4b,#312e81)", border: "1px solid #4c1d95", textAlign: "center" }}>
-      <p style={{ margin: "0 0 8px", fontWeight: 800, color: "#c4b5fd" }}>🎡 Щоденна рулетка</p>
-      <p style={{ margin: "0 0 8px", fontSize: 11, color: "#9ca3af" }}>Один безкоштовний спін щодня — бакси, картка, або джекпот!</p>
-      <button disabled={usedToday} style={{ ...sx.primaryBtn, maxWidth: 220, opacity: usedToday ? 0.5 : 1 }} onClick={() => setOpen(true)}>
-        {usedToday ? "Використано" : "Крутити рулетку!"}
+    <div style={{
+      marginTop: 16, padding: "16px 14px", borderRadius: 14, position: "relative", overflow: "hidden", textAlign: "center",
+      background: "linear-gradient(150deg,#2e1065,#1e1b4b 55%,#0b0f1a)", border: "1px solid #7c3aed", boxShadow: "0 0 20px #7c3aed33",
+    }}>
+      <span style={{ position: "absolute", top: -10, left: -8, fontSize: 60, opacity: 0.10, transform: "rotate(-12deg)" }}>🎡</span>
+      <span style={{ position: "absolute", bottom: -14, right: -6, fontSize: 50, opacity: 0.10, transform: "rotate(10deg)" }}>✨</span>
+      <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: 15, color: "#e9d5ff", position: "relative" }}>🎡 Щоденна рулетка</p>
+      <button disabled={usedToday} style={{
+        ...sx.primaryBtn, maxWidth: 220, position: "relative",
+        background: usedToday ? undefined : "linear-gradient(90deg,#a855f7,#7c3aed)",
+        boxShadow: usedToday ? "none" : "0 0 14px #a855f766", opacity: usedToday ? 0.5 : 1,
+      }} onClick={() => setOpen(true)}>
+        {usedToday ? "✅ Використано сьогодні" : "🎰 Крутити рулетку!"}
       </button>
       {open && <DailyRouletteModal wallet={wallet} saveWallet={saveWallet} allCards={allCards} showToast={showToast} abuseEvent={abuseEvent} onClose={() => setOpen(false)} />}
     </div>
@@ -2571,22 +2664,41 @@ function DailyRouletteModal({ wallet, saveWallet, allCards, showToast, abuseEven
     </div>
   );
 }
+const RARITY_EMOJI = { "Рідкісна": "🔹", "Епічна": "🔮", "Міфічна": "💠", "Легендарна": "⭐", "Ексклюзивна": "👑" };
 function RaritySummary({ weights, tempCards }) {
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  const maxPct = Math.max(...RARITY_ORDER.map((r) => weights[r] / total * 100));
   return (
-    <div style={sx.raritySummary}>
-      {RARITY_ORDER.map((r) => (
-        <div key={r} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#9ca3af" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: RARITY_COLOR[r], display: "inline-block" }} />
-          {r}: {(weights[r] / total * 100).toFixed(weights[r] / total * 100 < 0.1 ? 4 : 2)}%
+    <div style={{ ...sx.raritySummary, display: "flex", flexDirection: "column", gap: 10 }}>
+      <p style={{ margin: "0 0 2px", fontSize: 11, color: "#6b7280", fontWeight: 700 }}>Шанси випадання за один спін:</p>
+      {RARITY_ORDER.map((r) => {
+        const pct = weights[r] / total * 100;
+        return (
+          <div key={r}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, marginBottom: 3 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4, color: RARITY_COLOR[r], fontWeight: 700 }}>
+                <span>{RARITY_EMOJI[r] || "●"}</span>{r}
+              </span>
+              <span style={{ fontVariantNumeric: "tabular-nums", color: "#9ca3af" }}>{pct.toFixed(pct < 0.1 ? 4 : 2)}%</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 4, background: "#1f2937", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: RARITY_COLOR[r], borderRadius: 4 }} />
+            </div>
+          </div>
+        );
+      })}
+      {(tempCards || []).length > 0 && (
+        <div style={{ marginTop: 4, paddingTop: 6, borderTop: "1px dashed #374151" }}>
+          <p style={{ margin: "0 0 4px", fontSize: 10, color: "#22d3ee", fontWeight: 700 }}>⏳ Тимчасові/подієві картки (окремий шанс, поки активні):</p>
+          {tempCards.map((tc) => (
+            <div key={tc.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#67e8f9", marginBottom: 2 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#06b6d4", display: "inline-block", flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>"{tc.name}"{tc.season ? ` · ${tc.season}` : ""}</span>
+              <span style={{ color: "#9ca3af" }}>2%</span>
+            </div>
+          ))}
         </div>
-      ))}
-      {(tempCards || []).map((tc) => (
-        <div key={tc.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#22d3ee" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#06b6d4", display: "inline-block" }} />
-          Тимчасова ("{tc.name}"{tc.season ? `, ${tc.season}` : ""}): 2%
-        </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -2746,7 +2858,14 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
   const allSold = boughtIndices.length >= 10;
   return (
     <div style={sx.tabWrap}>
-      <h2 style={sx.h2}>Магазин акцій</h2>
+      <div style={{
+        borderRadius: 14, padding: "14px 14px 12px", marginBottom: 12, position: "relative", overflow: "hidden",
+        background: "linear-gradient(135deg,#164e63,#0c2d3a 60%,#0b0f1a)", border: "1px solid #22d3ee55",
+      }}>
+        <span style={{ position: "absolute", top: -12, right: -6, fontSize: 56, opacity: 0.14, transform: "rotate(12deg)" }}>🛍️</span>
+        <h2 style={{ margin: "0 0 2px", fontSize: 18, color: "#67e8f9" }}>🛒 Магазин акцій</h2>
+        <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>10 випадкових знижок, оновлюються щохвилини</p>
+      </div>
       <div style={sx.authTabs}>
         <button onClick={() => setSub("deals")} style={{ ...sx.authTabBtn, ...(sub === "deals" ? sx.authTabActive : {}) }}>Акції</button>
         <button onClick={() => setSub("catalog")} style={{ ...sx.authTabBtn, ...(sub === "catalog" ? sx.authTabActive : {}) }}>Всі картки</button>
@@ -3048,11 +3167,116 @@ function FriendProfileModal({ friend, onClose }) {
     <div style={sx.modalOverlay} onClick={onClose}>
       <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
         <div style={{ fontSize: 48, textAlign: "center" }}>{friend.avatar}</div>
-        <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, display: "flex", justifyContent: "center", alignItems: "center" }}>{friend.nick}<VerBadge v={friend.verified} /></div>
+        <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, display: "flex", justifyContent: "center", alignItems: "center", gap: 2 }}><ColoredNick nick={friend.nick} color={friend.nickColor} /><VerBadge v={friend.verified} /></div>
         <p style={{ textAlign: "center", color: "#6b7280", fontSize: 12 }}>Акаунт з {new Date(friend.createdAt).toLocaleDateString("uk-UA")}</p>
         <p style={{ textAlign: "center", color: "#9ca3af", fontSize: 12 }}>📚 Карток зібрано: {friend.cardCount}</p>
         <p style={{ textAlign: "center", color: "#9ca3af", fontSize: 12 }}>{Date.now() - friend.lastSeen < 120000 ? "🟢 зараз в мережі" : "востаннє " + timeAgo(friend.lastSeen)}</p>
         <button style={{ ...sx.smallBtn, width: "100%", marginTop: 8 }} onClick={onClose}>Закрити</button>
+      </div>
+    </div>
+  );
+}
+const GOLD_CASINO_WEIGHT = { "Епічна": 3, "Міфічна": 8, "Легендарна": 15, "Ексклюзивна": 10 };
+const GOLD_SPIN_PRICE = 500;
+function GoldCasino({ wallet, saveWallet, allCards, showToast }) {
+  const [spinning, setSpinning] = useState(false);
+  const [flickerCard, setFlickerCard] = useState(null);
+  const [won, setWon] = useState(null);
+  async function spin() {
+    if (spinning) return;
+    if (!wallet.bucksInfinite && wallet.bucks < GOLD_SPIN_PRICE) { showToast("Недостатньо баксів", "err"); return; }
+    setSpinning(true); setWon(null);
+    const w = JSON.parse(JSON.stringify(wallet));
+    if (!w.bucksInfinite) w.bucks -= GOLD_SPIN_PRICE;
+    const flickerPool = allCards().filter((c) => !c.tempEvent);
+    let ticks = 0;
+    const flick = setInterval(() => { setFlickerCard(flickerPool[Math.floor(Math.random() * flickerPool.length)]); ticks++; if (ticks > 14) clearInterval(flick); }, 90);
+    setTimeout(async () => {
+      clearInterval(flick);
+      const rarity = weightedPick(Math.random, GOLD_CASINO_WEIGHT);
+      const pool = allCards().filter((c) => c.rarity === rarity && !c.tempEvent);
+      const card = pool[Math.floor(Math.random() * pool.length)];
+      if (card) {
+        w.collection[card.id] = (w.collection[card.id] || 0) + 1;
+        if (!w.obtainedAt[card.id]) w.obtainedAt[card.id] = Date.now();
+        w.maxCount[card.id] = Math.max(w.maxCount[card.id] || 0, w.collection[card.id]);
+        w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[card.id] = "Party 🎉";
+      }
+      await saveWallet(w);
+      setFlickerCard(card || null);
+      setWon(card || { name: "Немає карток цієї рідкісності", rarity });
+      setSpinning(false);
+    }, 1300);
+  }
+  return (
+    <div style={{
+      marginTop: 12, padding: 16, borderRadius: 16, textAlign: "center", position: "relative", overflow: "hidden",
+      background: "linear-gradient(150deg,#451a03,#78350f 50%,#1a1400)", border: "2px solid #fbbf24", boxShadow: "0 0 22px #fbbf2455",
+    }}>
+      <span style={{ position: "absolute", top: -10, left: -6, fontSize: 60, opacity: 0.12, transform: "rotate(-10deg)" }}>👑</span>
+      <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: 16, color: "#fde68a" }}>👑 Золоте казино Party</p>
+      <div style={{ display: "flex", justifyContent: "center", margin: "10px 0", minHeight: 140 }}>
+        {flickerCard ? (
+          <div style={{ filter: spinning ? "blur(1.5px)" : "none", transition: "filter 0.15s" }}>
+            <CardFace card={flickerCard} />
+          </div>
+        ) : (
+          <div style={{
+            width: 120, aspectRatio: "3/4", borderRadius: 10, background: "linear-gradient(160deg,#78350f,#1a1400)",
+            border: "2px dashed #fbbf24", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36,
+          }}>🎰</div>
+        )}
+      </div>
+      {won && (
+        <p style={{ margin: "0 0 8px", fontSize: 12, color: "#4ade80", fontWeight: 700 }}>
+          {won.id ? `🎉 ${won.name}!` : `Немає карток рідкості "${won.rarity}" — спробуйте ще`}
+        </p>
+      )}
+      <button disabled={spinning} style={{
+        ...sx.primaryBtn, background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400", fontWeight: 900,
+        opacity: spinning ? 0.6 : 1,
+      }} onClick={spin}>{spinning ? "Крутиться…" : `Крутити за ${GOLD_SPIN_PRICE} 💵`}</button>
+    </div>
+  );
+}
+function PartyTab({ wallet, saveWallet, allCards, showToast, partyConfig, grantPassXP }) {
+  const claimedQuests = wallet.partyQuestsClaimed || [];
+  useEffect(() => {
+    if (!partyConfig || !partyConfig.questActive) return;
+    if (claimedQuests.includes("party_visit")) return;
+    (async () => {
+      const w = JSON.parse(JSON.stringify(wallet));
+      w.partyQuestsClaimed = [...(w.partyQuestsClaimed || []), "party_visit"];
+      grantPassXP(w, Number(partyConfig.questXP) || 0);
+      await saveWallet(w);
+      showToast(`🎉 Квест виконано: +${partyConfig.questXP || 0} XP пасу!`, "ok");
+    })();
+    // eslint-disable-next-line
+  }, [partyConfig && partyConfig.questActive]);
+  return (
+    <div style={{ ...sx.tabWrap, position: "relative", overflow: "hidden" }}>
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0, opacity: 0.12, fontSize: 42 }}>
+        <span style={{ position: "absolute", top: 6, left: 8, transform: "rotate(-12deg)" }}>🎉</span>
+        <span style={{ position: "absolute", top: 60, right: 10, transform: "rotate(10deg)" }}>🎊</span>
+        <span style={{ position: "absolute", top: 220, left: 16, transform: "rotate(6deg)" }}>🥳</span>
+      </div>
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <h2 style={sx.h2}>🎉 Party</h2>
+        {partyConfig && partyConfig.announcement && (
+          <div style={{ background: "#111827", border: "1px solid #fbbf24", borderRadius: 10, padding: 10, marginBottom: 10 }}>
+            <p style={{ margin: 0, fontSize: 12, color: "#fde68a" }}>📢 {partyConfig.announcement}</p>
+          </div>
+        )}
+        {partyConfig && partyConfig.questActive && (
+          <p style={{ fontSize: 11, color: claimedQuests.includes("party_visit") ? "#4ade80" : "#9ca3af", textAlign: "center", marginBottom: 10 }}>
+            {claimedQuests.includes("party_visit") ? "✅ Квест виконано (див. вкладку Квести)" : "🎉 Квест виконується автоматично…"}
+          </p>
+        )}
+        {partyConfig && partyConfig.casinoActive ? (
+          <GoldCasino wallet={wallet} saveWallet={saveWallet} allCards={allCards} showToast={showToast} />
+        ) : (
+          <p style={{ fontSize: 12, color: "#6b7280", textAlign: "center", marginTop: 20 }}>Тут скоро щось з'явиться 🎈</p>
+        )}
       </div>
     </div>
   );
@@ -3109,7 +3333,11 @@ function GiftCardModal({ wallet, saveWallet, nick, friend, allCards, onClose, sh
 }
 function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
   const [exclusive, setExclusive] = useState(null);
-  const loadExclusive = useCallback(async () => { setExclusive(await sGet("exclusive_achievement", true)); }, []);
+  const [exclusive2, setExclusive2] = useState(null);
+  const loadExclusive = useCallback(async () => {
+    setExclusive(await sGet("exclusive_achievement", true));
+    setExclusive2(await sGet("exclusive_achievement_2", true));
+  }, []);
   useEffect(() => { loadExclusive(); const t = setInterval(loadExclusive, 5000); return () => clearInterval(t); }, [loadExclusive]);
 
   const seen = wallet.achievementsSeen || [];
@@ -3121,36 +3349,39 @@ function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
     await saveWallet(w);
     showToast(`🏅 Отримано: "${a.name}"! +${a.bonus} 💵`, "ok");
   }
-  const exclusiveClaimed = exclusive && seen.includes(exclusive.id);
-  const exclusiveClaimable = exclusive && exclusive.active && !exclusiveClaimed;
+  const exclusiveList = [exclusive, exclusive2].filter((e) => e && (e.active || seen.includes(e.id)));
 
   return (
     <div style={sx.tabWrap}>
       <h2 style={sx.h2}>🏅 Досягнення</h2>
       <p style={{ fontSize: 12, color: "#9ca3af", marginTop: -8, marginBottom: 12 }}>
-        Отримано: {seen.length}/{ACHIEVEMENTS.length + (exclusive ? 1 : 0)}
+        Отримано: {seen.length}/{ACHIEVEMENTS.length + exclusiveList.length}
       </p>
 
-      {exclusive && (exclusive.active || exclusiveClaimed) && (
-        <div style={{
-          background: "linear-gradient(135deg,#78350f,#451a03)", border: "2px solid #fbbf24", borderRadius: 12, padding: 12, marginBottom: 14,
-          boxShadow: "0 0 16px #fbbf2455",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 30 }}>{exclusive.icon || "🌟"}</div>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontWeight: 800, color: "#fde68a" }}>{exclusive.name} <span style={{ fontSize: 10, background: "#f59e0b", color: "#451a03", borderRadius: 6, padding: "1px 6px", marginLeft: 4 }}>ЕКСКЛЮЗИВ</span></p>
-              <p style={{ margin: "2px 0 0", fontSize: 11, color: "#fcd34d" }}>{exclusive.desc}</p>
-              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#4ade80" }}>+{exclusive.bonus} 💵</p>
-            </div>
-          </div>
-          {exclusiveClaimable ? (
-            <button style={{ ...sx.primaryBtn, marginTop: 10 }} onClick={() => claim(exclusive)}>Забрати</button>
-          ) : exclusiveClaimed ? (
-            <p style={{ fontSize: 11, color: "#4ade80", marginTop: 8, marginBottom: 0, textAlign: "center" }}>✅ Уже отримано</p>
-          ) : (
-            <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 8, marginBottom: 0, textAlign: "center" }}>Час вийшов — цю подію пропущено</p>
-          )}
+      {exclusiveList.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: exclusiveList.length > 1 ? "1fr 1fr" : "1fr", gap: 8, marginBottom: 14 }}>
+          {exclusiveList.map((exc) => {
+            const claimed = seen.includes(exc.id);
+            const claimable = exc.active && !claimed;
+            return (
+              <div key={exc.id} style={{
+                background: "linear-gradient(135deg,#78350f,#451a03)", border: "2px solid #fbbf24", borderRadius: 12, padding: 10,
+                boxShadow: "0 0 12px #fbbf2455", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 24 }}>{exc.icon || "🌟"}</div>
+                <p style={{ margin: "3px 0 0", fontWeight: 800, color: "#fde68a", fontSize: 12 }}>{exc.name}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 10, background: "#f59e0b", color: "#451a03", borderRadius: 6, padding: "1px 6px", display: "inline-block" }}>ЕКСКЛЮЗИВ</p>
+                <p style={{ margin: "4px 0 0", fontSize: 11, color: "#4ade80" }}>+{exc.bonus} 💵</p>
+                {claimable ? (
+                  <button style={{ ...sx.primaryBtn, marginTop: 8, fontSize: 11, padding: "6px 10px" }} onClick={() => claim(exc)}>Забрати</button>
+                ) : claimed ? (
+                  <p style={{ fontSize: 10, color: "#4ade80", marginTop: 6, marginBottom: 0 }}>✅ Отримано</p>
+                ) : (
+                  <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 6, marginBottom: 0 }}>Пропущено</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -3277,9 +3508,14 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
       <div style={{ fontSize: 48, textAlign: "center" }}>{profile.avatar}</div>
       <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, display: "flex", justifyContent: "center", alignItems: "center", gap: 2 }}><ColoredNick nick={profile.nick} color={profile.nickColor} /><VerBadge v={profile.verified} /></div>
       <p style={{ textAlign: "center", color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>Акаунт з {new Date(profile.createdAt).toLocaleDateString("uk-UA")} <span onClick={() => setShowPassChange(true)} title="Змінити пароль" style={{ cursor: "pointer", fontSize: 11, background: "#1f2937", borderRadius: 6, padding: "1px 6px", color: "#9ca3af" }}>🔒</span></p>
-      <div onClick={() => setShowStreak(true)} style={{ cursor: "pointer", textAlign: "center", background: "#1f2937", borderRadius: 10, padding: 10, marginBottom: 12 }}>
-        <p style={{ margin: 0, color: "#fbbf24", fontWeight: 700 }}>🔥 Серія входів: {wallet.streak} дн.</p>
-        <p style={{ margin: 0, fontSize: 10, color: "#6b7280" }}>натисніть, щоб побачити нагороди</p>
+      <div onClick={() => setShowStreak(true)} style={{
+        cursor: "pointer", textAlign: "center", position: "relative", overflow: "hidden",
+        background: "linear-gradient(135deg,#7c2d12,#431407)", border: "1px solid #f97316",
+        borderRadius: 12, padding: "12px 10px", marginBottom: 12, boxShadow: "0 0 14px #f9731633",
+      }}>
+        <span style={{ position: "absolute", top: -8, right: -6, fontSize: 46, opacity: 0.14 }}>🔥</span>
+        <p style={{ margin: 0, color: "#fed7aa", fontWeight: 900, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>🔥 Серія входів: {wallet.streak} дн.</p>
+        <p style={{ margin: "3px 0 0", fontSize: 10, color: "#fdba74" }}>натисніть, щоб побачити нагороди</p>
       </div>
       <div style={{ marginBottom: 14 }}>
         <p style={{ fontSize: 12, color: "#9ca3af" }}>Обрати аватар:</p>
@@ -3469,11 +3705,11 @@ function DuelSetupModal({ wallet, saveWallet, nick, friendsData, onClose, onEnte
               {friendsData.length === 0 && <p style={{ fontSize: 11, color: "#6b7280" }}>У вас поки немає друзів — дайте код напряму або грайте проти бота.</p>}
               {friendsData.map((f) => (
                 <div key={f.nick} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1f2937", padding: 8, borderRadius: 8, marginBottom: 6 }}>
-                  <span>{f.avatar} {f.nick}</span>
+                  <span>{f.avatar} <ColoredNick nick={f.nick} color={f.nickColor} /></span>
                   <button disabled={invited[f.nick]} onClick={() => inviteFriendObj(f)} style={{ ...sx.smallBtn, fontSize: 11, opacity: invited[f.nick] ? 0.6 : 1 }}>{invited[f.nick] ? "Запрошено ✓" : "📨 Запросити"}</button>
                 </div>
               ))}
-              <button style={sx.primaryBtn} onClick={inviteBot}>🤖 Грати проти бота (миттєво)</button>
+              <button style={sx.primaryBtn} onClick={inviteBot}>🤖 Грати!</button>
               <button style={{ ...sx.smallBtn, marginTop: 8, width: "100%", background: "#7f1d1d" }} onClick={cancelRoom}>Скасувати кімнату</button>
             </>
           ) : (
@@ -3491,7 +3727,6 @@ function DuelSetupModal({ wallet, saveWallet, nick, friendsData, onClose, onEnte
                   <p style={{ fontSize: 11, color: "#9ca3af", marginTop: -8 }}>Кожен ставить по {stakeAmount || 0} 💵. Переможець забирає {(stakeAmount || 0) * 2} 💵.</p>
                 </>
               )}
-              <p style={{ fontSize: 11, color: "#f87171" }}>Рахуються лише Міфічні, Легендарні та Ексклюзивні картки!</p>
               {maintSoon ? <p style={{ color: "#f87171", fontSize: 12, textAlign: "center" }}>⚠️ Скоро технічна перерва — матчі зараз не запускаються</p> : <button style={sx.primaryBtn} onClick={startMatch}>Почати матч (3-2-1)</button>}
             </>
           )}
@@ -3893,9 +4128,51 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
     await sSet("site_settings", next, true);
   }
   const [exclusiveAchState, setExclusiveAchState] = useState(null);
-  useEffect(() => { sGet("exclusive_achievement", true).then(setExclusiveAchState); }, []);
+  const [starsCount, setStarsCount] = useState(5);
+  const [starsReward, setStarsReward] = useState(100);
+  async function launchStars() {
+    const cfg = { count: Number(starsCount) || 0, reward: Number(starsReward) || 0, active: true, seed: Date.now() };
+    await sSet("stars_config", cfg, true);
+    showToast(`Розкидано ${cfg.count} зірок по сайту, по ${cfg.reward} 💵 кожна!`, "ok");
+  }
+  async function stopStars() {
+    const cur = await sGet("stars_config", true);
+    await sSet("stars_config", { ...(cur || {}), active: false }, true);
+    showToast("Зірки прибрано з сайту", "ok");
+  }
+  const [partyTabActive, setPartyTabActive] = useState(false);
+  const [partyQuestActive, setPartyQuestActive] = useState(false);
+  const [partyQuestLabel, setPartyQuestLabel] = useState("Зайди у вкладку Party");
+  const [partyQuestXP, setPartyQuestXP] = useState(1000);
+  const [partyCasinoActive, setPartyCasinoActive] = useState(false);
+  const [partyAnnouncement, setPartyAnnouncement] = useState("");
+  useEffect(() => {
+    sGet("party_config", true).then((cfg) => {
+      if (!cfg) return;
+      setPartyTabActive(!!cfg.active); setPartyQuestActive(!!cfg.questActive);
+      setPartyQuestLabel(cfg.questLabel || "Зайди у вкладку Party"); setPartyQuestXP(cfg.questXP || 1000);
+      setPartyCasinoActive(!!cfg.casinoActive); setPartyAnnouncement(cfg.announcement || "");
+    });
+  }, []);
+  async function savePartyConfig(patch) {
+    const cur = (await sGet("party_config", true)) || {};
+    const next = { ...cur, ...patch };
+    await sSet("party_config", next, true);
+    setPartyTabActive(!!next.active); setPartyQuestActive(!!next.questActive);
+    setPartyQuestLabel(next.questLabel || "Зайди у вкладку Party"); setPartyQuestXP(next.questXP || 1000);
+    setPartyCasinoActive(!!next.casinoActive); setPartyAnnouncement(next.announcement || "");
+    showToast("Party оновлено", "ok");
+  }
+  useEffect(() => { sGet("exclusive_achievement", true).then(setExclusiveAchState); sGet("exclusive_achievement_2", true).then(setExclusiveAchState2); }, []);
+  const [exclusiveAchState2, setExclusiveAchState2] = useState(null);
+  const [ach1Icon, setAch1Icon] = useState("🌟");
+  const [ach1Name, setAch1Name] = useState("Був присутній на відкритті!");
+  const [ach1Bonus, setAch1Bonus] = useState(2000);
+  const [ach2Icon, setAch2Icon] = useState("🎉");
+  const [ach2Name, setAch2Name] = useState("Особливий гість");
+  const [ach2Bonus, setAch2Bonus] = useState(1000);
   async function enableExclusiveAchievement() {
-    const ex = { id: "exclusive_opening", icon: "🌟", name: "Був присутній на відкритті!", desc: "Був присутній на відкритті!", bonus: 2000, active: true };
+    const ex = { id: "exclusive_opening", icon: ach1Icon || "🌟", name: ach1Name, desc: ach1Name, bonus: Number(ach1Bonus) || 0, active: true };
     await sSet("exclusive_achievement", ex, true);
     setExclusiveAchState(ex);
     showToast("Ексклюзивне досягнення активовано для всіх гравців!", "ok");
@@ -3906,6 +4183,19 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
     await sSet("exclusive_achievement", ex, true);
     setExclusiveAchState(ex);
     showToast("Досягнення прибрано — хто не встиг, більше не отримає", "ok");
+  }
+  async function enableExclusiveAchievement2() {
+    const ex = { id: "exclusive_opening_2", icon: ach2Icon || "🎉", name: ach2Name, desc: ach2Name, bonus: Number(ach2Bonus) || 0, active: true };
+    await sSet("exclusive_achievement_2", ex, true);
+    setExclusiveAchState2(ex);
+    showToast("Друге ексклюзивне досягнення активовано для всіх гравців!", "ok");
+  }
+  async function disableExclusiveAchievement2() {
+    if (!exclusiveAchState2) return;
+    const ex = { ...exclusiveAchState2, active: false };
+    await sSet("exclusive_achievement_2", ex, true);
+    setExclusiveAchState2(ex);
+    showToast("Друге досягнення прибрано — хто не встиг, більше не отримає", "ok");
   }
   const [targetNick, setTargetNick] = useState("");
   const [amount, setAmount] = useState(1000);
@@ -4423,6 +4713,61 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
       <button style={{ ...sx.primaryBtn, marginBottom: 6 }} onClick={launchAbuse}>🔥 Запустити ADMIN ABUSE</button>
       <button style={{ ...sx.smallBtn, width: "100%", marginBottom: 14 }} onClick={stopAbuse}>Зупинити подію</button>
 
+      <div style={{ background: "#1f2937", border: "1px solid #fbbf24", borderRadius: 10, padding: 12, marginBottom: 14 }}>
+        <p style={{ fontSize: 12, color: "#fbbf24", fontWeight: 700, margin: "0 0 8px" }}>🌟 Ексклюзивні досягнення (видаються всім гравцям одразу)</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div>
+            <p style={{ fontSize: 10, color: "#9ca3af", margin: "0 0 4px" }}>Слот 1 {exclusiveAchState && exclusiveAchState.active ? "· 🟢 активне" : ""}</p>
+            <input placeholder="Емодзі" value={ach1Icon} onChange={(e) => setAch1Icon(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
+            <input placeholder="Назва" value={ach1Name} onChange={(e) => setAch1Name(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
+            <input type="number" placeholder="Бонус, баксів" value={ach1Bonus} onChange={(e) => setAch1Bonus(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
+            <div style={{ display: "flex", gap: 6 }}>
+              <button style={{ ...sx.smallBtn, flex: 1, background: "#166534" }} onClick={enableExclusiveAchievement}>Видати всім</button>
+              <button style={{ ...sx.smallBtn, flex: 1, background: "#7f1d1d" }} onClick={disableExclusiveAchievement}>Прибрати</button>
+            </div>
+          </div>
+          <div>
+            <p style={{ fontSize: 10, color: "#9ca3af", margin: "0 0 4px" }}>Слот 2 {exclusiveAchState2 && exclusiveAchState2.active ? "· 🟢 активне" : ""}</p>
+            <input placeholder="Емодзі" value={ach2Icon} onChange={(e) => setAch2Icon(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
+            <input placeholder="Назва" value={ach2Name} onChange={(e) => setAch2Name(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
+            <input type="number" placeholder="Бонус, баксів" value={ach2Bonus} onChange={(e) => setAch2Bonus(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
+            <div style={{ display: "flex", gap: 6 }}>
+              <button style={{ ...sx.smallBtn, flex: 1, background: "#166534" }} onClick={enableExclusiveAchievement2}>Видати всім</button>
+              <button style={{ ...sx.smallBtn, flex: 1, background: "#7f1d1d" }} onClick={disableExclusiveAchievement2}>Прибрати</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: "#1f2937", border: "1px solid #fbbf24", borderRadius: 10, padding: 12, marginBottom: 14 }}>
+        <h3 style={{ color: "#fbbf24", fontSize: 14, margin: "0 0 8px" }}>⭐ Збір зірок по сайту</h3>
+        <input type="number" placeholder="Скільки зірок розкидати" value={starsCount} onChange={(e) => setStarsCount(e.target.value)} style={sx.input} />
+        <input type="number" placeholder="Нагорода за зірку, баксів" value={starsReward} onChange={(e) => setStarsReward(e.target.value)} style={sx.input} />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ ...sx.smallBtn, flex: 1, background: "#166534" }} onClick={launchStars}>✨ Розкидати зірки</button>
+          <button style={{ ...sx.smallBtn, flex: 1, background: "#7f1d1d" }} onClick={stopStars}>Прибрати</button>
+        </div>
+      </div>
+
+      <div style={{ background: "#1f2937", border: "1px solid #a855f7", borderRadius: 10, padding: 12, marginBottom: 14 }}>
+        <h3 style={{ color: "#c4b5fd", fontSize: 14, margin: "0 0 8px" }}>🎉 Вкладка Party</h3>
+        <label style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
+          <input type="checkbox" checked={partyTabActive} onChange={(e) => savePartyConfig({ active: e.target.checked })} /> Показати вкладку "Party" всім гравцям
+        </label>
+        <label style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+          <input type="checkbox" checked={partyQuestActive} onChange={(e) => savePartyConfig({ questActive: e.target.checked })} /> Тимчасовий квест активний
+        </label>
+        <input placeholder='Текст квесту (напр. "Зайди у вкладку Party")' value={partyQuestLabel} onChange={(e) => setPartyQuestLabel(e.target.value)} style={sx.input} />
+        <input type="number" placeholder="XP пасу за квест" value={partyQuestXP} onChange={(e) => setPartyQuestXP(e.target.value)} style={sx.input} />
+        <button style={{ ...sx.smallBtn, width: "100%", marginBottom: 8, background: "#7c3aed" }} onClick={() => savePartyConfig({ questActive: true, questLabel: partyQuestLabel, questXP: Number(partyQuestXP) || 0 })}>Зберегти й активувати квест</button>
+        <label style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="checkbox" checked={partyCasinoActive} onChange={(e) => savePartyConfig({ casinoActive: e.target.checked })} /> 👑 Золоте казино у Party активне
+        </label>
+        <input placeholder="Оголошення на вкладці Party (необов'язково)" value={partyAnnouncement} onChange={(e) => setPartyAnnouncement(e.target.value)} style={{ ...sx.input, marginTop: 8 }} />
+        <button style={{ ...sx.smallBtn, width: "100%", marginBottom: 8, background: "#166534" }} onClick={() => savePartyConfig({ announcement: partyAnnouncement })}>Зберегти оголошення</button>
+        <button style={{ ...sx.smallBtn, width: "100%", background: "#7f1d1d" }} onClick={() => { savePartyConfig({ active: false, questActive: false, casinoActive: false, announcement: "" }); setPartyAnnouncement(""); }}>🗑 Прибрати вкладку Party повністю (вимкнути все)</button>
+      </div>
+
       <h3 style={{ color: "#fbbf24", fontSize: 14 }}>📢 Рекламний банер (окремо від подій)</h3>
       <textarea value={adBannerText} onChange={(e) => setAdBannerText(e.target.value)} placeholder="Текст оголошення" style={{ ...sx.input, minHeight: 50 }} />
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
@@ -4665,7 +5010,7 @@ const sx = {
   authWrap: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100dvh", background: "radial-gradient(circle at 30% 20%, #14532d, transparent 60%), radial-gradient(circle at 80% 80%, #78350f55, transparent 55%), #0b0f1a", padding: 16 },
   authCard: { background: "#111827dd", backdropFilter: "blur(6px)", border: "1px solid #22c55e33", borderRadius: 20, padding: 24, width: "100%", maxWidth: 300, boxShadow: "0 8px 30px #000a" },
   authTabs: { display: "flex", marginBottom: 14, background: "#0b0f1a", borderRadius: 12, overflow: "hidden", padding: 3 },
-  authTabBtn: { flex: 1, padding: "9px 0", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: 13, borderRadius: 9 },
+  authTabBtn: { flex: 1, padding: "9px 0", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: 13, borderRadius: 9, margin: 0 },
   authTabActive: { background: "linear-gradient(135deg,var(--primary-a,#22c55e),var(--primary-b,#16a34a))", color: "#052e16", fontWeight: 700 },
   input: { width: "100%", boxSizing: "border-box", padding: "11px 14px", marginBottom: 10, borderRadius: 10, border: "1px solid #374151", background: "#0b0f1acc", color: "#e5e7eb", fontSize: 14 },
   primaryBtn: { width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "linear-gradient(135deg,var(--primary-a,#22c55e),var(--primary-b,#16a34a))", color: "#052e16", fontWeight: 800, fontSize: 14, cursor: "pointer", boxShadow: "0 3px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25)" },
@@ -4689,8 +5034,8 @@ const sx = {
   textLogoSmall: { fontSize: 14, fontWeight: 900, background: "linear-gradient(90deg,var(--primary-a,#22c55e),#fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
   sellerAvatar: { marginRight: 4 },
   shopGrid: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 },
-  shopCard: { background: "#111827", borderRadius: 10, padding: 8, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" },
-  discountTag: { position: "absolute", top: 4, left: 4, background: "#dc2626", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6 },
+  shopCard: { background: "linear-gradient(160deg,#1a2035,#0f1420)", border: "1px solid #2d3748", borderRadius: 14, padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", boxShadow: "0 3px 10px #0006" },
+  discountTag: { position: "absolute", top: -6, left: -6, background: "linear-gradient(135deg,#ef4444,#b91c1c)", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, boxShadow: "0 2px 6px #0008" },
   auctionRow: { display: "flex", alignItems: "center", background: "#111827", borderRadius: 12, padding: 10, boxShadow: "0 2px 6px #0004" },
   boostTag: { marginLeft: 6, color: "#a78bfa", fontSize: 10 },
   modalOverlay: { position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
@@ -4730,9 +5075,11 @@ function GlobalStyles({ theme, boldText }) {
       @keyframes tempShift { 0%,100% { border-color: #3b82f6; box-shadow: 0 0 14px #3b82f6aa; } 50% { border-color: #22d3ee; box-shadow: 0 0 14px #22d3eeaa; } }
       @keyframes themeFall { 0% { transform: translateY(-5vh) rotate(0deg); opacity: 0; } 10% { opacity: 0.9; } 100% { transform: translateY(105vh) rotate(360deg); opacity: 0.7; } }
       @keyframes boostPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
-      @keyframes nickShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+      @keyframes nickShimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
       @keyframes passIconGlow { 0%,100% { box-shadow: 0 4px 20px #000b, 0 0 10px #fbbf2455; } 50% { box-shadow: 0 4px 24px #000b, 0 0 22px #fbbf24cc; } }
       @keyframes premiumGoldShine { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+      @keyframes starFloat { 0%,100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-10px) rotate(8deg); } }
+      @keyframes starPop { 0% { transform: scale(1); opacity: 1; } 60% { transform: scale(1.8); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       .card-legendary-shine { animation: goldShine 1.8s ease-in-out infinite; }
       .card-exclusive-shimmer { animation: exclusiveShift 2.4s linear infinite; }
