@@ -561,41 +561,34 @@ function VerBadge({ v }) {
 function StarsOverlay({ config, wallet, saveWallet, showToast }) {
   const [popped, setPopped] = useState({});
   if (!config || !config.active || !config.count) return null;
-  const rng = seededRandom(config.seed || 1);
-  const stars = [];
-  for (let i = 0; i < config.count; i++) {
-    const id = `star_${config.seed}_${i}`;
-    const top = 8 + rng() * 78;
-    const corner = Math.floor(rng() * 4);
-    const horiz = 6 + rng() * 30;
-    stars.push({ id, top, corner, horiz });
-  }
   const claimed = wallet.starsClaimed || {};
-  async function claimStar(id) {
+  // рахуємо, скільки зірок цього "розкидання" (seed) гравець вже зібрав —
+  // показуємо їх по черзі, одну за раз, а не всі одразу
+  const claimedForSeed = Object.keys(claimed).filter((k) => k.startsWith(`star_${config.seed}_`)).length;
+  if (claimedForSeed >= config.count) return null;
+  const rng = seededRandom((config.seed || 1) + claimedForSeed * 7919);
+  const id = `star_${config.seed}_${claimedForSeed}`;
+  const top = 8 + rng() * 78;
+  const corner = Math.floor(rng() * 4);
+  const horiz = 6 + rng() * 30;
+  async function claimStar() {
     if (claimed[id] || popped[id]) return;
     setPopped((s) => ({ ...s, [id]: true }));
     const w = JSON.parse(JSON.stringify(wallet));
     w.starsClaimed = { ...(w.starsClaimed || {}), [id]: true };
     if (!w.bucksInfinite) w.bucks += (config.reward || 0);
     await saveWallet(w);
-    showToast(`⭐ Зірка! +${config.reward || 0} 💵`, "ok");
+    showToast(`⭐ Зірка! +${config.reward || 0} 💵 (${claimedForSeed + 1}/${config.count})`, "ok");
   }
-  return (
-    <>
-      {stars.map((s) => {
-        if (claimed[s.id]) return null;
-        const isPopped = popped[s.id];
-        const style = {
-          position: "fixed", top: `${s.top}%`, zIndex: 140, cursor: "pointer",
-          fontSize: 26, filter: "drop-shadow(0 0 6px #fbbf24aa)",
-          animation: isPopped ? "starPop 0.5s ease-out forwards" : "starFloat 2.6s ease-in-out infinite",
-          userSelect: "none", pointerEvents: isPopped ? "none" : "auto",
-          ...(s.corner < 2 ? { left: `${s.horiz}%` } : { right: `${s.horiz}%` }),
-        };
-        return <span key={s.id} onClick={() => claimStar(s.id)} style={style}>⭐</span>;
-      })}
-    </>
-  );
+  const isPopped = popped[id];
+  const style = {
+    position: "fixed", top: `${top}%`, zIndex: 140, cursor: "pointer",
+    fontSize: 26, filter: "drop-shadow(0 0 6px #fbbf24aa)",
+    animation: isPopped ? "starPop 0.5s ease-out forwards" : "starFloat 2.6s ease-in-out infinite",
+    userSelect: "none", pointerEvents: isPopped ? "none" : "auto",
+    ...(corner < 2 ? { left: `${horiz}%` } : { right: `${horiz}%` }),
+  };
+  return <span onClick={claimStar} style={style}>⭐</span>;
 }
 /* ============================== CARD FACE ============================== */
 function CardFace({ card, count, hidden, small, onClick }) {
@@ -1074,6 +1067,7 @@ function App() {
             rewardSeenRef.current = reward.id;
             const w2 = { ...walletRef.current, collection: { ...walletRef.current.collection }, obtainedAt: { ...walletRef.current.obtainedAt }, cardOrigin: { ...(walletRef.current.cardOrigin || {}) } };
             if (!w2.bucksInfinite && reward.amount) w2.bucks += reward.amount;
+            if (reward.spins) w2.freeSpinsLeft = (w2.freeSpinsLeft || 0) + reward.spins;
             if (reward.cardId) {
               w2.collection[reward.cardId] = (w2.collection[reward.cardId] || 0) + 1;
               if (!w2.obtainedAt[reward.cardId]) w2.obtainedAt[reward.cardId] = Date.now();
@@ -1201,7 +1195,8 @@ function App() {
   }
 
   function grantPassXP(w, amount) {
-    w.passXP = (w.passXP || 0) + amount;
+    const mult = (abuseEvent && abuseEvent.xpX2 && abuseEvent.expiresAt > Date.now()) ? 2 : 1;
+    w.passXP = (w.passXP || 0) + Math.round(amount * mult);
     w.passLevel = passLevelFromTotalXP(w.passXP);
   }
   async function claimPassQuest(questId, isDaily) {
@@ -1518,6 +1513,7 @@ function App() {
             <div style={{ fontSize: 48 }}>🎁</div>
             <h3 style={{ color: "#fbbf24" }}>Вам нагорода!</h3>
             {rewardPopup.amount > 0 && <p style={{ fontSize: 20, fontWeight: 800, color: "#4ade80" }}>+{rewardPopup.amount} 💵</p>}
+            {rewardPopup.spins > 0 && <p style={{ fontSize: 18, fontWeight: 800, color: "#60a5fa" }}>🎰 +{rewardPopup.spins} безкоштовних прокрутів</p>}
             {rewardPopup.cardNames && <p style={{ fontSize: 16, fontWeight: 800, color: "#fbbf24" }}>🃏 {rewardPopup.cardNames.join(", ")}</p>}
             <p style={{ fontSize: 13, color: "#9ca3af" }}>{rewardPopup.reason}</p>
             <button style={sx.primaryBtn} onClick={() => setRewardPopup(null)}>Дякую!</button>
@@ -1940,6 +1936,9 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
   const [reels, setReels] = useState([null, null, null]);
+  const [stoppedReels, setStoppedReels] = useState([false, false, false]);
+  const stoppedRef = useRef([false, false, false]);
+  useEffect(() => { stoppedRef.current = stoppedReels; }, [stoppedReels]);
   const [showBulk, setShowBulk] = useState(false);
   const [bulkCount, setBulkCount] = useState(10);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -1970,29 +1969,39 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
     if (freeLeft) w.freeSpinsLeft -= 1;
     else { if (!w.bucksInfinite) w.bucks -= liveCost; w.spinLevel = liveLevel + 1 >= COST_LEVELS.length ? 0 : liveLevel + 1; w.lastPaidSpinAt = Date.now(); }
 
-    let frame = 0;
+    // визначаємо результат ОДРАЗУ (щоб економіка/пітірахунок не залежали від анімації),
+    // але показуємо його гравцю поступово — барабан за барабаном, як у справжньому слоті
     const pool = allCards();
+    const rng = seededRandom(Date.now() % 1000000 + Math.floor(Math.random() * 100000));
+    const weights = effectiveWeights(rarityOverride, abuseEvent, w);
+    const rarities = pickRaritiesWithPity(rng, weights, w);
+    const won = [];
+    for (let i = 0; i < 3; i++) {
+      const rarity = rarities[i];
+      const tempPool = pool.filter((c) => c.tempEvent && c.expiresAt > Date.now());
+      const rarityPool = pool.filter((c) => c.rarity === rarity && !c.tempEvent);
+      let card = null;
+      for (const tc of tempPool) { if (rng() < (tc.dropChance != null ? tc.dropChance : 0.02)) { card = tc; break; } }
+      if (!card) { const idx = Math.floor(rng() * rarityPool.length); card = rarityPool[Math.min(idx, rarityPool.length - 1)] || pool[0]; }
+      won.push(card);
+    }
+
+    setStoppedReels([false, false, false]);
+    let frame = 0;
     const anim = setInterval(() => {
-      setReels([pool[Math.floor(Math.random() * pool.length)], pool[Math.floor(Math.random() * pool.length)], pool[Math.floor(Math.random() * pool.length)]]);
-      frame++; if (frame > 14) clearInterval(anim);
+      setReels((cur) => cur.map((c, i) => (stoppedRef.current[i] ? c : pool[Math.floor(Math.random() * pool.length)])));
+      frame++; if (frame > 20) clearInterval(anim);
     }, 90);
+    const STOP_DELAYS = [800, 1150, 1550];
+    STOP_DELAYS.forEach((delay, i) => {
+      setTimeout(() => {
+        setStoppedReels((s) => { const n = [...s]; n[i] = true; stoppedRef.current = n; return n; });
+        setReels((cur) => cur.map((c, j) => (j === i ? won[i] : c)));
+      }, delay);
+    });
 
     setTimeout(async () => {
       clearInterval(anim);
-      const rng = seededRandom(Date.now() % 1000000 + Math.floor(Math.random() * 100000));
-      const weights = effectiveWeights(rarityOverride, abuseEvent, w);
-      const rarities = pickRaritiesWithPity(rng, weights, w);
-      const won = [];
-      for (let i = 0; i < 3; i++) {
-        const rarity = rarities[i];
-        const tempPool = pool.filter((c) => c.tempEvent && c.expiresAt > Date.now());
-        const rarityPool = pool.filter((c) => c.rarity === rarity && !c.tempEvent);
-        let card = null;
-        for (const tc of tempPool) { if (rng() < (tc.dropChance != null ? tc.dropChance : 0.02)) { card = tc; break; } }
-        if (!card) { const idx = Math.floor(rng() * rarityPool.length); card = rarityPool[Math.min(idx, rarityPool.length - 1)] || pool[0]; }
-        won.push(card);
-      }
-      setReels(won);
       w.cardOrigin = w.cardOrigin || {};
       won.forEach((c) => {
         w.collection[c.id] = (w.collection[c.id] || 0) + 1;
@@ -2015,7 +2024,7 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
       setResult(won);
       await saveWallet(w);
       setSpinning(false); busyRef.current = false;
-    }, 1500);
+    }, 1750);
   }
   function walletSnapshot() { return JSON.parse(JSON.stringify(wallet)); }
   function estimateBulkCost(w, count) {
@@ -2088,7 +2097,19 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
         Безкоштовно сьогодні: <b style={{ color: "#4ade80" }}>{wallet.freeSpinsLeft}</b> · Ціна: {cost} 💵
       </p>
       <div style={sx.reelsRow}>
-        {[0, 1, 2].map((i) => (<div key={i} style={{ ...sx.reelSlot, ...(spinning ? { animation: "reelPulse 0.4s ease infinite" } : {}) }}>{reels[i] ? <CardFace card={reels[i]} /> : <div style={sx.reelEmpty}>?</div>}</div>))}
+        {[0, 1, 2].map((i) => {
+          const reelSpinning = spinning && !stoppedReels[i];
+          const justStopped = spinning && stoppedReels[i];
+          return (
+            <div key={i} style={{
+              ...sx.reelSlot,
+              ...(reelSpinning ? { animation: "reelPulse 0.3s ease infinite" } : {}),
+              filter: reelSpinning ? "blur(2px) brightness(0.8)" : "none",
+              transform: justStopped ? "scale(1.08)" : "scale(1)",
+              transition: "transform 0.25s ease, filter 0.15s ease",
+            }}>{reels[i] ? <CardFace card={reels[i]} /> : <div style={sx.reelEmpty}>?</div>}</div>
+          );
+        })}
       </div>
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
         <button disabled={spinning} onClick={spin} style={{ ...sx.primaryBtn, opacity: spinning ? 0.6 : 1, maxWidth: 220 }}>
@@ -2666,11 +2687,36 @@ function DailyRouletteModal({ wallet, saveWallet, allCards, showToast, abuseEven
 }
 const RARITY_EMOJI = { "Рідкісна": "🔹", "Епічна": "🔮", "Міфічна": "💠", "Легендарна": "⭐", "Ексклюзивна": "👑" };
 function RaritySummary({ weights, tempCards }) {
+  const [expanded, setExpanded] = useState(false);
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   const maxPct = Math.max(...RARITY_ORDER.map((r) => weights[r] / total * 100));
+  if (!expanded) {
+    return (
+      <div style={{ ...sx.raritySummary, flexDirection: "column", gap: 8 }}>
+        <div onClick={() => setExpanded(true)} style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", cursor: "pointer" }}>
+          {RARITY_ORDER.map((r) => {
+            const pct = weights[r] / total * 100;
+            return (
+              <span key={r} style={{
+                display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: RARITY_COLOR[r],
+                background: "#111827", border: `1px solid ${RARITY_COLOR[r]}55`, borderRadius: 999, padding: "3px 8px",
+              }}>
+                {RARITY_EMOJI[r]} {pct.toFixed(pct < 0.1 ? 3 : 1)}%
+              </span>
+            );
+          })}
+          {(tempCards || []).length > 0 && <span style={{ fontSize: 11, color: "#67e8f9", background: "#111827", border: "1px solid #22d3ee55", borderRadius: 999, padding: "3px 8px" }}>⏳ +{tempCards.length}</span>}
+        </div>
+        <p style={{ margin: 0, textAlign: "center", fontSize: 10, color: "#6b7280", cursor: "pointer" }} onClick={() => setExpanded(true)}>натисніть для деталей ▾</p>
+      </div>
+    );
+  }
   return (
     <div style={{ ...sx.raritySummary, display: "flex", flexDirection: "column", gap: 10 }}>
-      <p style={{ margin: "0 0 2px", fontSize: 11, color: "#6b7280", fontWeight: 700 }}>Шанси випадання за один спін:</p>
+      <div onClick={() => setExpanded(false)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+        <p style={{ margin: 0, fontSize: 11, color: "#6b7280", fontWeight: 700 }}>Шанси випадання за один спін:</p>
+        <p style={{ margin: 0, fontSize: 10, color: "#6b7280" }}>згорнути ▴</p>
+      </div>
       {RARITY_ORDER.map((r) => {
         const pct = weights[r] / total * 100;
         return (
@@ -3214,7 +3260,7 @@ function GoldCasino({ wallet, saveWallet, allCards, showToast }) {
       background: "linear-gradient(150deg,#451a03,#78350f 50%,#1a1400)", border: "2px solid #fbbf24", boxShadow: "0 0 22px #fbbf2455",
     }}>
       <span style={{ position: "absolute", top: -10, left: -6, fontSize: 60, opacity: 0.12, transform: "rotate(-10deg)" }}>👑</span>
-      <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: 16, color: "#fde68a" }}>👑 Золоте казино Party</p>
+      <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: 16, color: "#fde68a" }}>👑 Золота рулетка</p>
       <div style={{ display: "flex", justifyContent: "center", margin: "10px 0", minHeight: 140 }}>
         {flickerCard ? (
           <div style={{ filter: spinning ? "blur(1.5px)" : "none", transition: "filter 0.15s" }}>
@@ -4127,7 +4173,6 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
     setSiteSettings(next);
     await sSet("site_settings", next, true);
   }
-  const [exclusiveAchState, setExclusiveAchState] = useState(null);
   const [starsCount, setStarsCount] = useState(5);
   const [starsReward, setStarsReward] = useState(100);
   async function launchStars() {
@@ -4163,40 +4208,6 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
     setPartyCasinoActive(!!next.casinoActive); setPartyAnnouncement(next.announcement || "");
     showToast("Party оновлено", "ok");
   }
-  useEffect(() => { sGet("exclusive_achievement", true).then(setExclusiveAchState); sGet("exclusive_achievement_2", true).then(setExclusiveAchState2); }, []);
-  const [exclusiveAchState2, setExclusiveAchState2] = useState(null);
-  const [ach1Icon, setAch1Icon] = useState("🌟");
-  const [ach1Name, setAch1Name] = useState("Був присутній на відкритті!");
-  const [ach1Bonus, setAch1Bonus] = useState(2000);
-  const [ach2Icon, setAch2Icon] = useState("🎉");
-  const [ach2Name, setAch2Name] = useState("Особливий гість");
-  const [ach2Bonus, setAch2Bonus] = useState(1000);
-  async function enableExclusiveAchievement() {
-    const ex = { id: "exclusive_opening", icon: ach1Icon || "🌟", name: ach1Name, desc: ach1Name, bonus: Number(ach1Bonus) || 0, active: true };
-    await sSet("exclusive_achievement", ex, true);
-    setExclusiveAchState(ex);
-    showToast("Ексклюзивне досягнення активовано для всіх гравців!", "ok");
-  }
-  async function disableExclusiveAchievement() {
-    if (!exclusiveAchState) return;
-    const ex = { ...exclusiveAchState, active: false };
-    await sSet("exclusive_achievement", ex, true);
-    setExclusiveAchState(ex);
-    showToast("Досягнення прибрано — хто не встиг, більше не отримає", "ok");
-  }
-  async function enableExclusiveAchievement2() {
-    const ex = { id: "exclusive_opening_2", icon: ach2Icon || "🎉", name: ach2Name, desc: ach2Name, bonus: Number(ach2Bonus) || 0, active: true };
-    await sSet("exclusive_achievement_2", ex, true);
-    setExclusiveAchState2(ex);
-    showToast("Друге ексклюзивне досягнення активовано для всіх гравців!", "ok");
-  }
-  async function disableExclusiveAchievement2() {
-    if (!exclusiveAchState2) return;
-    const ex = { ...exclusiveAchState2, active: false };
-    await sSet("exclusive_achievement_2", ex, true);
-    setExclusiveAchState2(ex);
-    showToast("Друге досягнення прибрано — хто не встиг, більше не отримає", "ok");
-  }
   const [targetNick, setTargetNick] = useState("");
   const [amount, setAmount] = useState(1000);
   const [extraSpins, setExtraSpins] = useState(3);
@@ -4216,10 +4227,13 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
   const [bannerText, setBannerText] = useState("");
   const [bannerColor, setBannerColor] = useState("#ffffff");
   const [applyRarityToAbuse, setApplyRarityToAbuse] = useState(false);
+  const [xpX2Toggle, setXpX2Toggle] = useState(false);
+  const [autoPartyWithAbuse, setAutoPartyWithAbuse] = useState(false);
   const [senderName, setSenderName] = useState(profile ? profile.nick : "Адмін");
   const [broadcastBusy, setBroadcastBusy] = useState(false);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [rewardAmount, setRewardAmount] = useState(500);
+  const [rewardSpins, setRewardSpins] = useState(0);
   const [rewardReason, setRewardReason] = useState("Подарунок від адміністрації");
   const [msgText, setMsgText] = useState("");
   const [w1, setW1] = useState(BASE_RARITY_WEIGHT["Рідкісна"]);
@@ -4507,12 +4521,14 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
   async function launchAbuse() {
     if (applyRarityToAbuse) await applyWeights();
     const ev = {
+      xpX2: xpX2Toggle,
       id: "abuse_" + Date.now(),
       bucksX2: true, chanceX2: true, discount: Number(abuseDiscount) || 0, expiresAt: Date.now() + (Number(abuseMinutes) || 15) * 60000, bannerText, bannerColor,
       tempCard: cardTemp && abuseCardName && abuseCardImg ? { id: "temp_" + Date.now(), name: abuseCardName, season: abuseCardSeason, origin: `Подія ADMIN ABUSE${abuseCardSeason ? ` — ${abuseCardSeason}` : ""}`, rarity: "Ексклюзивна", price: 999999, img: abuseCardImg, tempEvent: true, dropChance: Math.max(0, Number(abuseCardChance) || 2) / 100, expiresAt: Date.now() + (Number(abuseCardTempMin) || 15) * 60000 } : null,
     };
     await sSet("abuse_event", ev, true); setAbuseEvent(ev);
     if (ev.tempCard) { await setCustomCard(ev.tempCard); setCustomCards((s) => [...s, ev.tempCard]); }
+    if (autoPartyWithAbuse) await savePartyConfig({ active: true, casinoActive: true });
     showToast("ADMIN ABUSE подію запущено для всіх!", "ok");
   }
   async function updateBannerLive() {
@@ -4521,18 +4537,22 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
     cur.bannerText = bannerText; cur.bannerColor = bannerColor; await sSet("abuse_event", cur, true); setAbuseEvent(cur);
     showToast("Текст банера оновлено для всіх, без перезапуску таймера", "ok");
   }
-  async function stopAbuse() { await sSet("abuse_event", null, true); setAbuseEvent(null); showToast("Подію зупинено", "ok"); }
+  async function stopAbuse() {
+    await sSet("abuse_event", null, true); setAbuseEvent(null);
+    if (autoPartyWithAbuse) await savePartyConfig({ active: false, casinoActive: false });
+    showToast("Подію зупинено", "ok");
+  }
   async function forceShopRefresh() { const n = ((await sGet("shop_nonce", true)) || 0) + 1; await sSet("shop_nonce", n, true); setGlobalShopNonce(n); showToast("Магазин акцій примусово оновлено для всіх гравців", "ok"); }
   const [rewardCardId, setRewardCardId] = useState("");
   async function giveRewardToAll() {
-    if ((!rewardAmount || rewardAmount <= 0) && !rewardCardId) { showToast("Вкажіть суму або оберіть картку", "err"); return; }
+    if ((!rewardAmount || rewardAmount <= 0) && !rewardCardId && (!rewardSpins || rewardSpins <= 0)) { showToast("Вкажіть суму, прокрути або оберіть картку", "err"); return; }
     const card = rewardCardId ? allCards().find((c) => c.id === rewardCardId) : null;
     const reward = {
-      id: "r" + Date.now(), amount: Number(rewardAmount) || 0, reason: rewardReason || "Подарунок", ts: Date.now(), active: true,
+      id: "r" + Date.now(), amount: Number(rewardAmount) || 0, spins: Number(rewardSpins) || 0, reason: rewardReason || "Подарунок", ts: Date.now(), active: true,
       ...(card ? { cardId: card.id, cardNames: [card.name] } : {}),
     };
     await sSet("global_reward", reward, true);
-    showToast(`Нагороду роздано всім гравцям сайту!${card ? ` (+картка "${card.name}")` : ""}`, "ok");
+    showToast(`Нагороду роздано всім гравцям сайту!${card ? ` (+картка "${card.name}")` : ""}${reward.spins ? ` (+${reward.spins} прокрутів)` : ""}`, "ok");
   }
   async function stopRewardToAll() {
     const cur = await sGet("global_reward", true);
@@ -4698,6 +4718,12 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
         <input type="checkbox" checked={applyRarityToAbuse} onChange={(e) => setApplyRarityToAbuse(e.target.checked)} /> Одразу застосувати шанси з розділу нижче на час події
       </label>
       <label style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+        <input type="checkbox" checked={xpX2Toggle} onChange={(e) => setXpX2Toggle(e.target.checked)} /> ⚡ 2x XP пасу за квести на час події
+      </label>
+      <label style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+        <input type="checkbox" checked={autoPartyWithAbuse} onChange={(e) => setAutoPartyWithAbuse(e.target.checked)} /> 🎉 Одночасно увімкнути вкладку Party + золоту рулетку
+      </label>
+      <label style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
         <input type="checkbox" checked={cardTemp} onChange={(e) => setCardTemp(e.target.checked)} /> Додати тимчасову ексклюзивну картку в цю подію
       </label>
       {cardTemp && (
@@ -4712,32 +4738,6 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
       )}
       <button style={{ ...sx.primaryBtn, marginBottom: 6 }} onClick={launchAbuse}>🔥 Запустити ADMIN ABUSE</button>
       <button style={{ ...sx.smallBtn, width: "100%", marginBottom: 14 }} onClick={stopAbuse}>Зупинити подію</button>
-
-      <div style={{ background: "#1f2937", border: "1px solid #fbbf24", borderRadius: 10, padding: 12, marginBottom: 14 }}>
-        <p style={{ fontSize: 12, color: "#fbbf24", fontWeight: 700, margin: "0 0 8px" }}>🌟 Ексклюзивні досягнення (видаються всім гравцям одразу)</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div>
-            <p style={{ fontSize: 10, color: "#9ca3af", margin: "0 0 4px" }}>Слот 1 {exclusiveAchState && exclusiveAchState.active ? "· 🟢 активне" : ""}</p>
-            <input placeholder="Емодзі" value={ach1Icon} onChange={(e) => setAch1Icon(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
-            <input placeholder="Назва" value={ach1Name} onChange={(e) => setAch1Name(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
-            <input type="number" placeholder="Бонус, баксів" value={ach1Bonus} onChange={(e) => setAch1Bonus(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
-            <div style={{ display: "flex", gap: 6 }}>
-              <button style={{ ...sx.smallBtn, flex: 1, background: "#166534" }} onClick={enableExclusiveAchievement}>Видати всім</button>
-              <button style={{ ...sx.smallBtn, flex: 1, background: "#7f1d1d" }} onClick={disableExclusiveAchievement}>Прибрати</button>
-            </div>
-          </div>
-          <div>
-            <p style={{ fontSize: 10, color: "#9ca3af", margin: "0 0 4px" }}>Слот 2 {exclusiveAchState2 && exclusiveAchState2.active ? "· 🟢 активне" : ""}</p>
-            <input placeholder="Емодзі" value={ach2Icon} onChange={(e) => setAch2Icon(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
-            <input placeholder="Назва" value={ach2Name} onChange={(e) => setAch2Name(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
-            <input type="number" placeholder="Бонус, баксів" value={ach2Bonus} onChange={(e) => setAch2Bonus(e.target.value)} style={{ ...sx.input, marginBottom: 4 }} />
-            <div style={{ display: "flex", gap: 6 }}>
-              <button style={{ ...sx.smallBtn, flex: 1, background: "#166534" }} onClick={enableExclusiveAchievement2}>Видати всім</button>
-              <button style={{ ...sx.smallBtn, flex: 1, background: "#7f1d1d" }} onClick={disableExclusiveAchievement2}>Прибрати</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div style={{ background: "#1f2937", border: "1px solid #fbbf24", borderRadius: 10, padding: 12, marginBottom: 14 }}>
         <h3 style={{ color: "#fbbf24", fontSize: 14, margin: "0 0 8px" }}>⭐ Збір зірок по сайту</h3>
@@ -4761,7 +4761,7 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
         <input type="number" placeholder="XP пасу за квест" value={partyQuestXP} onChange={(e) => setPartyQuestXP(e.target.value)} style={sx.input} />
         <button style={{ ...sx.smallBtn, width: "100%", marginBottom: 8, background: "#7c3aed" }} onClick={() => savePartyConfig({ questActive: true, questLabel: partyQuestLabel, questXP: Number(partyQuestXP) || 0 })}>Зберегти й активувати квест</button>
         <label style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 6, alignItems: "center" }}>
-          <input type="checkbox" checked={partyCasinoActive} onChange={(e) => savePartyConfig({ casinoActive: e.target.checked })} /> 👑 Золоте казино у Party активне
+          <input type="checkbox" checked={partyCasinoActive} onChange={(e) => savePartyConfig({ casinoActive: e.target.checked })} /> 👑 Золота рулетка у Party активна
         </label>
         <input placeholder="Оголошення на вкладці Party (необов'язково)" value={partyAnnouncement} onChange={(e) => setPartyAnnouncement(e.target.value)} style={{ ...sx.input, marginTop: 8 }} />
         <button style={{ ...sx.smallBtn, width: "100%", marginBottom: 8, background: "#166534" }} onClick={() => savePartyConfig({ announcement: partyAnnouncement })}>Зберегти оголошення</button>
@@ -4810,6 +4810,7 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
         {allCards().map((c) => <option key={c.id} value={c.id}>{c.name} ({c.rarity})</option>)}
       </select>
       <input placeholder='Причина (напр. "З Днем Народження сайту!")' value={rewardReason} onChange={(e) => setRewardReason(e.target.value)} style={sx.input} />
+      <input type="number" placeholder="Безкоштовних прокрутів (необов'язково)" value={rewardSpins} onChange={(e) => setRewardSpins(e.target.value)} style={sx.input} />
       <button style={{ ...sx.primaryBtn, marginBottom: 8 }} onClick={giveRewardToAll}>Роздати всім гравцям на сайті</button>
       <button style={{ ...sx.smallBtn, marginBottom: 14, background: "#7f1d1d", width: "100%" }} onClick={stopRewardToAll}>🔴 Вимкнути для тих, хто ще не отримав</button>
 
@@ -4999,13 +5000,13 @@ const sx = {
   bootScreen: { color: "#9ca3af", display: "flex", alignItems: "center", justifyContent: "center", height: "100dvh", background: "#0b0f1a" },
   app: { display: "flex", flexDirection: "column", height: "100dvh", background: "radial-gradient(ellipse 120% 60% at 50% -10%, #16213a 0%, #0b0f1a 55%), radial-gradient(ellipse 90% 50% at 100% 100%, #131c2e 0%, transparent 60%), #0b0f1a", fontFamily: "system-ui,sans-serif", color: "#e5e7eb" },
   appEventActive: { background: "linear-gradient(160deg,#78350f,#7c2d12,#4c1d95,#0b0f1a)", backgroundSize: "400% 400%", animation: "eventGlow 5s ease infinite" },
-  topbar: { display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#111827", borderBottom: "1px solid #1f2937", position: "relative", zIndex: 5 },
+  topbar: { display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#111827", borderBottom: "1px solid #1f2937", position: "relative", zIndex: 5, boxShadow: "0 2px 12px #00000055" },
   bucksPill: { background: "#1f2937", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#fbbf24" },
   body: { flex: 1, overflowY: "auto", padding: "12px", position: "relative", zIndex: 5 },
   bottomNav: { display: "flex", background: "#111827", borderTop: "1px solid #1f2937", position: "relative", zIndex: 5 },
   navBtn: { flex: 1, background: "none", border: "none", color: "#6b7280", padding: "8px 0", cursor: "pointer" },
   navBtnActive: { color: "#4ade80" },
-  tabWrap: { maxWidth: 480, margin: "0 auto" },
+  tabWrap: { maxWidth: 480, margin: "0 auto", animation: "tabFadeIn 0.25s ease" },
   h2: { fontSize: 18, marginBottom: 4 },
   authWrap: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100dvh", background: "radial-gradient(circle at 30% 20%, #14532d, transparent 60%), radial-gradient(circle at 80% 80%, #78350f55, transparent 55%), #0b0f1a", padding: 16 },
   authCard: { background: "#111827dd", backdropFilter: "blur(6px)", border: "1px solid #22c55e33", borderRadius: 20, padding: 24, width: "100%", maxWidth: 300, boxShadow: "0 8px 30px #000a" },
@@ -5080,6 +5081,7 @@ function GlobalStyles({ theme, boldText }) {
       @keyframes premiumGoldShine { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
       @keyframes starFloat { 0%,100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-10px) rotate(8deg); } }
       @keyframes starPop { 0% { transform: scale(1); opacity: 1; } 60% { transform: scale(1.8); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
+      @keyframes tabFadeIn { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       .card-legendary-shine { animation: goldShine 1.8s ease-in-out infinite; }
       .card-exclusive-shimmer { animation: exclusiveShift 2.4s linear infinite; }
