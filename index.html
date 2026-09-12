@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin Soccer Card</title>
+<title>Spin a Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -3594,13 +3594,58 @@ function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
     showToast(`🏅 Отримано: "${a.name}"! +${a.bonus} 💵`, "ok");
   }
   const exclusiveList = [exclusive, exclusive2].filter((e) => e && (e.active || seen.includes(e.id)));
+  const totalCount = ACHIEVEMENTS.length + exclusiveList.length;
+  const pct = totalCount ? Math.round((seen.length / totalCount) * 100) : 0;
+
+  const unlocked = ACHIEVEMENTS.filter((a) => seen.includes(a.id));
+  const available = ACHIEVEMENTS.filter((a) => !seen.includes(a.id) && a.check(wallet, allCards()));
+  const locked = ACHIEVEMENTS.filter((a) => !seen.includes(a.id) && !a.check(wallet, allCards()));
+
+  function AchCard({ a }) {
+    const claimed = seen.includes(a.id);
+    const claimable = !claimed && a.check(wallet, allCards());
+    const accent = claimed ? "#a78bfa" : claimable ? "#4ade80" : "#374151";
+    return (
+      <div style={{
+        background: claimed ? "linear-gradient(135deg,#2e2a5c,#1a1f35)" : claimable ? "linear-gradient(135deg,#0f3d2e,#111827)" : "#111827",
+        borderLeft: `3px solid ${accent}`, borderRadius: "4px 10px 10px 4px", padding: 8, opacity: claimed || claimable ? 1 : 0.55,
+        display: "flex", flexDirection: "column",
+      }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17,
+          background: "#0b0f1a", border: `1px solid ${accent}`, marginBottom: 4,
+        }}>{a.icon}</div>
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: claimed ? "#e9d5ff" : claimable ? "#bbf7d0" : "#9ca3af" }}>{a.name}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 9, color: "#6b7280", flex: 1 }}>{a.desc}</p>
+        <p style={{ margin: "4px 0 4px", fontSize: 10, color: "#4ade80" }}>+{a.bonus} 💵</p>
+        {claimed ? (
+          <p style={{ margin: 0, fontSize: 10, color: "#a78bfa", textAlign: "center" }}>✅ Отримано</p>
+        ) : claimable ? (
+          <button style={{ ...sx.smallBtn, width: "100%", textAlign: "center", background: "#166534" }} onClick={() => claim(a)}>Забрати</button>
+        ) : (
+          <p style={{ margin: 0, fontSize: 10, color: "#4b5563", textAlign: "center" }}>🔒 Заблоковано</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={sx.tabWrap}>
-      <h2 style={sx.h2}>🏅 Досягнення</h2>
-      <p style={{ fontSize: 12, color: "#9ca3af", marginTop: -8, marginBottom: 12 }}>
-        Отримано: {seen.length}/{ACHIEVEMENTS.length + exclusiveList.length}
-      </p>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 14, background: "#111827", border: "1px solid #374151",
+        borderRadius: 14, padding: 14, marginBottom: 14,
+      }}>
+        <div style={{
+          width: 62, height: 62, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+          background: `conic-gradient(#4ade80 ${pct * 3.6}deg, #1f2937 0deg)`, position: "relative",
+        }}>
+          <div style={{ width: 50, height: 50, borderRadius: "50%", background: "#111827", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#4ade80" }}>{pct}%</div>
+        </div>
+        <div>
+          <h2 style={{ ...sx.h2, margin: 0 }}>🏅 Досягнення</h2>
+          <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>Отримано {seen.length} з {totalCount}</p>
+        </div>
+      </div>
 
       {exclusiveList.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: exclusiveList.length > 1 ? "1fr 1fr" : "1fr", gap: 8, marginBottom: 14 }}>
@@ -3629,34 +3674,34 @@ function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {ACHIEVEMENTS.map((a) => {
-          const claimed = seen.includes(a.id);
-          const claimable = !claimed && a.check(wallet, allCards());
-          return (
-            <div key={a.id} style={{
-              background: claimed ? "linear-gradient(135deg,#312e81,#1f2937)" : claimable ? "linear-gradient(135deg,#164e3c,#111827)" : "#111827",
-              border: claimed ? "1px solid #a78bfa" : claimable ? "1px solid #4ade80" : "1px solid #1f2937",
-              borderRadius: 10, padding: 8, opacity: claimed || claimable ? 1 : 0.5, display: "flex", flexDirection: "column",
-            }}>
-              <div style={{ fontSize: 20 }}>{a.icon}</div>
-              <p style={{ margin: "2px 0 0", fontSize: 11, fontWeight: 700, color: claimed ? "#e9d5ff" : claimable ? "#bbf7d0" : "#9ca3af" }}>{a.name}</p>
-              <p style={{ margin: "2px 0 0", fontSize: 9, color: "#6b7280", flex: 1 }}>{a.desc}</p>
-              <p style={{ margin: "4px 0 4px", fontSize: 10, color: "#4ade80" }}>+{a.bonus} 💵</p>
-              {claimed ? (
-                <p style={{ margin: 0, fontSize: 10, color: "#a78bfa", textAlign: "center" }}>✅ Отримано</p>
-              ) : claimable ? (
-                <button style={{ ...sx.smallBtn, width: "100%", textAlign: "center" }} onClick={() => claim(a)}>Забрати</button>
-              ) : (
-                <p style={{ margin: 0, fontSize: 10, color: "#4b5563", textAlign: "center" }}>Заблоковано</p>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {available.length > 0 && (
+        <>
+          <p style={{ fontSize: 11, color: "#4ade80", fontWeight: 800, margin: "0 0 6px" }}>🔓 Доступно забрати ({available.length})</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+            {available.map((a) => <AchCard key={a.id} a={a} />)}
+          </div>
+        </>
+      )}
+      {unlocked.length > 0 && (
+        <>
+          <p style={{ fontSize: 11, color: "#a78bfa", fontWeight: 800, margin: "0 0 6px" }}>✅ Отримано ({unlocked.length})</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+            {unlocked.map((a) => <AchCard key={a.id} a={a} />)}
+          </div>
+        </>
+      )}
+      {locked.length > 0 && (
+        <>
+          <p style={{ fontSize: 11, color: "#6b7280", fontWeight: 800, margin: "0 0 6px" }}>🔒 Заблоковано ({locked.length})</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {locked.map((a) => <AchCard key={a.id} a={a} />)}
+          </div>
+        </>
+      )}
     </div>
   );
 }
+
 function ChangePasswordModal({ changeOwnPassword, onClose }) {
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -3749,30 +3794,52 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
   return (
     <div style={sx.tabWrap}>
       <h2 style={sx.h2}>Профіль</h2>
-      <div style={{ fontSize: 48, textAlign: "center" }}>{profile.avatar}</div>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, display: "flex", justifyContent: "center", alignItems: "center", gap: 2 }}><ColoredNick nick={profile.nick} color={profile.nickColor} /><VerBadge v={profile.verified} /></div>
-      <p style={{ textAlign: "center", color: "#6b7280", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>Акаунт з {new Date(profile.createdAt).toLocaleDateString("uk-UA")} <span onClick={() => setShowPassChange(true)} title="Змінити пароль" style={{ cursor: "pointer", fontSize: 11, background: "#1f2937", borderRadius: 6, padding: "1px 6px", color: "#9ca3af" }}>🔒</span></p>
+
+      <div style={{
+        position: "relative", overflow: "hidden", textAlign: "center", borderRadius: 16, padding: "20px 14px 16px",
+        marginBottom: 14, background: "linear-gradient(160deg,#1e1b4b,#111827 60%,#0b0f1a)", border: "1px solid #374151",
+      }}>
+        <span style={{ position: "absolute", top: -14, left: -10, fontSize: 70, opacity: 0.06 }}>⚽</span>
+        <span style={{ position: "absolute", bottom: -18, right: -10, fontSize: 70, opacity: 0.06 }}>🏆</span>
+        <div style={{
+          width: 84, height: 84, borderRadius: "50%", margin: "0 auto 8px", display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 42, background: "#0b0f1a",
+          border: wallet.passPremium ? "3px solid #fbbf24" : "3px solid #374151",
+          boxShadow: wallet.passPremium ? "0 0 20px #fbbf2477" : "0 0 10px #0008",
+        }}>{profile.avatar}</div>
+        <div style={{ fontWeight: 800, fontSize: 19, display: "flex", justifyContent: "center", alignItems: "center", gap: 3 }}>
+          <ColoredNick nick={profile.nick} color={profile.nickColor} /><VerBadge v={profile.verified} />
+        </div>
+        {wallet.passPremium && (
+          <span style={{ display: "inline-block", marginTop: 4, fontSize: 9, fontWeight: 800, color: "#1a1400", background: "linear-gradient(90deg,#fbbf24,#f59e0b)", padding: "2px 8px", borderRadius: 999 }}>👑 SOCCER PASS</span>
+        )}
+        <p style={{ margin: "6px 0 0", color: "#6b7280", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          Акаунт з {new Date(profile.createdAt).toLocaleDateString("uk-UA")}
+          <span onClick={() => setShowPassChange(true)} title="Змінити пароль" style={{ cursor: "pointer", fontSize: 10, background: "#1f2937", borderRadius: 6, padding: "1px 6px", color: "#9ca3af" }}>🔒</span>
+        </p>
+      </div>
+
       <div onClick={() => setShowStreak(true)} style={{
         cursor: "pointer", textAlign: "center", position: "relative", overflow: "hidden",
         background: "linear-gradient(135deg,#7c2d12,#431407)", border: "1px solid #f97316",
-        borderRadius: 12, padding: "12px 10px", marginBottom: 12, boxShadow: "0 0 14px #f9731633",
+        borderRadius: 12, padding: "12px 10px", marginBottom: 14, boxShadow: "0 0 14px #f9731633",
       }}>
         <span style={{ position: "absolute", top: -8, right: -6, fontSize: 46, opacity: 0.14 }}>🔥</span>
         <p style={{ margin: 0, color: "#fed7aa", fontWeight: 900, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>🔥 Серія входів: {wallet.streak} дн.</p>
         <p style={{ margin: "3px 0 0", fontSize: 10, color: "#fdba74" }}>натисніть, щоб побачити нагороди</p>
       </div>
-      <div style={{ marginBottom: 14 }}>
-        <p style={{ fontSize: 12, color: "#9ca3af" }}>Обрати аватар:</p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+
+      <div style={{ background: "#111827", border: "1px solid #374151", borderRadius: 14, padding: 12, marginBottom: 14 }}>
+        <p style={{ fontSize: 12, color: "#e5e7eb", fontWeight: 800, margin: "0 0 10px", display: "flex", alignItems: "center", gap: 5 }}>🎨 Персоналізація</p>
+        <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 6px" }}>Обрати аватар:</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           {AVATAR_OPTIONS.map((a) => (<button key={a} onClick={() => saveProfile({ ...profile, avatar: a })} style={{ ...sx.avatarBtn, ...(profile.avatar === a ? sx.avatarBtnActive : {}) }}>{a}</button>))}
           {wallet.passSeasonAvatarUnlocked && (() => { const szn = (passSeason && passSeason.avatarEmoji) || "🎓"; return (
             <button key={"szn"+szn} onClick={() => saveProfile({ ...profile, avatar: szn })} title="Сезонна аватарка SOCCER PASS" style={{ ...sx.avatarBtn, ...(profile.avatar === szn ? sx.avatarBtnActive : {}), border: "2px solid #fbbf24", boxShadow: "0 0 8px #fbbf2477" }}>{szn}</button>
           ); })()}
           {isSuperAdmin(nick) && (<button key={DEV_AVATAR} title="Лише для розробника" onClick={() => saveProfile({ ...profile, avatar: DEV_AVATAR })} style={{ ...sx.avatarBtn, ...(profile.avatar === DEV_AVATAR ? sx.avatarBtnActive : {}), border: "1px solid #fbbf24" }}>{DEV_AVATAR}</button>)}
         </div>
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <p style={{ fontSize: 12, color: "#9ca3af" }}>Колір ніку:</p>
+        <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 6px" }}>Колір ніку:</p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
           <button onClick={() => setNickColor(null)} style={{ ...sx.smallBtn, fontSize: 10, ...(!profile.nickColor ? { border: "2px solid #fbbf24" } : {}) }}>Звичайний</button>
           {PASS_NICK_COLORS_FREE.map((c) => (
@@ -3792,8 +3859,14 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
           <p style={{ fontSize: 10, color: "#6b7280", margin: "4px 0 0" }}>Градієнтні кольори доступні з SOCCER PASS 🎫</p>
         )}
       </div>
-      <div style={{ marginBottom: 14 }}>
-        <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>👥 Друзі ({friendsData.length}) <span onClick={loadFriends} style={{ cursor: "pointer", color: "#60a5fa" }}>{friendsBusy ? <span style={{ display: "inline-block", animation: "spin 0.8s linear infinite" }}>⟳</span> : "⟳"} оновити</span></p>
+
+      <div style={{ background: "#111827", border: "1px solid #374151", borderRadius: 14, padding: 12, marginBottom: 14 }}>
+        <p style={{ fontSize: 12, color: "#e5e7eb", fontWeight: 800, margin: "0 0 10px", display: "flex", alignItems: "center", gap: 5 }}>
+          👥 Друзі ({friendsData.length})
+          <span onClick={loadFriends} style={{ cursor: "pointer", color: "#60a5fa", fontWeight: 400, marginLeft: "auto", fontSize: 11 }}>
+            {friendsBusy ? <span style={{ display: "inline-block", animation: "spin 0.8s linear infinite" }}>⟳</span> : "⟳"} оновити
+          </span>
+        </p>
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           <input placeholder="Нік друга" value={friendInput} onChange={(e) => setFriendInput(e.target.value)} style={{ ...sx.input, marginBottom: 0 }} />
           <button style={sx.smallBtn} onClick={sendFriendRequest}>Додати</button>
@@ -3810,8 +3883,11 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
             ))}
           </div>
         )}
+        {friendsData.length === 0 && incomingRequests.length === 0 && (
+          <p style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", margin: 0 }}>Ще немає друзів — додайте когось за ніком вище</p>
+        )}
         {friendsData.map((f) => (
-          <div key={f.nick} style={{ display: "flex", alignItems: "center", gap: 8, background: "#111827", borderRadius: 8, padding: 8, marginBottom: 6 }}>
+          <div key={f.nick} style={{ display: "flex", alignItems: "center", gap: 8, background: "#1f2937", borderRadius: 8, padding: 8, marginBottom: 6 }}>
             <span onClick={() => setViewFriend(f)} style={{ fontSize: 20, cursor: "pointer" }}>{f.avatar}</span>
             <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setViewFriend(f)}>
               <div style={{ fontSize: 12, display: "flex", alignItems: "center" }}><ColoredNick nick={f.nick} color={f.nickColor} /><VerBadge v={f.verified} /></div>
@@ -3822,8 +3898,11 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
           </div>
         ))}
       </div>
-      <button disabled={maintSoon} style={{ ...sx.smallBtn, width: "100%", marginBottom: 8, background: "#7c3aed", opacity: maintSoon ? 0.4 : 1 }} onClick={() => setShowDuel(true)}>{maintSoon ? "⚔️ Скоро технічна перерва" : "⚔️ Дуель"}</button>
-      <button style={{ ...sx.smallBtn, width: "100%" }} onClick={onLogout}>Вийти з акаунту</button>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button disabled={maintSoon} style={{ ...sx.smallBtn, flex: 1, background: "#7c3aed", opacity: maintSoon ? 0.4 : 1 }} onClick={() => setShowDuel(true)}>{maintSoon ? "⚔️ Скоро перерва" : "⚔️ Дуель"}</button>
+        <button style={{ ...sx.smallBtn, flex: 1 }} onClick={onLogout}>🚪 Вийти</button>
+      </div>
       {showPassChange && <ChangePasswordModal changeOwnPassword={changeOwnPassword} onClose={() => setShowPassChange(false)} />}
       {showStreak && <StreakModal wallet={wallet} nick={nick} claimStreakReward={claimStreakReward} onClose={() => setShowStreak(false)} />}
       {viewFriend && <FriendProfileModal friend={viewFriend} onClose={() => setViewFriend(null)} />}
