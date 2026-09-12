@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin Soccer Card</title>
+<title>Spin a Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -512,7 +512,7 @@ function newWallet() {
     friends: [], auctionAbuseCount: 0, auctionBanUntil: 0, shopNonce: 0, claimedStreakDay: "",
     dealsBought: { bucket: 0, indices: [] }, lastRewardSeen: null, processedGrantIds: [],
     processedGiftIds: [], processedFriendEventIds: [], cardOrigin: {}, pollSeen: [], lastDailyRoulette: "",
-    keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [],
+    keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [], favoriteCards: [],
   };
 }
 // доповнює старі гаманці (створені до v10) новими полями, щоб нічого не падало
@@ -3111,6 +3111,9 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
   const [sortBy, setSortBy] = useState("date");
   const [detail, setDetail] = useState(null);
   const [sellDupConfirm, setSellDupConfirm] = useState(null);
+  const [rarityFilter, setRarityFilter] = useState(null);
+  const [originFilter, setOriginFilter] = useState("");
+  const [density, setDensity] = useState("normal");
   const cards = allCards();
   function calcDuplicates() {
     let totalCopies = 0, totalBucks = 0;
@@ -3142,8 +3145,7 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
     setSellDupConfirm(null);
     showToast(`Продано дублікатів на ${gained} 💵`, "ok");
   }
-  async function sellInstant(id, e) {
-    e.stopPropagation();
+  async function sellInstant(id) {
     const card = cards.find((c) => c.id === id);
     if (!card) { showToast("Цю картку більше не існує в грі", "err"); return; }
     if (card.tempEvent) { showToast("Тимчасові/подієві картки не можна продати", "err"); return; }
@@ -3151,13 +3153,39 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
     const w = JSON.parse(JSON.stringify(wallet));
     w.collection[id] -= 1; if (!w.bucksInfinite) w.bucks += price;
     await saveWallet(w);
+    setDetail(null);
     showToast(`Продано миттєво за ${price} 💵`, "ok");
+  }
+  async function toggleFavorite(id) {
+    const w = JSON.parse(JSON.stringify(wallet));
+    const fav = w.favoriteCards || [];
+    w.favoriteCards = fav.includes(id) ? fav.filter((x) => x !== id) : [...fav, id];
+    await saveWallet(w);
   }
   const rarityRank = { "Ексклюзивна": 0, "Легендарна": 1, "Міфічна": 2, "Епічна": 3, "Рідкісна": 4 };
   // тимчасові/подієві картки, яких немає у гравця, не показуємо і не рахуємо в тоталі
   const visibleCards = cards.filter(c => !c.tempEvent || (wallet.collection[c.id] || 0) > 0);
-  const owned = visibleCards.filter(c => (wallet.collection[c.id] || 0) > 0);
-  const unowned = visibleCards.filter(c => !(wallet.collection[c.id] || 0) > 0);
+  const ownedAll = visibleCards.filter(c => (wallet.collection[c.id] || 0) > 0);
+  const unownedAll = visibleCards.filter(c => !(wallet.collection[c.id] || 0) > 0);
+
+  // прогрес по рідкості — завжди по всій колекції, незалежно від активних фільтрів
+  const rarityStats = RARITY_ORDER.map((r) => ({
+    rarity: r,
+    owned: ownedAll.filter((c) => c.rarity === r).length,
+    total: visibleCards.filter((c) => c.rarity === r).length,
+  }));
+  // джерела карток, які реально є у гравця
+  const originsPresent = Array.from(new Set(ownedAll.map((c) => wallet.cardOrigin[c.id]).filter(Boolean)));
+  // "найближче до завершення" — рідкість, якої найменше не вистачає (і хоч щось не вистачає)
+  const closest = [...rarityStats].filter((s) => s.total - s.owned > 0).sort((a, b) => (a.total - a.owned) - (b.total - b.owned))[0];
+  const closestMissing = closest ? unownedAll.filter((c) => c.rarity === closest.rarity).slice(0, 3) : null;
+
+  let filteredVisible = visibleCards;
+  if (rarityFilter) filteredVisible = filteredVisible.filter((c) => c.rarity === rarityFilter);
+  if (originFilter) filteredVisible = filteredVisible.filter((c) => wallet.cardOrigin[c.id] === originFilter);
+  const owned = filteredVisible.filter(c => (wallet.collection[c.id] || 0) > 0);
+  const unowned = filteredVisible.filter(c => !(wallet.collection[c.id] || 0) > 0);
+
   function sortFn(a, b) {
     if (sortBy === "rarity") return rarityRank[a.rarity] - rarityRank[b.rarity];
     if (sortBy === "name") return a.name.localeCompare(b.name, "uk");
@@ -3166,15 +3194,50 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
     if (sortBy === "count") return (wallet.collection[b.id] || 0) - (wallet.collection[a.id] || 0);
     return (wallet.obtainedAt[b.id] || 0) - (wallet.obtainedAt[a.id] || 0);
   }
-  owned.sort(sortFn);
-  const ordered = [...owned, ...unowned];
+  const favSet = new Set(wallet.favoriteCards || []);
+  const favOwned = owned.filter((c) => favSet.has(c.id)).sort(sortFn);
+  const restOwned = owned.filter((c) => !favSet.has(c.id)).sort(sortFn);
+  const ordered = [...favOwned, ...restOwned, ...unowned];
 
   return (
     <div style={sx.tabWrap}>
       <h2 style={sx.h2}>Колекція</h2>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+        {rarityStats.map((s) => (
+          <div key={s.rarity} onClick={() => setRarityFilter(rarityFilter === s.rarity ? null : s.rarity)} style={{ cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
+              <span style={{ color: RARITY_COLOR[s.rarity], fontWeight: rarityFilter === s.rarity ? 900 : 700, display: "flex", alignItems: "center", gap: 4 }}>
+                {RARITY_EMOJI[s.rarity]} {s.rarity} {rarityFilter === s.rarity && "✓"}
+              </span>
+              <span style={{ color: "#9ca3af" }}>{s.owned}/{s.total}</span>
+            </div>
+            <div style={{ height: 5, borderRadius: 4, background: "#1f2937", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${s.total ? (s.owned / s.total) * 100 : 0}%`, background: RARITY_COLOR[s.rarity] }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {closestMissing && closestMissing.length > 0 && (
+        <div style={{ background: "#111827", border: "1px solid #374151", borderRadius: 10, padding: 8, marginBottom: 12, textAlign: "center" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 11, color: "#9ca3af" }}>
+            🎯 Найближче до завершення: <b style={{ color: RARITY_COLOR[closest.rarity] }}>{closest.rarity}</b> — лишилось {closest.total - closest.owned}
+          </p>
+          <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+            {closestMissing.map((c) => <CardFace key={c.id} card={c} hidden small />)}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 6, flexWrap: "wrap" }}>
-        <p style={{ color: "#9ca3af", fontSize: 12, margin: 0 }}>Зібрано {owned.length} / {visibleCards.length}</p>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <p style={{ color: "#9ca3af", fontSize: 12, margin: 0 }}>
+          Зібрано {ownedAll.length} / {visibleCards.length}{(rarityFilter || originFilter) ? ` · показано ${owned.length + unowned.length}` : ""}
+        </p>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <button onClick={() => setDensity(density === "normal" ? "compact" : "normal")} style={{ ...sx.smallBtn, fontSize: 10, padding: "6px 8px" }}>
+            {density === "normal" ? "🔳 Компактно" : "◻️ Звичайно"}
+          </button>
           <button onClick={() => setSellDupConfirm(calcDuplicates())} style={{ ...sx.smallBtn, fontSize: 10, padding: "6px 8px" }}>🗑 Продати дублікати</button>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ ...sx.input, width: "auto", marginBottom: 0, fontSize: 11, padding: "6px 8px" }}>
           <option value="date">Спочатку нові</option>
@@ -3186,6 +3249,25 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
           </select>
         </div>
       </div>
+
+      {(rarityFilter || originsPresent.length > 0) && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          {rarityFilter && (
+            <button onClick={() => setRarityFilter(null)} style={{ ...sx.smallBtn, fontSize: 10, padding: "4px 8px", background: RARITY_COLOR[rarityFilter], color: "#1a1400" }}>
+              {RARITY_EMOJI[rarityFilter]} {rarityFilter} ✕
+            </button>
+          )}
+          {originsPresent.length > 0 && (
+            <>
+              <button onClick={() => setOriginFilter("")} style={{ ...sx.smallBtn, fontSize: 10, padding: "4px 8px", ...(originFilter === "" ? sx.authTabActive : {}) }}>Усі джерела</button>
+              {originsPresent.map((o) => (
+                <button key={o} onClick={() => setOriginFilter(originFilter === o ? "" : o)} style={{ ...sx.smallBtn, fontSize: 10, padding: "4px 8px", ...(originFilter === o ? sx.authTabActive : {}) }}>{o}</button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
       {sellDupConfirm && (
         <div style={sx.modalOverlay} onClick={() => setSellDupConfirm(null)}>
           <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
@@ -3202,13 +3284,16 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
           </div>
         </div>
       )}
-      <div style={sx.collectionGrid}>
+      <div style={{ ...sx.collectionGrid, ...(density === "compact" ? { gridTemplateColumns: "repeat(auto-fill, minmax(58px, 1fr))", gap: 6 } : {}) }}>
         {ordered.map((c) => {
           const count = wallet.collection[c.id] || 0;
+          const isNew = count > 0 && (Date.now() - (wallet.obtainedAt[c.id] || 0)) < 86400000;
+          const isFav = favSet.has(c.id);
           return (
-            <div key={c.id} style={sx.collectionCard}>
+            <div key={c.id} style={{ ...sx.collectionCard, position: "relative", ...(density === "compact" ? { padding: 2, gap: 2 } : {}) }}>
+              {isFav && <span style={{ position: "absolute", top: -3, left: -3, fontSize: 12, zIndex: 2 }}>⭐</span>}
+              {isNew && <span style={{ position: "absolute", top: -3, right: -3, background: "#dc2626", color: "#fff", fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 4, zIndex: 2 }}>NEW</span>}
               <CardFace card={c} count={count > 0 ? count : undefined} hidden={count === 0} small onClick={() => count > 0 && setDetail(c)} />
-              {count > 0 && !c.tempEvent && <button onClick={(e) => sellInstant(c.id, e)} style={{ ...sx.smallBtn, fontSize: 9, padding: "3px 6px", marginTop: 4 }}>Продати ({Math.round(c.price * 0.4)})</button>}
             </div>
           );
         })}
@@ -3225,10 +3310,16 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
                 <p style={{ margin: 2, fontSize: 12, color: "#9ca3af" }}>Зараз маєте: {wallet.collection[detail.id] || 0}</p>
                 <p style={{ margin: 2, fontSize: 12, color: "#9ca3af" }}>Рекорд одночасно: {wallet.maxCount[detail.id] || 0}</p>
                 <p style={{ margin: 2, fontSize: 12, color: "#9ca3af" }}>Базова ціна: {fmtBucks(detail.price)}</p>
-                {detail.tempEvent && detail.origin && (
-                  <p style={{ margin: "6px 2px 2px", fontSize: 11, color: "#f87171" }}>⏰ {(detail.id === "custom_6411" || detail.id === "custom_6412") ? "Admin Abuse" : detail.origin}</p>
+                {wallet.cardOrigin[detail.id] && (
+                  <p style={{ margin: "6px 2px 2px", fontSize: 11, color: "#67e8f9" }}>📍 {(detail.id === "custom_6411" || detail.id === "custom_6412") ? "Admin Abuse" : wallet.cardOrigin[detail.id]}</p>
                 )}
               </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button style={{ ...sx.smallBtn, flex: 1 }} onClick={() => toggleFavorite(detail.id)}>{favSet.has(detail.id) ? "⭐ Прибрати з улюблених" : "☆ В улюблені"}</button>
+              {!detail.tempEvent && (wallet.collection[detail.id] || 0) > 0 && (
+                <button style={{ ...sx.smallBtn, flex: 1, background: "#7f1d1d" }} onClick={() => sellInstant(detail.id)}>Продати ({Math.round(detail.price * 0.4 * bucksMult(abuseEvent, wallet))})</button>
+              )}
             </div>
             <button style={{ ...sx.smallBtn, marginTop: 10, width: "100%" }} onClick={() => setDetail(null)}>Закрити</button>
           </div>
@@ -3237,7 +3328,6 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
     </div>
   );
 }
-
 /* ============================== PROFILE (avatar, streak modal, friends, duel) ============================== */
 const AVATAR_OPTIONS = ["⚽", "🥅", "🏆", "🐐", "🥇", "🎽", "🧤", "🚩"];
 const DEV_AVATAR = "👨‍💻"; // спеціальна аватарка, доступна лише розробнику (SUPER_ADMIN_NICKS)
