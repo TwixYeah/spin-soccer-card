@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin a Soccer Card</title>
+<title>Spin Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -1943,6 +1943,7 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
   const [bulkCount, setBulkCount] = useState(10);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResults, setBulkResults] = useState(null);
+  const [bulkViewMode, setBulkViewMode] = useState("grid");
   const [, forceTick] = useState(0);
   useEffect(() => { const t = setInterval(() => forceTick(v => v + 1), 1000); return () => clearInterval(t); }, []);
 
@@ -2042,9 +2043,11 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
     if (spinning || busyRef.current || bulkBusy) return;
     busyRef.current = true; setBulkBusy(true);
     const w = walletSnapshot();
+    const beforeCollection = { ...w.collection }; // знімок ДО прокрутів — щоб потім знати, які картки справді нові
     const pool = allCards();
     const allWon = [];
     let spinsDone = 0;
+    let totalValue = 0;
     for (let i = 0; i < count; i++) {
       const freeLeft = w.freeSpinsLeft > 0;
       const liveLevel = currentCostLevel(w);
@@ -2071,22 +2074,22 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
         if (!w.obtainedAt[c.id]) w.obtainedAt[c.id] = Date.now();
         w.maxCount[c.id] = Math.max(w.maxCount[c.id] || 0, w.collection[c.id]);
         if (!c.tempEvent) w.cardOrigin[c.id] = "Виграно в казино 🎰";
+        totalValue += c.price;
       });
       updatePityCounters(w, spinWon);
       bumpPassQuest(w, "spins");
       if (spinWon.some((c) => c.rarity === "Міфічна")) bumpPassQuest(w, "card_mythic");
       if (spinWon.some((c) => c.rarity === "Епічна")) bumpPassQuest(w, "card_epic");
       if (spinWon.some((c) => c.rarity === "Легендарна")) bumpPassQuest(w, "card_legendary");
-      const hitLegendary = spinWon.some((c) => c.rarity === "Легендарна");
-      const hitExclusive = spinWon.some((c) => c.rarity === "Ексклюзивна");
-      if (hitExclusive) w.pityExclusive = 8; else if (w.pityExclusive > 0) w.pityExclusive -= 1;
-      if (hitLegendary) w.pityLegendary = 5; else if (w.pityLegendary > 0) w.pityLegendary -= 1;
       allWon.push(...spinWon);
       spinsDone++;
     }
     await saveWallet(w);
     setShowBulk(false);
-    setBulkResults({ cards: allWon, spinsDone, requested: count });
+    setBulkResults({
+      cards: allWon, spinsDone, requested: count, beforeCollection, totalValue,
+      pityCountExclusive: w.pityCountExclusive || 0, pityCountLegendary: w.pityCountLegendary || 0, pityCountMythic: w.pityCountMythic || 0,
+    });
     setBulkBusy(false); busyRef.current = false;
   }
 
@@ -2161,28 +2164,120 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
           </div>
         );
       })()}
-      {bulkResults && (
-        <div style={sx.modalOverlay} onClick={() => setBulkResults(null)}>
-          <div style={{ ...sx.modal, textAlign: "center", maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: "#fbbf24" }}>🎉 Результати ({bulkResults.spinsDone} з {bulkResults.requested})</h3>
-            <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 12 }}>
-              {RARITY_ORDER.map((r) => {
-                const n = bulkResults.cards.filter((c) => c.rarity === r).length;
-                if (n === 0) return null;
-                return (
-                  <div key={r} style={{ background: "#111827", border: `1px solid ${RARITY_COLOR[r]}`, borderRadius: 8, padding: "4px 10px" }}>
-                    <span style={{ color: RARITY_COLOR[r], fontWeight: 800, fontSize: 12 }}>{r}: {n}</span>
+      {bulkResults && (() => {
+        const RARITY_DESC = [...RARITY_ORDER].reverse(); // від найріднішої до найзвичайнішої
+        const seenSoFar = { ...bulkResults.beforeCollection };
+        const enriched = bulkResults.cards.map((c) => {
+          const isNew = !seenSoFar[c.id];
+          const isDup = !isNew;
+          seenSoFar[c.id] = (seenSoFar[c.id] || 0) + 1;
+          return { ...c, _isNew: isNew, _isDup: isDup };
+        });
+        const dupCount = enriched.filter((c) => c._isDup && !c.tempEvent).length;
+        const dupValue = enriched.filter((c) => c._isDup && !c.tempEvent).reduce((sum, c) => sum + Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)), 0);
+        const newCount = enriched.filter((c) => c._isNew).length;
+        const bestCard = RARITY_DESC.reduce((best, r) => best || enriched.find((c) => c.rarity === r), null);
+        const bigWin = enriched.some((c) => c.rarity === "Легендарна" || c.rarity === "Ексклюзивна");
+        async function sellDuplicatesFromPull() {
+          if (dupCount === 0) return;
+          const w = JSON.parse(JSON.stringify(wallet));
+          let gained = 0;
+          const toSell = {};
+          enriched.forEach((c) => { if (c._isDup && !c.tempEvent) toSell[c.id] = (toSell[c.id] || 0) + 1; });
+          Object.entries(toSell).forEach(([id, cnt]) => {
+            const card = enriched.find((c) => c.id === id);
+            const per = Math.round(card.price * 0.4 * bucksMult(abuseEvent, wallet));
+            const removeCount = Math.min(cnt, Math.max(0, (w.collection[id] || 0) - 1));
+            w.collection[id] = (w.collection[id] || 0) - removeCount;
+            gained += per * removeCount;
+          });
+          if (!w.bucksInfinite) w.bucks += gained;
+          await saveWallet(w);
+          setBulkResults(null);
+          showToast(`Продано дублікатів на ${gained} 💵`, "ok");
+        }
+        return (
+          <div style={sx.modalOverlay} onClick={() => setBulkResults(null)}>
+            {bigWin && <FireworksCanvas />}
+            <div style={{ ...sx.modal, textAlign: "center", maxHeight: "85vh", overflowY: "auto", maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ marginTop: 0, color: "#fbbf24" }}>🎉 Результати ({bulkResults.spinsDone} з {bulkResults.requested})</h3>
+
+              {bestCard && (
+                <div style={{ marginBottom: 12 }}>
+                  <p style={{ fontSize: 10, color: "#9ca3af", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: 1 }}>🏆 Головна знахідка паку</p>
+                  <div style={{ display: "flex", justifyContent: "center", animation: "popIn 0.5s ease" }}>
+                    <CardFace card={bestCard} />
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 8 }}>
+                {RARITY_ORDER.map((r) => {
+                  const n = bulkResults.cards.filter((c) => c.rarity === r).length;
+                  if (n === 0) return null;
+                  return (
+                    <div key={r} style={{ background: "#111827", border: `1px solid ${RARITY_COLOR[r]}`, borderRadius: 8, padding: "4px 10px" }}>
+                      <span style={{ color: RARITY_COLOR[r], fontWeight: 800, fontSize: 12 }}>{r}: {n}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", fontSize: 11, color: "#9ca3af", marginBottom: 10 }}>
+                <span>🆕 Нових карток: <b style={{ color: "#4ade80" }}>{newCount}</b></span>
+                <span>💰 Загальна цінність: <b style={{ color: "#fbbf24" }}>{bulkResults.totalValue}</b></span>
+                <span>👑 До гаранту Екскл.: <b>{Math.max(0, PITY_THRESHOLD["Ексклюзивна"] - bulkResults.pityCountExclusive)}</b></span>
+                <span>⭐ До гаранту Легенд.: <b>{Math.max(0, PITY_THRESHOLD["Легендарна"] - bulkResults.pityCountLegendary)}</b></span>
+              </div>
+
+              {dupCount > 0 && (
+                <button style={{ ...sx.smallBtn, marginBottom: 10, background: "#166534" }} onClick={sellDuplicatesFromPull}>
+                  🗑 Продати {dupCount} дублікатів з цього паку за {dupValue} 💵
+                </button>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 10 }}>
+                <button style={{ ...sx.smallBtn, ...(bulkViewMode === "grid" ? sx.authTabActive : {}), fontSize: 11 }} onClick={() => setBulkViewMode("grid")}>🔳 Сітка</button>
+                <button style={{ ...sx.smallBtn, ...(bulkViewMode === "list" ? sx.authTabActive : {}), fontSize: 11 }} onClick={() => setBulkViewMode("list")}>📋 Список</button>
+              </div>
+
+              {bulkViewMode === "grid" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(70px, 1fr))", gap: 8 }}>
+                  {enriched.map((c, i) => (
+                    <div key={i} style={{ position: "relative" }}>
+                      <CardFace card={c} small />
+                      {c._isNew && <span style={{ position: "absolute", top: -4, left: -4, background: "#dc2626", color: "#fff", fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 4 }}>NEW</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: "left" }}>
+                  {RARITY_DESC.map((r) => {
+                    const inGroup = enriched.filter((c) => c.rarity === r);
+                    if (inGroup.length === 0) return null;
+                    return (
+                      <div key={r} style={{ marginBottom: 8 }}>
+                        <p style={{ fontSize: 11, fontWeight: 800, color: RARITY_COLOR[r], margin: "0 0 4px" }}>{RARITY_EMOJI[r]} {r} ({inGroup.length})</p>
+                        {inGroup.map((c, i) => (
+                          <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#e5e7eb", padding: "3px 0", borderBottom: "1px solid #1f2937" }}>
+                            <span>{c._isNew && "🆕 "}{c.name}</span>
+                            <span style={{ color: "#9ca3af" }}>{c.price} 💵</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button style={{ ...sx.smallBtn, flex: 1 }} onClick={() => { const req = bulkResults.requested; setBulkResults(null); bulkSpin(req); }}>🔁 Крутити ще {bulkResults.requested}</button>
+                <button style={{ ...sx.primaryBtn, flex: 1 }} onClick={() => setBulkResults(null)}>Забрати все</button>
+              </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(70px, 1fr))", gap: 8 }}>
-              {bulkResults.cards.map((c, i) => <CardFace key={i} card={c} small />)}
-            </div>
-            <button style={{ ...sx.primaryBtn, marginTop: 14 }} onClick={() => setBulkResults(null)}>Забрати все</button>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
