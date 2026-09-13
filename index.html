@@ -11,6 +11,22 @@
   html,body,#root{margin:0;padding:0;height:100%;background:#0b0f1a;}
   * { box-sizing: border-box; }
   ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:#374151;border-radius:3px;}
+  @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    .grad-nick-text { -webkit-text-fill-color: initial !important; background: none !important; color: #fbbf24 !important; }
+  }
+  @keyframes rainbowSpin { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+  .rainbow-ring { background: conic-gradient(from 0deg,#f87171,#fbbf24,#4ade80,#22d3ee,#a855f7,#f87171); animation: rainbowSpin 4s linear infinite; }
+  /* базова мобільна оптимізація: без бічного скролу, приємніші тап-цілі */
+  html { -webkit-text-size-adjust: 100%; }
+  body { overflow-x: hidden; }
+  button, [role="button"], input, select, textarea { font-family: inherit; }
+  button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  @media (max-width: 480px) {
+    button, .tap-target { min-height: 34px; }
+  }
+  @media (max-width: 360px) {
+    .reel-card { width: 92px !important; }
+  }
 </style>
 </head>
 <body>
@@ -279,7 +295,13 @@ function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 60) return s + "с тому";
   if (s < 3600) return Math.floor(s / 60) + "хв тому";
-  return Math.floor(s / 3600) + "г тому";
+  if (s < 86400) return Math.floor(s / 3600) + "г тому";
+  const days = Math.floor(s / 86400);
+  if (days < 7) return days + (days === 1 ? " день тому" : days < 5 ? " дні тому" : " днів тому");
+  if (days < 30) { const w = Math.floor(days / 7); return w + (w === 1 ? " тиждень тому" : w < 5 ? " тижні тому" : " тижнів тому"); }
+  if (days < 365) { const m = Math.floor(days / 30); return m + (m === 1 ? " місяць тому" : m < 5 ? " місяці тому" : " місяців тому"); }
+  const y = Math.floor(days / 365);
+  return y + (y === 1 ? " рік тому" : y < 5 ? " роки тому" : " років тому");
 }
 // ===== ЗБЕРЕЖЕННЯ ДАНИХ: Firestore напряму через fetch (без SDK, щоб не залежати
 // від завантаження зовнішнього скрипта, який в деяких середовищах блокується) =====
@@ -512,7 +534,7 @@ function newWallet() {
     friends: [], auctionAbuseCount: 0, auctionBanUntil: 0, shopNonce: 0, claimedStreakDay: "",
     dealsBought: { bucket: 0, indices: [] }, lastRewardSeen: null, processedGrantIds: [],
     processedGiftIds: [], processedFriendEventIds: [], cardOrigin: {}, pollSeen: [], lastDailyRoulette: "",
-    keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [], favoriteCards: [],
+    keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [], favoriteCards: [], maintCompClaimed: [], onboardingSeen: false,
   };
 }
 // доповнює старі гаманці (створені до v10) новими полями, щоб нічого не падало
@@ -525,7 +547,11 @@ function withDefaults(w) {
 function ColoredNick({ nick, color }) {
   if (!color) return <>{nick}</>;
   if (color.startsWith("linear-gradient")) {
-    return <span style={{ background: color, backgroundSize: "160% auto", animation: "nickShimmer 5s ease-in-out infinite", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent", fontWeight: 800, display: "inline-block" }}>{nick}</span>;
+    // -webkit-background-clip:text не підтримується скрізь (деякі вбудовані
+    // webview) — на таких пристроях текст стає геть невидимим (сама заливка
+    // "з'їдає" літери). Клас grad-nick-text ловить це через CSS @supports
+    // і дає безпечний суцільний колір замість зникнення тексту.
+    return <span className="grad-nick-text" style={{ background: color, backgroundSize: "130% auto", animation: "nickShimmer 7s ease-in-out infinite", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent", fontWeight: 800, display: "inline-block" }}>{nick}</span>;
   }
   return <span style={{ color, fontWeight: 700 }}>{nick}</span>;
 }
@@ -1160,6 +1186,35 @@ function App() {
   const tabRef = useRef("casino");
   const maintAckRef = useRef(0);
   const [maintState, setMaintState] = useState(null);
+  const [showMaintComp, setShowMaintComp] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    if (wallet && !wallet.onboardingSeen) setShowOnboarding(true);
+  }, [wallet && wallet.onboardingSeen]);
+  async function finishOnboarding() {
+    setShowOnboarding(false);
+    const w = JSON.parse(JSON.stringify(wallet));
+    w.onboardingSeen = true;
+    await saveWallet(w);
+  }
+  useEffect(() => {
+    if (!maintState || !wallet) return;
+    const warnOrActive = maintState.phase === "warning" || maintState.phase === "active";
+    if (!warnOrActive) return;
+    if (!activeBoosts(wallet).length) return;
+    const compId = "maint_" + (maintState.effectiveAt || maintState.startedAt || "x");
+    if ((wallet.maintCompClaimed || []).includes(compId)) return;
+    setShowMaintComp(compId);
+  }, [maintState, wallet]);
+  async function claimMaintCompensation() {
+    if (!showMaintComp) return;
+    const w = JSON.parse(JSON.stringify(wallet));
+    w.maintCompClaimed = [...(w.maintCompClaimed || []), showMaintComp];
+    if (!w.bucksInfinite) w.bucks += 5000;
+    await saveWallet(w);
+    showToast("Компенсація +5000 💵 нарахована!", "ok");
+    setShowMaintComp(null);
+  }
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const reloadBaselineRef = useRef(null);
   const kickSeenRef = useRef(0);
@@ -1242,12 +1297,13 @@ function App() {
   }
   async function claimPassQuest(questId, isDaily) {
     const w = JSON.parse(JSON.stringify(wallet));
+    const passDone = (w.passLevel || 0) >= PASS_MAX_LEVEL;
     if (isDaily) {
       const q = (w.passDailyQuests && w.passDailyQuests.quests || []).find((x) => x.id === questId);
       if (!q || q.claimed || q.progress < q.target) return;
       q.claimed = true;
-      grantPassXP(w, q.xp);
-      showToast(`+${q.xp} XP (пропуск)`, "ok");
+      if (passDone) { if (!w.bucksInfinite) w.bucks += q.xp; showToast(`+${q.xp} 💵 (пасс уже пройдено)`, "ok"); }
+      else { grantPassXP(w, q.xp); showToast(`+${q.xp} XP (пропуск)`, "ok"); }
     } else {
       const qd = DEFAULT_SEASON_QUESTS.find((x) => x.id === questId);
       if (!qd) return;
@@ -1255,8 +1311,8 @@ function App() {
       const progress = (w.passSeasonQuestProgress || {})[questId] || 0;
       if (progress < qd.target || (w.passSeasonClaimedQuests || []).includes(questId)) return;
       w.passSeasonClaimedQuests = [...(w.passSeasonClaimedQuests || []), questId];
-      grantPassXP(w, qd.xp);
-      showToast(`+${qd.xp} XP (пропуск)`, "ok");
+      if (passDone) { if (!w.bucksInfinite) w.bucks += qd.xp; showToast(`+${qd.xp} 💵 (пасс уже пройдено)`, "ok"); }
+      else { grantPassXP(w, qd.xp); showToast(`+${qd.xp} XP (пропуск)`, "ok"); }
     }
     await saveWallet(w);
   }
@@ -1311,8 +1367,12 @@ function App() {
     if (!def) return;
     const reward = track === "free" ? def.free : def.premium;
     if (track === "premium" && !wallet.passPremium) return;
-    const claimedList = track === "free" ? (wallet.passClaimedFree || []) : (wallet.passClaimedPremium || []);
-    if (claimedList.includes(level) || wallet.passLevel < level) return;
+    // читаємо АКТУАЛЬНИЙ стан гаманця прямо з бази перед видачею — це усуває
+    // баг, коли нагороду можна забрати двічі (наприклад з іншого пристрою чи
+    // після оновлення сторінки), бо локальний wallet міг встигнути застаріти
+    const fresh = withDefaults((await sGet("wallet_" + nick, true)) || wallet);
+    const claimedList = track === "free" ? (fresh.passClaimedFree || []) : (fresh.passClaimedPremium || []);
+    if (claimedList.includes(level) || fresh.passLevel < level) { setWallet(fresh); walletRef.current = fresh; return; }
     if (reward.type === "card_choice") {
       const pool = allCards().filter((c) => c.rarity === reward.rarity && !c.tempEvent);
       const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(3, pool.length));
@@ -1324,7 +1384,7 @@ function App() {
       setPassCardChoice({ level, track, rarity: reward.rarity, options });
       return;
     }
-    const w = JSON.parse(JSON.stringify(wallet));
+    const w = JSON.parse(JSON.stringify(fresh));
     const listField = track === "free" ? "passClaimedFree" : "passClaimedPremium";
     w[listField] = [...(w[listField] || []), level];
     const res = redeemPassRewardInto(w, reward);
@@ -1334,8 +1394,10 @@ function App() {
   async function confirmPassCardChoice(card) {
     const { level, track } = passCardChoice;
     setPassCardChoice(null);
-    const w = JSON.parse(JSON.stringify(wallet));
+    const fresh = withDefaults((await sGet("wallet_" + nick, true)) || wallet);
     const listField = track === "free" ? "passClaimedFree" : "passClaimedPremium";
+    if ((fresh[listField] || []).includes(level)) { setWallet(fresh); walletRef.current = fresh; return; }
+    const w = JSON.parse(JSON.stringify(fresh));
     w[listField] = [...(w[listField] || []), level];
     w.collection[card.id] = (w.collection[card.id] || 0) + 1;
     if (!w.obtainedAt[card.id]) w.obtainedAt[card.id] = Date.now();
@@ -1640,6 +1702,16 @@ function App() {
       <BottomNav tab={tab} setTab={setTab} isAdmin={isSuperAdmin(nick)} passSeason={passSeason} partyConfig={partyConfig} hasNewPartyQuest={partyConfig && partyConfig.questActive && !(wallet.partyQuestsClaimed || []).includes("party_visit")} />
       <StarsOverlay config={starsConfig} wallet={wallet} saveWallet={saveWallet} showToast={showToast} />
       {showAutoStreak && <StreakModal wallet={wallet} nick={nick} claimStreakReward={claimStreakReward} onClose={() => setShowAutoStreak(false)} />}
+      {showMaintComp && (
+        <div style={sx.modalOverlay} onClick={() => setShowMaintComp(null)}>
+          <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, color: "#fbbf24" }}>⚠️ Технічна перерва скоро</h3>
+            <p style={{ fontSize: 13, color: "#e5e7eb" }}>У вас активний буст, який може не встигнути повністю спрацювати через технічну перерву. Ось невелика компенсація за незручності!</p>
+            <button style={{ ...sx.primaryBtn, width: "100%" }} onClick={claimMaintCompensation}>Забрати компенсацію +5000 💵</button>
+          </div>
+        </div>
+      )}
+      {showOnboarding && <OnboardingTutorial onFinish={finishOnboarding} />}
     </div>
   );
 }
@@ -1973,6 +2045,45 @@ function passRewardLabel(r) {
   if (r.type === "card_fixed") return `🃏 картка сезону`;
   return "";
 }
+const ONBOARDING_STEPS = [
+  { icon: "🎰", title: "Крутити", desc: "Тут ви крутите рулетку і отримуєте нові футбольні картки різної рідкості." },
+  { icon: "🛒", title: "Магазин", desc: "Купуйте картки за бакси — щохвилини тут з'являються нові випадкові знижки." },
+  { icon: "📋", title: "Квести", desc: "Виконуйте щоденні та сезонні завдання SOCCER PASS, щоб отримати XP і підвищувати рівень пасу." },
+  { icon: "📚", title: "Колекція", desc: "Тут зберігаються всі ваші картки. Можна фільтрувати за рідкістю та продавати дублікати." },
+  { icon: "🏅", title: "Досягнення", desc: "Виконуйте досягнення, щоб отримати додаткові бакси." },
+  { icon: "👤", title: "Профіль", desc: "Тут можна змінити аватар, колір ніку, додати друзів і почати дуель." },
+];
+function OnboardingTutorial({ onFinish }) {
+  const [step, setStep] = useState(0);
+  const total = ONBOARDING_STEPS.length;
+  const s = ONBOARDING_STEPS[step];
+  const leftPct = ((step + 0.5) / total) * 100;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 500 }}>
+      <div style={{
+        position: "fixed", left: `${leftPct}%`, bottom: 26, width: 56, height: 56, borderRadius: "50%",
+        transform: "translateX(-50%)", boxShadow: "0 0 0 9999px rgba(0,0,0,0.86)", border: "2px solid #fbbf24",
+        pointerEvents: "none", transition: "left 0.35s ease",
+      }} />
+      <div style={{
+        position: "fixed", left: "50%", bottom: 100, transform: "translateX(-50%)", width: "88%", maxWidth: 360,
+        background: "#111827", border: "1px solid #fbbf24", borderRadius: 14, padding: 16, textAlign: "center", zIndex: 501,
+        boxShadow: "0 8px 24px #000a",
+      }}>
+        <div style={{ fontSize: 30, marginBottom: 6 }}>{s.icon}</div>
+        <h3 style={{ margin: "0 0 6px", color: "#fbbf24" }}>{s.title}</h3>
+        <p style={{ fontSize: 13, color: "#e5e7eb", margin: "0 0 12px" }}>{s.desc}</p>
+        <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 10px" }}>Крок {step + 1} з {total}</p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ ...sx.smallBtn, flex: 1 }} onClick={onFinish}>Пропустити</button>
+          <button style={{ ...sx.primaryBtn, flex: 1 }} onClick={() => (step + 1 < total ? setStep(step + 1) : onFinish())}>
+            {step + 1 < total ? "Далі →" : "Зрозуміло!"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverride, allCards, showToast, busyRef, tileBanner }) {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
@@ -2145,7 +2256,7 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
           const reelSpinning = spinning && !stoppedReels[i];
           const justStopped = spinning && stoppedReels[i];
           return (
-            <div key={i} style={{
+            <div key={i} className="reel-card" style={{
               ...sx.reelSlot,
               ...(reelSpinning ? { animation: "reelPulse 0.3s ease infinite" } : {}),
               filter: reelSpinning ? "blur(2px) brightness(0.8)" : "none",
@@ -3250,14 +3361,21 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
       <h2 style={sx.h2}>Колекція</h2>
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-        {rarityStats.map((s) => (
-          <span key={s.rarity} onClick={() => setRarityFilter(rarityFilter === s.rarity ? null : s.rarity)} style={{
-            display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, cursor: "pointer",
-            color: rarityFilter === s.rarity ? "#1a1400" : RARITY_COLOR[s.rarity],
-            background: rarityFilter === s.rarity ? RARITY_COLOR[s.rarity] : "#111827",
-            border: `1px solid ${RARITY_COLOR[s.rarity]}`, borderRadius: 999, padding: "4px 9px", fontWeight: 700,
-          }}>{RARITY_EMOJI[s.rarity]} {s.owned}/{s.total}</span>
-        ))}
+        {rarityStats.map((s) => {
+          const isExclusive = s.rarity === "Ексклюзивна";
+          const active = rarityFilter === s.rarity;
+          const inner = (
+            <span onClick={() => setRarityFilter(active ? null : s.rarity)} style={{
+              display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, cursor: "pointer",
+              color: active ? "#1a1400" : RARITY_COLOR[s.rarity],
+              background: active ? RARITY_COLOR[s.rarity] : "#111827",
+              border: isExclusive ? "none" : `1px solid ${RARITY_COLOR[s.rarity]}`, borderRadius: 999, padding: "4px 9px", fontWeight: 700,
+            }}>{RARITY_EMOJI[s.rarity]} {s.owned}/{s.total}</span>
+          );
+          return isExclusive ? (
+            <span key={s.rarity} className="rainbow-ring" style={{ borderRadius: 999, padding: 1.5, display: "inline-flex" }}>{inner}</span>
+          ) : <React.Fragment key={s.rarity}>{inner}</React.Fragment>;
+        })}
       </div>
 
       {closestMissing && closestMissing.length > 0 && (
@@ -3406,7 +3524,8 @@ function StreakModal({ wallet, nick, claimStreakReward, onClose }) {
     </div>
   );
 }
-function FriendProfileModal({ friend, onClose }) {
+function FriendProfileModal({ friend, onClose, allCards }) {
+  const favCard = friend.favCardId ? allCards().find((c) => c.id === friend.favCardId) : null;
   return (
     <div style={sx.modalOverlay} onClick={onClose}>
       <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
@@ -3414,6 +3533,13 @@ function FriendProfileModal({ friend, onClose }) {
         <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, display: "flex", justifyContent: "center", alignItems: "center", gap: 2 }}><ColoredNick nick={friend.nick} color={friend.nickColor} /><VerBadge v={friend.verified} /></div>
         <p style={{ textAlign: "center", color: "#6b7280", fontSize: 12 }}>Акаунт з {new Date(friend.createdAt).toLocaleDateString("uk-UA")}</p>
         <p style={{ textAlign: "center", color: "#9ca3af", fontSize: 12 }}>📚 Карток зібрано: {friend.cardCount}</p>
+        <p style={{ textAlign: "center", color: "#9ca3af", fontSize: 12 }}>⚔️ Дуелі: {friend.duelWins || 0} перемог / {friend.duelLosses || 0} поразок</p>
+        {favCard && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 6 }}>
+            <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 4px" }}>🏆 Найцінніша картка</p>
+            <CardFace card={favCard} small />
+          </div>
+        )}
         <p style={{ textAlign: "center", color: "#9ca3af", fontSize: 12 }}>{Date.now() - friend.lastSeen < 120000 ? "🟢 зараз в мережі" : "востаннє " + timeAgo(friend.lastSeen)}</p>
         <button style={{ ...sx.smallBtn, width: "100%", marginTop: 8 }} onClick={onClose}>Закрити</button>
       </div>
@@ -3593,7 +3719,7 @@ function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
     await saveWallet(w);
     showToast(`🏅 Отримано: "${a.name}"! +${a.bonus} 💵`, "ok");
   }
-  const exclusiveList = [exclusive, exclusive2].filter((e) => e && (e.active || seen.includes(e.id)));
+  const exclusiveList = [exclusive].filter((e) => e && e.id !== "exclusive_opening_2" && (e.active || seen.includes(e.id)));
   const totalCount = ACHIEVEMENTS.length + exclusiveList.length;
   const pct = totalCount ? Math.round((seen.length / totalCount) * 100) : 0;
 
@@ -3648,23 +3774,28 @@ function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
       </div>
 
       {exclusiveList.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: exclusiveList.length > 1 ? "1fr 1fr" : "1fr", gap: 8, marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
           {exclusiveList.map((exc) => {
             const claimed = seen.includes(exc.id);
             const claimable = exc.active && !claimed;
             return (
               <div key={exc.id} style={{
-                background: "linear-gradient(135deg,#78350f,#451a03)", border: "2px solid #fbbf24", borderRadius: 12, padding: 10,
-                boxShadow: "0 0 12px #fbbf2455", textAlign: "center",
+                background: claimed ? "linear-gradient(135deg,#78350f,#2b1a04)" : claimable ? "linear-gradient(135deg,#8a5a06,#2b1a04)" : "#111827",
+                borderLeft: "3px solid #fbbf24", borderRadius: "4px 10px 10px 4px", padding: 8, opacity: claimed || claimable ? 1 : 0.55,
+                display: "flex", flexDirection: "column",
               }}>
-                <div style={{ fontSize: 24 }}>{exc.icon || "🌟"}</div>
-                <p style={{ margin: "3px 0 0", fontWeight: 800, color: "#fde68a", fontSize: 12 }}>{exc.name}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 10, background: "#f59e0b", color: "#451a03", borderRadius: 6, padding: "1px 6px", display: "inline-block" }}>ЕКСКЛЮЗИВ</p>
-                <p style={{ margin: "4px 0 0", fontSize: 11, color: "#4ade80" }}>+{exc.bonus} 💵</p>
+                <div style={{
+                  width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17,
+                  background: "#0b0f1a", border: "1px solid #fbbf24", marginBottom: 4,
+                }}>{exc.icon || "🌟"}</div>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#fde68a" }}>{exc.name}</p>
+                <p style={{ margin: "3px 0 0", fontSize: 9, background: "#f59e0b", color: "#451a03", borderRadius: 6, padding: "1px 6px", display: "inline-block", fontWeight: 800 }}>ЕКСКЛЮЗИВ</p>
+                <p style={{ margin: "3px 0 0", fontSize: 9, color: "#d1a26e", flex: 1 }}>{exc.desc && exc.desc !== exc.name ? exc.desc : "Була доступна лише обмежений час під час особливої події сайту."}</p>
+                <p style={{ margin: "4px 0 4px", fontSize: 10, color: "#4ade80" }}>+{exc.bonus} 💵</p>
                 {claimable ? (
-                  <button style={{ ...sx.primaryBtn, marginTop: 8, fontSize: 11, padding: "6px 10px" }} onClick={() => claim(exc)}>Забрати</button>
+                  <button style={{ ...sx.smallBtn, width: "100%", background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400", fontWeight: 700 }} onClick={() => claim(exc)}>Забрати</button>
                 ) : claimed ? (
-                  <p style={{ fontSize: 10, color: "#4ade80", marginTop: 6, marginBottom: 0 }}>✅ Отримано</p>
+                  <p style={{ fontSize: 10, color: "#4ade80", margin: 0, textAlign: "center" }}>✅ Отримано</p>
                 ) : (
                   <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 6, marginBottom: 0 }}>Пропущено</p>
                 )}
@@ -3745,7 +3876,18 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
       const [u, fw] = await Promise.all([getUser(f), sGet("wallet_" + f, true)]);
       if (!u) return;
       const cardCount = fw ? Object.values(fw.collection || {}).filter((c) => c > 0).length : 0;
-      list.push({ nick: u.nick, avatar: u.avatar, verified: u.verified, lastSeen: u.lastSeen, createdAt: u.createdAt, cardCount, nickColor: u.nickColor });
+      const duelWins = (fw && fw.duelStats && fw.duelStats.wins) || 0;
+      const duelLosses = (fw && fw.duelStats && fw.duelStats.losses) || 0;
+      let favCardId = fw && fw.favoriteCards && fw.favoriteCards[0];
+      if (!favCardId && fw) {
+        const owned = Object.keys(fw.collection || {}).filter((id) => fw.collection[id] > 0);
+        const rarityRank = { "Ексклюзивна": 0, "Легендарна": 1, "Міфічна": 2, "Епічна": 3, "Рідкісна": 4 };
+        const ac = allCards();
+        const ownedCards = owned.map((id) => ac.find((c) => c.id === id)).filter(Boolean);
+        ownedCards.sort((a, b) => (rarityRank[a.rarity] ?? 9) - (rarityRank[b.rarity] ?? 9));
+        favCardId = ownedCards[0] && ownedCards[0].id;
+      }
+      list.push({ nick: u.nick, avatar: u.avatar, verified: u.verified, lastSeen: u.lastSeen, createdAt: u.createdAt, cardCount, nickColor: u.nickColor, duelWins, duelLosses, favCardId });
     }));
     setFriendsData(list);
     setIncomingRequests((await sGet("friend_requests_" + nick, true)) || []);
@@ -3801,12 +3943,16 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
       }}>
         <span style={{ position: "absolute", top: -14, left: -10, fontSize: 70, opacity: 0.06 }}>⚽</span>
         <span style={{ position: "absolute", bottom: -18, right: -10, fontSize: 70, opacity: 0.06 }}>🏆</span>
-        <div style={{
-          width: 84, height: 84, borderRadius: "50%", margin: "0 auto 8px", display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 42, background: "#0b0f1a",
-          border: wallet.passPremium ? "3px solid #fbbf24" : "3px solid #374151",
-          boxShadow: wallet.passPremium ? "0 0 20px #fbbf2477" : "0 0 10px #0008",
-        }}>{profile.avatar}</div>
+        <div className={wallet.passPremium ? "rainbow-ring" : ""} style={{
+          width: 90, height: 90, borderRadius: "50%", margin: "0 auto 8px", padding: wallet.passPremium ? 3 : 0,
+          boxShadow: wallet.passPremium ? "0 0 20px #a855f777" : "none",
+        }}>
+          <div style={{
+            width: "100%", height: "100%", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 42, background: "#0b0f1a", border: wallet.passPremium ? "none" : "3px solid #374151",
+            boxShadow: wallet.passPremium ? "none" : "0 0 10px #0008",
+          }}>{profile.avatar}</div>
+        </div>
         <div style={{ fontWeight: 800, fontSize: 19, display: "flex", justifyContent: "center", alignItems: "center", gap: 3 }}>
           <ColoredNick nick={profile.nick} color={profile.nickColor} /><VerBadge v={profile.verified} />
         </div>
@@ -3841,7 +3987,6 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
         </div>
         <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 6px" }}>Колір ніку:</p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-          <button onClick={() => setNickColor(null)} style={{ ...sx.smallBtn, fontSize: 10, ...(!profile.nickColor ? { border: "2px solid #fbbf24" } : {}) }}>Звичайний</button>
           {PASS_NICK_COLORS_FREE.map((c) => (
             <button key={c} onClick={() => setNickColor(c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, border: profile.nickColor === c ? "2px solid #fbbf24" : "1px solid #374151", cursor: "pointer" }} />
           ))}
@@ -3905,7 +4050,7 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
       </div>
       {showPassChange && <ChangePasswordModal changeOwnPassword={changeOwnPassword} onClose={() => setShowPassChange(false)} />}
       {showStreak && <StreakModal wallet={wallet} nick={nick} claimStreakReward={claimStreakReward} onClose={() => setShowStreak(false)} />}
-      {viewFriend && <FriendProfileModal friend={viewFriend} onClose={() => setViewFriend(null)} />}
+      {viewFriend && <FriendProfileModal friend={viewFriend} onClose={() => setViewFriend(null)} allCards={allCards} />}
       {giftTarget && <GiftCardModal wallet={wallet} saveWallet={saveWallet} nick={nick} friend={giftTarget} allCards={allCards} onClose={() => setGiftTarget(null)} showToast={showToast} />}
       {showDuel && <DuelSetupModal wallet={wallet} saveWallet={saveWallet} nick={nick} friendsData={friendsData} onClose={() => setShowDuel(false)} onEnterDuel={onEnterDuel} showToast={showToast} allCards={allCards} maintState={maintState} />}
     </div>
