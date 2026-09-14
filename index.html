@@ -14,8 +14,14 @@
   @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
     .grad-nick-text { -webkit-text-fill-color: initial !important; background: none !important; color: #fbbf24 !important; }
   }
-  @keyframes rainbowSpin { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
-  .rainbow-ring { background: conic-gradient(from 0deg,#f87171,#fbbf24,#4ade80,#22d3ee,#a855f7,#f87171); animation: rainbowSpin 4s linear infinite; }
+  @keyframes rainbowSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  .rainbow-ring { position: relative; isolation: isolate; overflow: hidden; }
+  .rainbow-ring::before {
+    content: ""; position: absolute; inset: -100%; z-index: 0;
+    background: conic-gradient(from 0deg,#f87171,#fbbf24,#4ade80,#22d3ee,#a855f7,#f87171);
+    animation: rainbowSpin 4s linear infinite;
+  }
+  .rainbow-ring > * { position: relative; z-index: 1; }
   /* базова мобільна оптимізація: без бічного скролу, приємніші тап-цілі */
   html { -webkit-text-size-adjust: 100%; }
   body { overflow-x: hidden; }
@@ -153,26 +159,11 @@ const STREAK_WEEK1 = [
   { bucks: 100, medal: "🥉" }, { bucks: 150, medal: "🥉" }, { bucks: 200, medal: "🥈" },
   { bucks: 250, medal: "🥈" }, { bucks: 300, medal: "🥇" }, { bucks: 400, medal: "🏆" }, { bucks: 600, medal: "⚽🏆" },
 ];
+const STREAK_5_REWARDS = [100, 250, 450, 700, 1000];
 function getStreakReward(day, seedKey) {
-  if (day === 30) return { bucks: 1000, medal: "⚽🏆", card: "Легендарна", label: "Легендарна картка!", lucky: false };
-  const rng = seededRandom(parseInt(simpleHash((seedKey || "x") + "_streak_" + day), 16) % 2147483646);
-  // "щасливий день" — рідкісний (8%), помітний нагородою: золота рамка + бонусні бакси + тимчасовий буст 2х/30хв
-  if (rng() < 0.08) {
-    const boostType = rng() < 0.5 ? "chance" : "bucks";
-    return { bucks: 500, medal: "🍀", lucky: true, boost: { type: boostType, mult: 2, minutes: 30 } };
-  }
-  const week = Math.floor((day - 1) / 7);
-  const base = 90 + week * 35;
-  const variance = 0.6 + rng() * 0.8; // 0.6x .. 1.4x — випадковість, але без вибуху сум
-  let bucks = Math.min(900, Math.round((base * variance) / 10) * 10);
-  const medals = ["🥉", "🥈", "🥇", "🏆"];
-  const medal = medals[Math.min(medals.length - 1, week)];
-  // додатковий, звичайніший (15%) шанс на короткий буст 1.2x на 10 хв разом зі звичайною нагородою
-  if (rng() < 0.15) {
-    const boostType = rng() < 0.5 ? "chance" : "bucks";
-    return { bucks, medal, lucky: false, boost: { type: boostType, mult: 1.2, minutes: 10 } };
-  }
-  return { bucks, medal, lucky: false };
+  const idx = (day - 1) % 5;
+  const medals = ["🔥", "🔥", "⭐", "⭐", "🏆"];
+  return { bucks: STREAK_5_REWARDS[idx], medal: medals[idx], lucky: false };
 }
 const DISCOUNT_TABLE = [[5, 22], [10, 22], [15, 18], [25, 16], [50, 12], [75, 7], [100, 3]]; // ніколи 0%
 const THEME_PRESETS = {
@@ -551,7 +542,7 @@ function ColoredNick({ nick, color }) {
     // webview) — на таких пристроях текст стає геть невидимим (сама заливка
     // "з'їдає" літери). Клас grad-nick-text ловить це через CSS @supports
     // і дає безпечний суцільний колір замість зникнення тексту.
-    return <span className="grad-nick-text" style={{ background: color, backgroundSize: "130% auto", animation: "nickShimmer 7s ease-in-out infinite", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent", fontWeight: 800, display: "inline-block" }}>{nick}</span>;
+    return <span key={color} className="grad-nick-text" style={{ background: color, backgroundSize: "130% auto", animation: "nickShimmer 7s ease-in-out infinite", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent", fontWeight: 800, display: "inline-block" }}>{nick}</span>;
   }
   return <span style={{ color, fontWeight: 700 }}>{nick}</span>;
 }
@@ -716,18 +707,29 @@ function AdBanner({ banner }) {
     </div>
   );
 }
+function eventCardTheme(season) {
+  const s = (season || "").toLowerCase();
+  if (s.includes("хеллоу") || s.includes("halloween")) return { bg: "linear-gradient(90deg,#3b0764,#7c2d12)", emoji: "🎃", glow: "#f97316" };
+  if (s.includes("новий рік") || s.includes("різдв") || s.includes("christmas") || s.includes("santa")) return { bg: "linear-gradient(90deg,#7f1d1d,#14532d)", emoji: "🎄", glow: "#4ade80" };
+  if (s.includes("school") || s.includes("школ")) return { bg: "linear-gradient(90deg,#14532d,#1e3a8a)", emoji: "🎓", glow: "#fbbf24" };
+  return { bg: "linear-gradient(90deg,#1f2937,#111827)", emoji: "🔥", glow: "#f59e0b" };
+}
 /* ============================== ADMIN ABUSE BANNER + THOUGHT BUBBLE ============================== */
 function AdminAbuseBanner({ event }) {
   if (!event || event.expiresAt < Date.now()) return null;
   const text = event.bannerText || `ADMIN ABUSE! ${event.bucksX2 ? "БАКСИ x1.5! " : ""}${event.chanceX2 ? "ШАНСИ x2! " : ""}${event.discount ? `ЗНИЖКА -${event.discount}%!` : ""}`;
   const repeated = Array(8).fill(text).join("          •          ");
   const textColor = event.bannerColor || "#ffffff";
+  const evTheme = event.tempCard ? eventCardTheme(event.tempCard.season) : null;
   return (
     <div style={{ ...sx.marqueeWrap, ...(event.bannerImg ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)), url(${event.bannerImg})`, backgroundSize: "cover", backgroundPosition: "center" } : {}) }}>
       <div style={sx.marqueeRowTop}><div style={{ ...sx.marqueeTrackLTR, color: textColor }}>{repeated}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{repeated}</div></div>
       {event.tempCard && (
-        <div style={{ textAlign: "center", fontSize: 10, color: "#fff", background: "#00000055", padding: "4px 0", lineHeight: 1.6 }}>
-          🔥 «{event.tempCard.name}» {event.tempCard.season ? `(${event.tempCard.season}) ` : ""}— обмежена картка, ще {Math.max(0, Math.ceil((event.tempCard.expiresAt - Date.now()) / 60000))} хв!
+        <div style={{
+          textAlign: "center", fontSize: 10, color: "#fff", padding: "5px 0", lineHeight: 1.6,
+          background: evTheme.bg, boxShadow: `inset 0 0 14px ${evTheme.glow}66`, animation: "eventStripPulse 2.4s ease-in-out infinite",
+        }}>
+          {evTheme.emoji} «{event.tempCard.name}» {event.tempCard.season ? `(${event.tempCard.season}) ` : ""}— обмежена картка, ще {Math.max(0, Math.ceil((event.tempCard.expiresAt - Date.now()) / 60000))} хв! {evTheme.emoji}
         </div>
       )}
       <div style={sx.marqueeRowBottom}><div style={{ ...sx.marqueeTrackRTL, color: textColor }}>{repeated}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{repeated}</div></div>
@@ -1188,11 +1190,16 @@ function App() {
   const [maintState, setMaintState] = useState(null);
   const [showMaintComp, setShowMaintComp] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showForceSpin, setShowForceSpin] = useState(false);
   useEffect(() => {
     if (wallet && !wallet.onboardingSeen) setShowOnboarding(true);
   }, [wallet && wallet.onboardingSeen]);
-  async function finishOnboarding() {
+  function proceedToForceSpin() {
     setShowOnboarding(false);
+    setShowForceSpin(true);
+  }
+  async function finishOnboarding() {
+    setShowForceSpin(false);
     const w = JSON.parse(JSON.stringify(wallet));
     w.onboardingSeen = true;
     await saveWallet(w);
@@ -1711,7 +1718,8 @@ function App() {
           </div>
         </div>
       )}
-      {showOnboarding && <OnboardingTutorial onFinish={finishOnboarding} />}
+      {showOnboarding && <OnboardingTutorial onForceSpin={proceedToForceSpin} />}
+      {showForceSpin && <ForcedFirstSpinModal wallet={wallet} saveWallet={saveWallet} allCards={allCards} onDone={finishOnboarding} />}
     </div>
   );
 }
@@ -1799,7 +1807,7 @@ function BottomNav({ tab, setTab, isAdmin, passSeason, partyConfig, hasNewPartyQ
   return (
     <div style={sx.bottomNav}>
       {items.map(([id, icon, label]) => (
-        <button key={id} onClick={() => setTab(id)} style={{ ...sx.navBtn, ...(tab === id ? sx.navBtnActive : {}), position: "relative" }}>
+        <button key={id} data-nav-id={id} onClick={() => setTab(id)} style={{ ...sx.navBtn, ...(tab === id ? sx.navBtnActive : {}), position: "relative" }}>
           {id === "party" && hasNewPartyQuest && (
             <span style={{ position: "absolute", top: 2, right: "50%", marginRight: -18, background: "#dc2626", color: "#fff", fontSize: 7, fontWeight: 800, padding: "1px 4px", borderRadius: 999 }}>НОВЕ</span>
           )}
@@ -2046,25 +2054,43 @@ function passRewardLabel(r) {
   return "";
 }
 const ONBOARDING_STEPS = [
-  { icon: "🎰", title: "Крутити", desc: "Тут ви крутите рулетку і отримуєте нові футбольні картки різної рідкості." },
-  { icon: "🛒", title: "Магазин", desc: "Купуйте картки за бакси — щохвилини тут з'являються нові випадкові знижки." },
-  { icon: "📋", title: "Квести", desc: "Виконуйте щоденні та сезонні завдання SOCCER PASS, щоб отримати XP і підвищувати рівень пасу." },
-  { icon: "📚", title: "Колекція", desc: "Тут зберігаються всі ваші картки. Можна фільтрувати за рідкістю та продавати дублікати." },
-  { icon: "🏅", title: "Досягнення", desc: "Виконуйте досягнення, щоб отримати додаткові бакси." },
-  { icon: "👤", title: "Профіль", desc: "Тут можна змінити аватар, колір ніку, додати друзів і почати дуель." },
+  { navId: "casino", icon: "🎰", title: "Крутити", desc: "Тут ви крутите рулетку і отримуєте нові футбольні картки різної рідкості." },
+  { navId: "shop", icon: "🛒", title: "Магазин", desc: "Купуйте картки за бакси — щохвилини тут з'являються нові випадкові знижки." },
+  { navId: "quests", icon: "📋", title: "Квести", desc: "Виконуйте щоденні та сезонні завдання SOCCER PASS, щоб отримати XP і підвищувати рівень пасу." },
+  { navId: "collection", icon: "📚", title: "Колекція", desc: "Тут зберігаються всі ваші картки. Можна фільтрувати за рідкістю та продавати дублікати." },
+  { navId: "achievements", icon: "🏅", title: "Досягнення", desc: "Виконуйте досягнення, щоб отримати додаткові бакси." },
+  { navId: "profile", icon: "👤", title: "Профіль", desc: "Тут можна змінити аватар, колір ніку, додати друзів і почати дуель." },
 ];
-function OnboardingTutorial({ onFinish }) {
+function useNavRect(navId) {
+  const [rect, setRect] = useState(null);
+  useEffect(() => {
+    function measure() {
+      const el = document.querySelector(`[data-nav-id="${navId}"]`);
+      if (el) { const r = el.getBoundingClientRect(); setRect({ x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.max(r.width, r.height) }); }
+    }
+    measure();
+    const t = setInterval(measure, 200); // на випадок якщо нижня панель ще домальовується/змінюється
+    window.addEventListener("resize", measure);
+    return () => { clearInterval(t); window.removeEventListener("resize", measure); };
+  }, [navId]);
+  return rect;
+}
+function OnboardingTutorial({ onForceSpin }) {
   const [step, setStep] = useState(0);
   const total = ONBOARDING_STEPS.length;
   const s = ONBOARDING_STEPS[step];
-  const leftPct = ((step + 0.5) / total) * 100;
+  const rect = useNavRect(s.navId);
+  const size = rect ? rect.w + 14 : 60;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 500 }}>
-      <div style={{
-        position: "fixed", left: `${leftPct}%`, bottom: 26, width: 56, height: 56, borderRadius: "50%",
-        transform: "translateX(-50%)", boxShadow: "0 0 0 9999px rgba(0,0,0,0.86)", border: "2px solid #fbbf24",
-        pointerEvents: "none", transition: "left 0.35s ease",
-      }} />
+      {rect && (
+        <div style={{
+          position: "fixed", left: rect.x, top: rect.y, width: size, height: size, borderRadius: "50%",
+          transform: "translate(-50%,-50%)", boxShadow: "0 0 0 9999px rgba(0,0,0,0.86)", border: "2px solid #fbbf24",
+          pointerEvents: "none", transition: "left 0.3s ease, top 0.3s ease",
+        }} />
+      )}
+      {!rect && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.86)" }} />}
       <div style={{
         position: "fixed", left: "50%", bottom: 100, transform: "translateX(-50%)", width: "88%", maxWidth: 360,
         background: "#111827", border: "1px solid #fbbf24", borderRadius: 14, padding: 16, textAlign: "center", zIndex: 501,
@@ -2075,11 +2101,64 @@ function OnboardingTutorial({ onFinish }) {
         <p style={{ fontSize: 13, color: "#e5e7eb", margin: "0 0 12px" }}>{s.desc}</p>
         <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 10px" }}>Крок {step + 1} з {total}</p>
         <div style={{ display: "flex", gap: 8 }}>
-          <button style={{ ...sx.smallBtn, flex: 1 }} onClick={onFinish}>Пропустити</button>
-          <button style={{ ...sx.primaryBtn, flex: 1 }} onClick={() => (step + 1 < total ? setStep(step + 1) : onFinish())}>
+          <button style={{ ...sx.smallBtn, flex: 1 }} onClick={onForceSpin}>Пропустити</button>
+          <button style={{ ...sx.primaryBtn, flex: 1 }} onClick={() => (step + 1 < total ? setStep(step + 1) : onForceSpin())}>
             {step + 1 < total ? "Далі →" : "Зрозуміло!"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+function ForcedFirstSpinModal({ wallet, saveWallet, allCards, onDone }) {
+  const [phase, setPhase] = useState("intro");
+  const [wonCard, setWonCard] = useState(null);
+  async function doSpin() {
+    setPhase("spinning");
+    setTimeout(async () => {
+      const ac = allCards();
+      const pool = ac.filter((c) => !c.tempEvent && (c.rarity === "Легендарна" || c.rarity === "Ексклюзивна"));
+      const card = pool[Math.floor(Math.random() * pool.length)] || ac[0];
+      const w = JSON.parse(JSON.stringify(wallet));
+      w.collection[card.id] = (w.collection[card.id] || 0) + 1;
+      if (!w.obtainedAt[card.id]) w.obtainedAt[card.id] = Date.now();
+      w.maxCount[card.id] = Math.max(w.maxCount[card.id] || 0, w.collection[card.id]);
+      w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[card.id] = "Перший прокрут 🎉";
+      w.favoriteCards = [card.id, ...((w.favoriteCards || []).filter((id) => id !== card.id))];
+      const achDef = ACHIEVEMENTS.find((a) => a.id === "first_card");
+      if (achDef && !(w.achievementsSeen || []).includes("first_card")) {
+        w.achievementsSeen = [...(w.achievementsSeen || []), "first_card"];
+        if (!w.bucksInfinite) w.bucks += achDef.bonus;
+      }
+      await saveWallet(w);
+      setWonCard(card);
+      setPhase("done");
+    }, 1600);
+  }
+  return (
+    <div style={sx.modalOverlay}>
+      <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
+        {phase === "intro" && (
+          <>
+            <h3 style={{ marginTop: 0, color: "#fbbf24", textAlign: "center" }}>🎉 Ваш перший прокрут!</h3>
+            <p style={{ fontSize: 13, color: "#e5e7eb", textAlign: "center" }}>Спробуйте рулетку самі — цей перший прокрут гарантовано принесе вам круту картку!</p>
+            <button style={{ ...sx.primaryBtn, width: "100%" }} onClick={doSpin}>🎰 Крутити!</button>
+          </>
+        )}
+        {phase === "spinning" && (
+          <div style={{ textAlign: "center", padding: 20 }}>
+            <div style={{ fontSize: 50, animation: "spin 0.6s linear infinite", display: "inline-block" }}>🎰</div>
+            <p style={{ color: "#9ca3af" }}>Крутиться…</p>
+          </div>
+        )}
+        {phase === "done" && wonCard && (
+          <>
+            <h3 style={{ marginTop: 0, color: "#4ade80", textAlign: "center" }}>🎉 Вітаємо!</h3>
+            <div style={{ display: "flex", justifyContent: "center", margin: "10px 0", animation: "popIn 0.5s ease" }}><CardFace card={wonCard} /></div>
+            <p style={{ fontSize: 13, color: "#e5e7eb", textAlign: "center" }}>Ви отримали "{wonCard.name}"! Ми одразу зробили її вашою улюбленою карткою і зарахували досягнення "Перша картка".</p>
+            <button style={{ ...sx.primaryBtn, width: "100%" }} onClick={onDone}>Почати гру!</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -2639,6 +2718,7 @@ function PassQuestsPane({ wallet, claimPassQuest, partyConfig, setTab }) {
   const seasonProgress = wallet.passSeasonQuestProgress || {};
   const seasonClaimed = wallet.passSeasonClaimedQuests || [];
   const resetIn = useMidnightCountdown();
+  const passDone = (wallet.passLevel || 0) >= PASS_MAX_LEVEL;
   const partyQuestDone = (wallet.partyQuestsClaimed || []).includes("party_visit");
   const notebookCard = {
     background: "repeating-linear-gradient(#16281c 0px, #16281c 22px, #1f3a28 23px)",
@@ -2664,7 +2744,7 @@ function PassQuestsPane({ wallet, claimPassQuest, partyConfig, setTab }) {
       {daily.filter((q) => !q.claimed).length === 0 && <p style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>Усі квести дня виконано ✅ Відмінник! 🍎</p>}
       {daily.filter((q) => !q.claimed).map((q) => (
         <div key={q.id} style={notebookCard}>
-          <p style={{ margin: "0 0 4px", fontSize: 12 }}>📝 {q.label} <span style={{ color: "#4ade80" }}>+{q.xp} XP</span></p>
+          <p style={{ margin: "0 0 4px", fontSize: 12 }}>📝 {q.label} <span style={{ color: "#4ade80" }}>+{q.xp} {passDone ? "💵" : "XP"}</span></p>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ flex: 1, height: 6, borderRadius: 4, background: "#0b1a10", overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${Math.min(100, (q.progress / q.target) * 100)}%`, background: "linear-gradient(90deg,#4ade80,#22c55e)" }} />
@@ -2683,7 +2763,7 @@ function PassQuestsPane({ wallet, claimPassQuest, partyConfig, setTab }) {
         return (
           <div key={q.id} style={{ ...notebookCard, borderLeft: "3px solid #a78bfa", opacity: locked ? 0.5 : 1 }}>
             <p style={{ margin: "0 0 4px", fontSize: 12 }}>
-              {locked ? "🔒 " : "📌 "}{q.label} <span style={{ color: "#4ade80" }}>+{q.xp} XP</span>
+              {locked ? "🔒 " : "📌 "}{q.label} <span style={{ color: "#4ade80" }}>+{q.xp} {passDone ? "💵" : "XP"}</span>
               {q.premiumOnly && <span style={{ fontSize: 9, color: "#a78bfa", marginLeft: 4 }}>SOCCER PASS</span>}
             </p>
             {!locked && (
@@ -3720,8 +3800,10 @@ function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
     showToast(`🏅 Отримано: "${a.name}"! +${a.bonus} 💵`, "ok");
   }
   const exclusiveList = [exclusive].filter((e) => e && e.id !== "exclusive_opening_2" && (e.active || seen.includes(e.id)));
-  const totalCount = ACHIEVEMENTS.length + exclusiveList.length;
-  const pct = totalCount ? Math.round((seen.length / totalCount) * 100) : 0;
+  // ексклюзивні досягнення НЕ рахуються в загальний відсоток/тотал — вони бонусні, поза основним списком
+  const totalCount = ACHIEVEMENTS.length;
+  const seenRegularCount = seen.filter((id) => ACHIEVEMENTS.some((a) => a.id === id)).length;
+  const pct = totalCount ? Math.round((seenRegularCount / totalCount) * 100) : 0;
 
   const unlocked = ACHIEVEMENTS.filter((a) => seen.includes(a.id));
   const available = ACHIEVEMENTS.filter((a) => !seen.includes(a.id) && a.check(wallet, allCards()));
@@ -3769,7 +3851,7 @@ function AchievementsTab({ wallet, saveWallet, allCards, showToast }) {
         </div>
         <div>
           <h2 style={{ ...sx.h2, margin: 0 }}>🏅 Досягнення</h2>
-          <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>Отримано {seen.length} з {totalCount}</p>
+          <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>Отримано {seenRegularCount} з {totalCount}</p>
         </div>
       </div>
 
@@ -5503,6 +5585,7 @@ function GlobalStyles({ theme, boldText }) {
       @keyframes premiumGoldShine { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
       @keyframes starFloat { 0%,100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-10px) rotate(8deg); } }
       @keyframes starPop { 0% { transform: scale(1); opacity: 1; } 60% { transform: scale(1.8); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
+  @keyframes eventStripPulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
       @keyframes tabFadeIn { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
       @keyframes sortCycle { 0% { opacity: 0; transform: translateY(-6px); } 100% { opacity: 1; transform: translateY(0); } }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
