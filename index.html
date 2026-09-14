@@ -525,7 +525,7 @@ function newWallet() {
     friends: [], auctionAbuseCount: 0, auctionBanUntil: 0, shopNonce: 0, claimedStreakDay: "",
     dealsBought: { bucket: 0, indices: [] }, lastRewardSeen: null, processedGrantIds: [],
     processedGiftIds: [], processedFriendEventIds: [], cardOrigin: {}, pollSeen: [], lastDailyRoulette: "",
-    keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [], favoriteCards: [], maintCompClaimed: [], onboardingSeen: false,
+    keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [], favoriteCards: [], maintCompClaimed: [], onboardingSeen: false, dismissedBanners: [],
   };
 }
 // доповнює старі гаманці (створені до v10) новими полями, щоб нічого не падало
@@ -692,18 +692,35 @@ function TileBanner({ banner }) {
     </div>
   );
 }
-function AdBanner({ banner }) {
-  const [dismissedId, setDismissedId] = useState(null);
+function AdBanner({ banner, wallet, saveWallet }) {
   if (!banner || !banner.active) return null;
-  if (dismissedId === banner.id) return null;
+  const dismissed = (wallet && wallet.dismissedBanners) || [];
+  if (dismissed.includes(banner.id)) return null;
+  const s = (banner.text || "").toLowerCase();
+  const isHalloween = s.includes("хеллоу") || s.includes("halloween");
+  async function dismiss() {
+    if (!wallet || !saveWallet) return;
+    const w = JSON.parse(JSON.stringify(wallet));
+    w.dismissedBanners = [...(w.dismissedBanners || []), banner.id];
+    await saveWallet(w);
+  }
   return (
     <div style={{
-      position: "relative", padding: "10px 34px 10px 14px", textAlign: "center",
-      background: banner.img ? `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url(${banner.img}) center/cover` : (banner.color || "linear-gradient(135deg,#1d4ed8,#7c3aed)"),
-      borderBottom: "2px solid #fbbf24",
+      position: "relative", padding: "10px 34px 10px 14px", textAlign: "center", overflow: "hidden",
+      background: isHalloween
+        ? "linear-gradient(90deg,#3b0764,#7c2d12,#3b0764)"
+        : (banner.img ? `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url(${banner.img}) center/cover` : (banner.color || "linear-gradient(135deg,#1d4ed8,#7c3aed)")),
+      backgroundSize: isHalloween ? "200% auto" : undefined,
+      animation: isHalloween ? "premiumGoldShine 5s ease infinite" : "none",
+      borderBottom: `2px solid ${isHalloween ? "#f97316" : "#fbbf24"}`,
     }}>
-      <div style={{ color: banner.textColor || "#ffffff", fontWeight: 800, fontSize: 13 }}>{banner.text}</div>
-      <span onClick={() => setDismissedId(banner.id)} style={{ position: "absolute", top: 6, right: 10, cursor: "pointer", color: "#fff", fontSize: 16, opacity: 0.85, padding: 4 }}>✕</span>
+      {isHalloween && (
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.25, fontSize: 20, display: "flex", justifyContent: "space-around", alignItems: "center" }}>
+          <span>🎃</span><span>👻</span><span>🦇</span><span>🎃</span><span>👻</span>
+        </div>
+      )}
+      <div style={{ color: banner.textColor || "#ffffff", fontWeight: 800, fontSize: 13, position: "relative" }}>{isHalloween ? `🎃 ${banner.text} 🎃` : banner.text}</div>
+      <span onClick={dismiss} style={{ position: "absolute", top: 6, right: 10, cursor: "pointer", color: "#fff", fontSize: 16, opacity: 0.9, padding: 4, fontWeight: 900 }}>✕</span>
     </div>
   );
 }
@@ -1204,6 +1221,12 @@ function App() {
     w.onboardingSeen = true;
     await saveWallet(w);
   }
+  async function resetOnboarding() {
+    const w = JSON.parse(JSON.stringify(wallet));
+    w.onboardingSeen = false;
+    await saveWallet(w);
+    showToast("Навчання запущено знову", "ok");
+  }
   useEffect(() => {
     if (!maintState || !wallet) return;
     const warnOrActive = maintState.phase === "warning" || maintState.phase === "active";
@@ -1661,7 +1684,7 @@ function App() {
         }
         setPollPopup(null);
       }} />}
-      <AdBanner banner={adBanner} />
+      <AdBanner banner={adBanner} wallet={wallet} saveWallet={saveWallet} />
       <AdminAbuseBanner event={abuseEvent} />
       <PersonalBoostBanner wallet={wallet} />
       <div style={sx.body}>
@@ -1704,7 +1727,7 @@ function App() {
         {tab === "profile" && <ProfileTab profile={profile} saveProfile={saveProfile} wallet={wallet} saveWallet={saveWallet}
           nick={nick} onLogout={doLogout} showToast={showToast} onEnterDuel={setDuelRoom} allCards={allCards} siteSettings={siteSettings} maintState={maintState} claimStreakReward={claimStreakReward} setNickColor={setNickColor} passSeason={passSeason} changeOwnPassword={changeOwnPassword} />}
         {tab === "admin" && isSuperAdmin(nick) && <AdminTab showToast={showToast} setGlobalShopNonce={setGlobalShopNonce}
-          setAbuseEvent={setAbuseEvent} setRarityOverride={setRarityOverride} customCards={customCards} setCustomCards={setCustomCards} profile={profile} myNick={nick} allCards={allCards} siteSettings={siteSettings} setSiteSettings={setSiteSettings} />}
+          setAbuseEvent={setAbuseEvent} setRarityOverride={setRarityOverride} customCards={customCards} setCustomCards={setCustomCards} profile={profile} myNick={nick} allCards={allCards} siteSettings={siteSettings} setSiteSettings={setSiteSettings} resetOnboarding={resetOnboarding} />}
       </div>
       <BottomNav tab={tab} setTab={setTab} isAdmin={isSuperAdmin(nick)} passSeason={passSeason} partyConfig={partyConfig} hasNewPartyQuest={partyConfig && partyConfig.questActive && !(wallet.partyQuestsClaimed || []).includes("party_visit")} />
       <StarsOverlay config={starsConfig} wallet={wallet} saveWallet={saveWallet} showToast={showToast} />
@@ -2054,12 +2077,12 @@ function passRewardLabel(r) {
   return "";
 }
 const ONBOARDING_STEPS = [
-  { navId: "casino", icon: "🎰", title: "Крутити", desc: "Тут ви крутите рулетку і отримуєте нові футбольні картки різної рідкості." },
-  { navId: "shop", icon: "🛒", title: "Магазин", desc: "Купуйте картки за бакси — щохвилини тут з'являються нові випадкові знижки." },
-  { navId: "quests", icon: "📋", title: "Квести", desc: "Виконуйте щоденні та сезонні завдання SOCCER PASS, щоб отримати XP і підвищувати рівень пасу." },
-  { navId: "collection", icon: "📚", title: "Колекція", desc: "Тут зберігаються всі ваші картки. Можна фільтрувати за рідкістю та продавати дублікати." },
-  { navId: "achievements", icon: "🏅", title: "Досягнення", desc: "Виконуйте досягнення, щоб отримати додаткові бакси." },
-  { navId: "profile", icon: "👤", title: "Профіль", desc: "Тут можна змінити аватар, колір ніку, додати друзів і почати дуель." },
+  { navId: "casino", icon: "🎰", title: "Крутити", desc: "Тут ви крутите рулетку і отримуєте нові футбольні картки різної рідкості.", color: "#fbbf24" },
+  { navId: "shop", icon: "🛒", title: "Магазин", desc: "Купуйте картки за бакси — щохвилини тут з'являються нові випадкові знижки.", color: "#22d3ee" },
+  { navId: "quests", icon: "📋", title: "Квести", desc: "Виконуйте щоденні та сезонні завдання SOCCER PASS, щоб отримати XP і підвищувати рівень пасу.", color: "#a78bfa" },
+  { navId: "collection", icon: "📚", title: "Колекція", desc: "Тут зберігаються всі ваші картки. Можна фільтрувати за рідкістю та продавати дублікати.", color: "#4ade80" },
+  { navId: "achievements", icon: "🏅", title: "Досягнення", desc: "Виконуйте досягнення, щоб отримати додаткові бакси.", color: "#f59e0b" },
+  { navId: "profile", icon: "👤", title: "Профіль", desc: "Тут можна змінити аватар, колір ніку, додати друзів і почати дуель.", color: "#f87171" },
 ];
 function useNavRect(navId) {
   const [rect, setRect] = useState(null);
@@ -2080,29 +2103,40 @@ function OnboardingTutorial({ onForceSpin }) {
   const total = ONBOARDING_STEPS.length;
   const s = ONBOARDING_STEPS[step];
   const rect = useNavRect(s.navId);
-  const size = rect ? rect.w + 14 : 60;
+  const size = rect ? rect.w + 18 : 60;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 500 }}>
       {rect && (
         <div style={{
           position: "fixed", left: rect.x, top: rect.y, width: size, height: size, borderRadius: "50%",
-          transform: "translate(-50%,-50%)", boxShadow: "0 0 0 9999px rgba(0,0,0,0.86)", border: "2px solid #fbbf24",
-          pointerEvents: "none", transition: "left 0.3s ease, top 0.3s ease",
+          transform: "translate(-50%,-50%)", boxShadow: `0 0 0 9999px rgba(0,0,0,0.88), 0 0 0 3px ${s.color}, 0 0 22px 4px ${s.color}aa`,
+          pointerEvents: "none", transition: "left 0.3s ease, top 0.3s ease, box-shadow 0.3s ease",
+          animation: "onboardPulse 1.6s ease-in-out infinite",
         }} />
       )}
-      {!rect && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.86)" }} />}
-      <div style={{
+      {!rect && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)" }} />}
+      <div key={step} style={{
         position: "fixed", left: "50%", bottom: 100, transform: "translateX(-50%)", width: "88%", maxWidth: 360,
-        background: "#111827", border: "1px solid #fbbf24", borderRadius: 14, padding: 16, textAlign: "center", zIndex: 501,
-        boxShadow: "0 8px 24px #000a",
+        background: "linear-gradient(160deg,#1a1f35,#0b0f1a)", border: `1px solid ${s.color}`, borderRadius: 16, padding: "18px 16px 16px", textAlign: "center", zIndex: 501,
+        boxShadow: `0 10px 28px #000c, 0 0 24px ${s.color}44`, animation: "tabFadeIn 0.3s ease",
       }}>
-        <div style={{ fontSize: 30, marginBottom: 6 }}>{s.icon}</div>
-        <h3 style={{ margin: "0 0 6px", color: "#fbbf24" }}>{s.title}</h3>
-        <p style={{ fontSize: 13, color: "#e5e7eb", margin: "0 0 12px" }}>{s.desc}</p>
-        <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 10px" }}>Крок {step + 1} з {total}</p>
+        <div style={{
+          width: 56, height: 56, borderRadius: "50%", margin: "0 auto 10px", display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 28, background: "#0b0f1a", border: `2px solid ${s.color}`, boxShadow: `0 0 16px ${s.color}77`,
+        }}>{s.icon}</div>
+        <h3 style={{ margin: "0 0 6px", color: s.color }}>{s.title}</h3>
+        <p style={{ fontSize: 13, color: "#e5e7eb", margin: "0 0 14px", lineHeight: 1.4 }}>{s.desc}</p>
+        <div style={{ display: "flex", justifyContent: "center", gap: 5, marginBottom: 14 }}>
+          {ONBOARDING_STEPS.map((_, i) => (
+            <span key={i} style={{
+              width: i === step ? 18 : 6, height: 6, borderRadius: 999, transition: "width 0.25s ease",
+              background: i === step ? s.color : i < step ? "#4ade80" : "#374151",
+            }} />
+          ))}
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button style={{ ...sx.smallBtn, flex: 1 }} onClick={onForceSpin}>Пропустити</button>
-          <button style={{ ...sx.primaryBtn, flex: 1 }} onClick={() => (step + 1 < total ? setStep(step + 1) : onForceSpin())}>
+          <button style={{ ...sx.primaryBtn, flex: 1, background: `linear-gradient(90deg,${s.color},#f59e0b)`, color: "#1a1400", fontWeight: 800 }} onClick={() => (step + 1 < total ? setStep(step + 1) : onForceSpin())}>
             {step + 1 < total ? "Далі →" : "Зрозуміло!"}
           </button>
         </div>
@@ -3029,14 +3063,18 @@ function RaritySummary({ weights, tempCards }) {
         <div onClick={() => setExpanded(true)} style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", cursor: "pointer" }}>
           {RARITY_ORDER.map((r) => {
             const pct = weights[r] / total * 100;
-            return (
-              <span key={r} style={{
+            const isExclusive = r === "Ексклюзивна";
+            const chip = (
+              <span style={{
                 display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: RARITY_COLOR[r],
-                background: "#111827", border: `1px solid ${RARITY_COLOR[r]}55`, borderRadius: 999, padding: "3px 8px",
+                background: "#111827", border: isExclusive ? "none" : `1px solid ${RARITY_COLOR[r]}55`, borderRadius: 999, padding: "3px 8px",
               }}>
                 {RARITY_EMOJI[r]} {pct.toFixed(pct < 0.1 ? 3 : 1)}%
               </span>
             );
+            return isExclusive ? (
+              <span key={r} className="rainbow-ring" style={{ borderRadius: 999, padding: 1.5, display: "inline-flex" }}>{chip}</span>
+            ) : <React.Fragment key={r}>{chip}</React.Fragment>;
           })}
           {(tempCards || []).length > 0 && <span style={{ fontSize: 11, color: "#67e8f9", background: "#111827", border: "1px solid #22d3ee55", borderRadius: 999, padding: "3px 8px" }}>⏳ +{tempCards.length}</span>}
         </div>
@@ -3061,7 +3099,7 @@ function RaritySummary({ weights, tempCards }) {
               <span style={{ fontVariantNumeric: "tabular-nums", color: "#9ca3af" }}>{pct.toFixed(pct < 0.1 ? 4 : 2)}%</span>
             </div>
             <div style={{ height: 6, borderRadius: 4, background: "#1f2937", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: RARITY_COLOR[r], borderRadius: 4 }} />
+              <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, borderRadius: 4, background: r === "Ексклюзивна" ? "linear-gradient(90deg,#f87171,#fbbf24,#4ade80,#22d3ee,#a855f7)" : RARITY_COLOR[r] }} />
             </div>
           </div>
         );
@@ -4289,22 +4327,36 @@ function DuelSetupModal({ wallet, saveWallet, nick, friendsData, onClose, onEnte
   return (
     <div style={sx.modalOverlay} onClick={onClose}>
       <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
+        <div style={{
+          textAlign: "center", padding: "12px 10px", marginBottom: 12, borderRadius: 12, position: "relative", overflow: "hidden",
+          background: "linear-gradient(135deg,#4c1d95,#1e1b4b)", border: "1px solid #7c3aed",
+        }}>
+          <span style={{ position: "absolute", top: -10, left: -6, fontSize: 44, opacity: 0.14 }}>⚔️</span>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: "#e9d5ff" }}>⚔️ Дуель карток</p>
+        </div>
         <div style={sx.authTabs}>
-          <button onClick={() => setMode("create")} style={{ ...sx.authTabBtn, ...(mode === "create" ? sx.authTabActive : {}) }}>Створити</button>
-          <button onClick={() => setMode("join")} style={{ ...sx.authTabBtn, ...(mode === "join" ? sx.authTabActive : {}) }}>Приєднатись</button>
+          <button onClick={() => setMode("create")} style={{ ...sx.authTabBtn, ...(mode === "create" ? sx.authTabActive : {}) }}>🆕 Створити</button>
+          <button onClick={() => setMode("join")} style={{ ...sx.authTabBtn, ...(mode === "join" ? sx.authTabActive : {}) }}>🔑 Приєднатись</button>
         </div>
         {mode === "create" ? (
           <>
-            <p style={{ fontSize: 12, color: "#9ca3af" }}>Хто накрутить більше Легендарних/Ексклюзивних карток за час — переможе.</p>
+            <div style={{ background: "#111827", border: "1px solid #374151", borderRadius: 10, padding: 10, marginBottom: 10, textAlign: "center" }}>
+              <p style={{ fontSize: 12, color: "#e5e7eb", margin: 0 }}>🏆 Хто накрутить більше <b style={{ color: "#fbbf24" }}>Легендарних</b>/<b style={{ color: "#f59e0b" }}>Ексклюзивних</b> карток за час — перемагає!</p>
+            </div>
             {wallet.duelStats && (wallet.duelStats.wins > 0 || wallet.duelStats.losses > 0) && (
-              <p style={{ fontSize: 11, color: "#a78bfa", marginBottom: 10 }}>⚔️ Перемоги: {wallet.duelStats.wins} · Поразки: {wallet.duelStats.losses} · Серія: {wallet.duelStats.streak}{wallet.duelStats.bestStreak > 0 ? ` (рекорд: ${wallet.duelStats.bestStreak})` : ""}</p>
+              <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 12 }}>
+                <span style={{ fontSize: 11, background: "#111827", border: "1px solid #4ade80", borderRadius: 999, padding: "4px 9px", color: "#4ade80", fontWeight: 700 }}>✅ {wallet.duelStats.wins} перемог</span>
+                <span style={{ fontSize: 11, background: "#111827", border: "1px solid #f87171", borderRadius: 999, padding: "4px 9px", color: "#f87171", fontWeight: 700 }}>❌ {wallet.duelStats.losses} поразок</span>
+                <span style={{ fontSize: 11, background: "#111827", border: "1px solid #a78bfa", borderRadius: 999, padding: "4px 9px", color: "#a78bfa", fontWeight: 700 }}>🔥 серія {wallet.duelStats.streak}{wallet.duelStats.bestStreak > 0 ? ` (рекорд ${wallet.duelStats.bestStreak})` : ""}</span>
+              </div>
             )}
-            <button style={sx.primaryBtn} onClick={createRoom}>Створити кімнату</button>
+            <button style={{ ...sx.primaryBtn, background: "linear-gradient(90deg,#7c3aed,#4c1d95)" }} onClick={createRoom}>⚔️ Створити кімнату</button>
           </>
         ) : (
           <>
-            <input placeholder="Код кімнати" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} style={sx.input} />
-            <button style={sx.primaryBtn} onClick={joinRoom}>Приєднатись</button>
+            <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 0 }}>Введіть код кімнати, яким з вами поділився суперник:</p>
+            <input placeholder="Код кімнати" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} style={{ ...sx.input, textAlign: "center", fontSize: 18, fontWeight: 800, letterSpacing: 2 }} />
+            <button style={{ ...sx.primaryBtn, background: "linear-gradient(90deg,#7c3aed,#4c1d95)" }} onClick={joinRoom}>🔑 Приєднатись</button>
           </>
         )}
         <button style={{ ...sx.smallBtn, marginTop: 8, width: "100%" }} onClick={onClose}>Закрити</button>
@@ -4671,7 +4723,7 @@ function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, 
 }
 
 /* ============================== ADMIN ============================== */
-function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverride, customCards, setCustomCards, profile, myNick, allCards, siteSettings, setSiteSettings }) {
+function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverride, customCards, setCustomCards, profile, myNick, allCards, siteSettings, setSiteSettings, resetOnboarding }) {
   const [users, setUsers] = useState({});
   async function saveSiteSettings(next) {
     setSiteSettings(next);
@@ -5243,6 +5295,8 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
       <button style={{ ...sx.primaryBtn, marginBottom: 6 }} onClick={launchAbuse}>🔥 Запустити ADMIN ABUSE</button>
       <button style={{ ...sx.smallBtn, width: "100%", marginBottom: 14 }} onClick={stopAbuse}>Зупинити подію</button>
 
+      <button style={{ ...sx.smallBtn, width: "100%", marginBottom: 14, background: "#7c3aed" }} onClick={resetOnboarding}>🎓 Показати мені навчання ще раз</button>
+
       <div style={{ background: "#1f2937", border: "1px solid #fbbf24", borderRadius: 10, padding: 12, marginBottom: 14 }}>
         <h3 style={{ color: "#fbbf24", fontSize: 14, margin: "0 0 8px" }}>⭐ Збір зірок по сайту</h3>
         <input type="number" placeholder="Скільки зірок розкидати" value={starsCount} onChange={(e) => setStarsCount(e.target.value)} style={sx.input} />
@@ -5586,6 +5640,7 @@ function GlobalStyles({ theme, boldText }) {
       @keyframes starFloat { 0%,100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-10px) rotate(8deg); } }
       @keyframes starPop { 0% { transform: scale(1); opacity: 1; } 60% { transform: scale(1.8); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
   @keyframes eventStripPulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+  @keyframes onboardPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(1.06); } }
       @keyframes tabFadeIn { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
       @keyframes sortCycle { 0% { opacity: 0; transform: translateY(-6px); } 100% { opacity: 1; transform: translateY(0); } }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
