@@ -132,6 +132,19 @@ const BOT_NAMES = [
   "BlazeComet","FrostKnight","ZenPhoenix","EchoHawk","StormRider7","QuietCobra",
   "GoldenLynx","NovaWizard","DarkPulse","SkyRoamer","IronJackal","VoidWalker42"
 ];
+const SUPERQUEST_POOL = [
+  { id: "sq_duels", icon: "⚔️", label: "Виграй 30 дуелей", target: 30, getStat: (w) => (w.duelStats && w.duelStats.wins) || 0, rewardXP: 3000, rewardBucks: 1500, boostHours: 24 },
+  { id: "sq_spins", icon: "🎰", label: "Зроби 1000 прокрутів", target: 1000, getStat: (w) => w.spinsLifetime || 0, rewardXP: 3000, rewardBucks: 1500, boostHours: 24 },
+  { id: "sq_legendary", icon: "⭐", label: "Отримай 20 Легендарних карток", target: 20, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Легендарна"]) || 0, rewardXP: 2500, rewardBucks: 1200, boostHours: 12 },
+  { id: "sq_exclusive", icon: "👑", label: "Отримай 3 Ексклюзивні картки", target: 3, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Ексклюзивна"]) || 0, rewardXP: 3500, rewardBucks: 2000, boostHours: 24, premiumOnly: true },
+  { id: "sq_mythic", icon: "💠", label: "Отримай 40 Міфічних карток", target: 40, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Міфічна"]) || 0, rewardXP: 2800, rewardBucks: 1000, boostHours: 12, premiumOnly: true },
+];
+function eligibleSuperquests(w) { return SUPERQUEST_POOL.filter((q) => !q.premiumOnly || w.passPremium); }
+function currentSuperquest(w) {
+  const pool = eligibleSuperquests(w);
+  if (!pool.length) return null;
+  return pool[(w.superQuestIndex || 0) % pool.length];
+}
 const ACHIEVEMENTS = [
   { id: "first_card", icon: "🃏", name: "Перша картка", desc: "Отримайте свою першу картку", bonus: 50, check: (w) => Object.values(w.collection || {}).some((c) => c > 0) },
   { id: "collector_10", icon: "📚", name: "Колекціонер I", desc: "Зберіть 10 унікальних карток", bonus: 150, check: (w) => Object.values(w.collection || {}).filter((c) => c > 0).length >= 10 },
@@ -526,6 +539,8 @@ function newWallet() {
     dealsBought: { bucket: 0, indices: [] }, lastRewardSeen: null, processedGrantIds: [],
     processedGiftIds: [], processedFriendEventIds: [], cardOrigin: {}, pollSeen: [], lastDailyRoulette: "",
     keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [], favoriteCards: [], maintCompClaimed: [], onboardingSeen: false, dismissedBanners: [],
+    spinsLifetime: 0, rarityLifetime: {}, superQuestIndex: 0, superQuestBaseline: 0, superQuestClaims: 0,
+    abuseQuestProgress: 0, abuseQuestId: "", abuseQuestClaimed: [],
   };
 }
 // доповнює старі гаманці (створені до v10) новими полями, щоб нічого не падало
@@ -1346,6 +1361,42 @@ function App() {
     }
     await saveWallet(w);
   }
+  async function claimSuperquest() {
+    const passDone = (wallet.passLevel || 0) >= PASS_MAX_LEVEL;
+    if (passDone) return; // після повного проходження пасу суперквести не дають нагород
+    const q = currentSuperquest(wallet);
+    if (!q) return;
+    const progress = Math.max(0, q.getStat(wallet) - (wallet.superQuestBaseline || 0));
+    if (progress < q.target) return;
+    const w = JSON.parse(JSON.stringify(wallet));
+    if (!w.bucksInfinite) w.bucks += q.rewardBucks;
+    grantPassXP(w, q.rewardXP);
+    applyBoost(w, "bucks", 2, q.boostHours * 60);
+    w.superQuestClaims = (w.superQuestClaims || 0) + 1;
+    w.superQuestIndex = ((w.superQuestIndex || 0) + 1) % eligibleSuperquests(w).length;
+    const next = currentSuperquest(w);
+    w.superQuestBaseline = next ? next.getStat(w) : 0;
+    await saveWallet(w);
+    showToast(`🌟 Суперквест виконано! +${q.rewardXP} XP, +${q.rewardBucks} 💵, 2x бакси на ${q.boostHours} год!`, "ok");
+  }
+  async function changeSuperquest() {
+    const w = JSON.parse(JSON.stringify(wallet));
+    w.superQuestIndex = ((w.superQuestIndex || 0) + 1) % eligibleSuperquests(w).length;
+    const next = currentSuperquest(w);
+    w.superQuestBaseline = next ? next.getStat(w) : 0;
+    await saveWallet(w);
+    showToast("Суперквест змінено — прогрес попереднього скинуто", "ok");
+  }
+  async function claimAbuseQuest() {
+    const w = JSON.parse(JSON.stringify(wallet));
+    if ((w.abuseQuestClaimed || []).includes(w.abuseQuestId)) return;
+    if ((w.abuseQuestProgress || 0) < 500) return;
+    if (!w.bucksInfinite) w.bucks += 3000;
+    grantPassXP(w, 4000);
+    w.abuseQuestClaimed = [...(w.abuseQuestClaimed || []), w.abuseQuestId];
+    await saveWallet(w);
+    showToast("🔥 Суперквест ADMIN ABUSE виконано! +4000 XP, +3000 💵!", "ok");
+  }
   const [passCardChoice, setPassCardChoice] = useState(null);
   function redeemPassRewardInto(w, reward) {
     if (reward.type === "bucks") { if (!w.bucksInfinite) w.bucks += reward.amount; return { text: `+${reward.amount} 💵` }; }
@@ -1709,7 +1760,8 @@ function App() {
               <span>📋 Квести</span>
               <span style={{ fontSize: 11, fontWeight: 800, color: "#1a1400", background: "linear-gradient(90deg,#fbbf24,#f59e0b)", padding: "2px 8px", borderRadius: 999 }}>BACK TO SCHOOL 🎓</span>
             </h2>
-            <PassQuestsPane wallet={wallet} claimPassQuest={claimPassQuest} partyConfig={partyConfig} setTab={setTab} />
+            <PassQuestsPane wallet={wallet} claimPassQuest={claimPassQuest} partyConfig={partyConfig} setTab={setTab}
+              claimSuperquest={claimSuperquest} changeSuperquest={changeSuperquest} claimAbuseQuest={claimAbuseQuest} abuseEvent={abuseEvent} />
             </div>
           </div>
         )}
@@ -2269,12 +2321,19 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
     setTimeout(async () => {
       clearInterval(anim);
       w.cardOrigin = w.cardOrigin || {};
+      w.spinsLifetime = (w.spinsLifetime || 0) + 1;
+      w.rarityLifetime = { ...(w.rarityLifetime || {}) };
       won.forEach((c) => {
         w.collection[c.id] = (w.collection[c.id] || 0) + 1;
         if (!w.obtainedAt[c.id]) w.obtainedAt[c.id] = Date.now();
         w.maxCount[c.id] = Math.max(w.maxCount[c.id] || 0, w.collection[c.id]);
         if (!c.tempEvent) w.cardOrigin[c.id] = "Виграно в казино 🎰";
+        w.rarityLifetime[c.rarity] = (w.rarityLifetime[c.rarity] || 0) + 1;
       });
+      if (abuseEvent && abuseEvent.expiresAt > Date.now() && abuseEvent.superQuestId === "abuse_spins500") {
+        w.abuseQuestId = "abuse_spins500";
+        w.abuseQuestProgress = (w.abuseQuestProgress || 0) + 1;
+      }
       const hitLegendary = won.some((c) => c.rarity === "Легендарна");
       const hitExclusive = won.some((c) => c.rarity === "Ексклюзивна");
       if (hitExclusive) w.pityExclusive = 8;
@@ -2334,13 +2393,20 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
         spinWon.push(card);
       }
       w.cardOrigin = w.cardOrigin || {};
+      w.spinsLifetime = (w.spinsLifetime || 0) + 1;
+      w.rarityLifetime = w.rarityLifetime || {};
       spinWon.forEach((c) => {
         w.collection[c.id] = (w.collection[c.id] || 0) + 1;
         if (!w.obtainedAt[c.id]) w.obtainedAt[c.id] = Date.now();
         w.maxCount[c.id] = Math.max(w.maxCount[c.id] || 0, w.collection[c.id]);
         if (!c.tempEvent) w.cardOrigin[c.id] = "Виграно в казино 🎰";
+        w.rarityLifetime[c.rarity] = (w.rarityLifetime[c.rarity] || 0) + 1;
         totalValue += c.price;
       });
+      if (abuseEvent && abuseEvent.expiresAt > Date.now() && abuseEvent.superQuestId === "abuse_spins500") {
+        w.abuseQuestId = "abuse_spins500";
+        w.abuseQuestProgress = (w.abuseQuestProgress || 0) + 1;
+      }
       updatePityCounters(w, spinWon);
       bumpPassQuest(w, "spins");
       if (spinWon.some((c) => c.rarity === "Міфічна")) bumpPassQuest(w, "card_mythic");
@@ -2747,13 +2813,20 @@ function countdownColor(ms) {
   const c = g.map((gv, i) => Math.round(gv + (r[i] - gv) * ratio));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
-function PassQuestsPane({ wallet, claimPassQuest, partyConfig, setTab }) {
+function PassQuestsPane({ wallet, claimPassQuest, partyConfig, setTab, claimSuperquest, changeSuperquest, claimAbuseQuest, abuseEvent }) {
   const daily = (wallet.passDailyQuests && wallet.passDailyQuests.quests) || [];
   const seasonProgress = wallet.passSeasonQuestProgress || {};
   const seasonClaimed = wallet.passSeasonClaimedQuests || [];
   const resetIn = useMidnightCountdown();
   const passDone = (wallet.passLevel || 0) >= PASS_MAX_LEVEL;
   const partyQuestDone = (wallet.partyQuestsClaimed || []).includes("party_visit");
+  const [showChangeConfirm, setShowChangeConfirm] = useState(false);
+  const sq = currentSuperquest(wallet);
+  const sqProgress = sq ? Math.max(0, Math.min(sq.target, sq.getStat(wallet) - (wallet.superQuestBaseline || 0))) : 0;
+  const sqDone = sq && sqProgress >= sq.target;
+  const abuseActive = abuseEvent && abuseEvent.expiresAt > Date.now() && abuseEvent.superQuestId === "abuse_spins500";
+  const abuseQuestOwned = wallet.abuseQuestId === "abuse_spins500";
+  const abuseQuestClaimed = (wallet.abuseQuestClaimed || []).includes("abuse_spins500");
   const notebookCard = {
     background: "repeating-linear-gradient(#16281c 0px, #16281c 22px, #1f3a28 23px)",
     borderLeft: "3px solid #dc2626", borderRadius: "2px 8px 8px 2px", padding: "8px 8px 8px 12px", marginBottom: 8,
@@ -2761,6 +2834,61 @@ function PassQuestsPane({ wallet, claimPassQuest, partyConfig, setTab }) {
   };
   return (
     <div>
+      {passDone ? (
+        <div style={{
+          textAlign: "center", padding: "14px 10px", marginBottom: 14, borderRadius: 12,
+          background: "linear-gradient(135deg,#4c1d95,#1e1b4b)", border: "1px solid #a855f7",
+        }}>
+          <p style={{ margin: 0, fontSize: 24 }}>🏆</p>
+          <p style={{ margin: "4px 0 0", fontWeight: 800, color: "#e9d5ff" }}>Пас пройдено!</p>
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#c4b5fd" }}>Суперквести більше не потрібні — ви й так досягли максимуму цього сезону 🎉</p>
+        </div>
+      ) : sq && (
+        <div style={{
+          position: "relative", overflow: "hidden", borderRadius: 12, padding: "12px 10px", marginBottom: 14,
+          background: "linear-gradient(150deg,#78350f,#1e1b4b)", border: "2px solid #fbbf24", boxShadow: "0 0 16px #fbbf2444",
+        }}>
+          <p style={{ margin: "0 0 4px", fontSize: 11, color: "#fde68a", fontWeight: 800, letterSpacing: 1 }}>🌟 СУПЕРКВЕСТ СЕЗОНУ</p>
+          <p style={{ margin: "0 0 6px", fontSize: 13, color: "#fff", fontWeight: 700 }}>{sq.icon} {sq.label}</p>
+          <div style={{ height: 8, borderRadius: 4, background: "#1f2937", overflow: "hidden", marginBottom: 4 }}>
+            <div style={{ height: "100%", width: `${(sqProgress / sq.target) * 100}%`, background: "linear-gradient(90deg,#fbbf24,#f59e0b)" }} />
+          </div>
+          <p style={{ margin: "0 0 8px", fontSize: 11, color: "#fde68a" }}>{sqProgress}/{sq.target}</p>
+          <p style={{ margin: "0 0 8px", fontSize: 10, color: "#c4b5fd" }}>Нагорода: +{sq.rewardXP} XP, +{sq.rewardBucks} 💵, 2x бакси на {sq.boostHours} год</p>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button disabled={!sqDone} style={{ ...sx.smallBtn, flex: 1, background: sqDone ? "linear-gradient(90deg,#fbbf24,#f59e0b)" : "#374151", color: sqDone ? "#1a1400" : "#6b7280", fontWeight: 700 }} onClick={claimSuperquest}>{sqDone ? "🎁 Забрати" : "Ще не виконано"}</button>
+            <button style={{ ...sx.smallBtn, background: "#374151", fontSize: 11 }} onClick={() => setShowChangeConfirm(true)}>Змінити</button>
+          </div>
+          {showChangeConfirm && (
+            <div style={sx.modalOverlay} onClick={() => setShowChangeConfirm(false)}>
+              <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
+                <h3 style={{ marginTop: 0, color: "#fbbf24" }}>Змінити суперквест?</h3>
+                <p style={{ fontSize: 13, color: "#e5e7eb" }}>Весь прогрес поточного суперквесту ({sqProgress}/{sq.target}) буде втрачено назавжди. Ви точно впевнені?</p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...sx.smallBtn, flex: 1 }} onClick={() => setShowChangeConfirm(false)}>Скасувати</button>
+                  <button style={{ ...sx.primaryBtn, flex: 1, background: "#7f1d1d" }} onClick={() => { changeSuperquest(); setShowChangeConfirm(false); }}>Так, змінити</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {(abuseActive || (abuseQuestOwned && !abuseQuestClaimed)) && (
+        <div style={{
+          borderRadius: 12, padding: "12px 10px", marginBottom: 14, background: "linear-gradient(150deg,#7f1d1d,#431407)",
+          border: "2px solid #ef4444", animation: "eventStripPulse 2s ease-in-out infinite",
+        }}>
+          <p style={{ margin: "0 0 4px", fontSize: 11, color: "#fecaca", fontWeight: 800 }}>🔥 СУПЕРКВЕСТ ADMIN ABUSE</p>
+          <p style={{ margin: "0 0 6px", fontSize: 13, color: "#fff", fontWeight: 700 }}>Зроби 500 прокрутів під час події</p>
+          <div style={{ height: 8, borderRadius: 4, background: "#1f2937", overflow: "hidden", marginBottom: 4 }}>
+            <div style={{ height: "100%", width: `${Math.min(100, ((wallet.abuseQuestProgress || 0) / 500) * 100)}%`, background: "linear-gradient(90deg,#ef4444,#f97316)" }} />
+          </div>
+          <p style={{ margin: "0 0 8px", fontSize: 11, color: "#fecaca" }}>{wallet.abuseQuestProgress || 0}/500 · нагорода: +4000 XP, +3000 💵</p>
+          <button disabled={(wallet.abuseQuestProgress || 0) < 500 || abuseQuestClaimed} style={{ ...sx.smallBtn, width: "100%", background: (wallet.abuseQuestProgress || 0) >= 500 && !abuseQuestClaimed ? "linear-gradient(90deg,#ef4444,#f97316)" : "#374151" }} onClick={claimAbuseQuest}>
+            {abuseQuestClaimed ? "✅ Отримано" : (wallet.abuseQuestProgress || 0) >= 500 ? "🎁 Забрати" : "Ще не виконано"}
+          </button>
+        </div>
+      )}
       {partyConfig && partyConfig.questActive && (
         <div style={{ ...notebookCard, borderLeft: "3px solid #a855f7", marginBottom: 12 }}>
           <p style={{ margin: "0 0 4px", fontSize: 12 }}>🎉 {partyConfig.questLabel || "Зайди у вкладку Party"} <span style={{ color: "#4ade80" }}>+{partyConfig.questXP || 0} XP</span></p>
@@ -3584,8 +3712,8 @@ function StreakModal({ wallet, nick, claimStreakReward, onClose }) {
   const current = wallet.streak || 1;
   const pending = wallet.pendingStreakReward && !wallet.pendingStreakReward.claimed && wallet.pendingStreakReward.day === current ? wallet.pendingStreakReward : null;
   const todayReward = getStreakReward(current, nick);
-  const previewDays = [];
-  for (let d = Math.max(1, current - 1); d <= current + 10; d++) previewDays.push(d);
+  const cyclePos = (current - 1) % 5; // 0..4 — де в поточному 5-денному циклі ми зараз
+  const cycleStart = current - cyclePos; // день 1 поточного цикла
   const [claiming, setClaiming] = useState(false);
   async function doClaim() {
     setClaiming(true);
@@ -3595,49 +3723,47 @@ function StreakModal({ wallet, nick, claimStreakReward, onClose }) {
   return (
     <div style={sx.modalOverlay} onClick={onClose}>
       <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0, color: "#fbbf24", textAlign: "center" }}>🔥 Щоденна серія: {current} дн.</h3>
-
         <div style={{
-          background: pending && pending.lucky ? "linear-gradient(135deg,#78350f,#451a03)" : "linear-gradient(135deg,#14532d,#052e16)",
-          border: pending && pending.lucky ? "2px solid #fbbf24" : "1px solid #4ade80",
-          borderRadius: 12, padding: 14, textAlign: "center", marginBottom: 14,
-          boxShadow: pending && pending.lucky ? "0 0 18px #fbbf2455" : "none",
+          textAlign: "center", position: "relative", overflow: "hidden", borderRadius: 14, padding: "16px 12px",
+          marginBottom: 14, background: "linear-gradient(150deg,#7c2d12,#431407 60%,#1a1400)", border: "1px solid #f97316",
         }}>
-          <div style={{ fontSize: 32 }}>{todayReward.lucky ? "🍀" : todayReward.medal}</div>
-          <p style={{ margin: "4px 0 0", fontWeight: 800, color: "#fff" }}>Нагорода за сьогодні (день {current})</p>
-          <p style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 800, color: "#4ade80" }}>+{todayReward.bucks} 💵{todayReward.card ? ` + ${todayReward.card} картка!` : ""}</p>
-          {todayReward.lucky && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#fde68a" }}>🍀 Щасливий день! Бонус: {todayReward.boost.mult}x {todayReward.boost.type === "bucks" ? "бакси" : "шанси"} на {todayReward.boost.minutes} хв</p>}
-          {!todayReward.lucky && todayReward.boost && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#a78bfa" }}>⚡ Бонус: {todayReward.boost.mult}x {todayReward.boost.type === "bucks" ? "бакси" : "шанси"} на {todayReward.boost.minutes} хв</p>}
+          <span style={{ position: "absolute", top: -10, left: -8, fontSize: 50, opacity: 0.13 }}>🔥</span>
+          <span style={{ position: "absolute", bottom: -12, right: -6, fontSize: 46, opacity: 0.13 }}>⚽</span>
+          <p style={{ margin: "0 0 2px", fontSize: 12, color: "#fdba74" }}>Серія входів</p>
+          <h3 style={{ margin: "0 0 8px", color: "#fed7aa", fontSize: 24 }}>🔥 {current} {current === 1 ? "день" : current < 5 ? "дні" : "днів"}</h3>
+          <div style={{ fontSize: 34, marginBottom: 2 }}>{todayReward.medal}</div>
+          <p style={{ margin: "2px 0 0", fontSize: 12, color: "#fdba74" }}>Нагорода за сьогодні</p>
+          <p style={{ margin: "2px 0 10px", fontSize: 22, fontWeight: 900, color: "#4ade80" }}>+{todayReward.bucks} 💵</p>
           {pending ? (
-            <button disabled={claiming} style={{ ...sx.primaryBtn, marginTop: 10 }} onClick={doClaim}>{claiming ? "Забираю…" : "🎁 Забрати"}</button>
+            <button disabled={claiming} style={{ ...sx.primaryBtn, background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400", fontWeight: 800 }} onClick={doClaim}>{claiming ? "Забираю…" : "🎁 Забрати"}</button>
           ) : (
-            <p style={{ margin: "10px 0 0", fontSize: 12, color: "#86efac" }}>✅ Отримано</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#86efac", fontWeight: 700 }}>✅ Отримано</p>
           )}
         </div>
 
-        <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 6px" }}>Наступні дні:</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, maxHeight: 260, overflowY: "auto" }}>
-          {previewDays.map((d) => {
+        <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 8px" }}>Цикл нагород (5 днів, потім повторюється):</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6 }}>
+          {[1, 2, 3, 4, 5].map((pos) => {
+            const d = cycleStart + (pos - 1);
             const r = getStreakReward(d, nick);
-            const isToday = d === current;
-            const isFuture = d > current;
+            const isToday = pos - 1 === cyclePos;
+            const isPast = pos - 1 < cyclePos;
+            const isLast = pos === 5;
             return (
-              <div key={d} style={{
-                padding: 8, borderRadius: 8, textAlign: "center",
-                background: isToday ? "#14532d" : "#1f2937",
-                border: isToday ? "1px solid #4ade80" : "1px solid #374151",
-                opacity: isFuture ? 0.85 : 1,
+              <div key={pos} style={{
+                padding: "8px 4px", borderRadius: 10, textAlign: "center", position: "relative",
+                background: isToday ? "linear-gradient(160deg,#7c2d12,#431407)" : isPast ? "#14532d" : "#1f2937",
+                border: isToday ? "2px solid #fbbf24" : isLast ? "1px solid #f59e0b" : "1px solid #374151",
+                opacity: isPast || isToday ? 1 : 0.7,
               }}>
-                <div style={{ fontSize: 10, color: "#9ca3af" }}>День {d}</div>
-                <div style={{ fontSize: 16 }}>{r.medal}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#fbbf24" }}>{r.bucks} 💵</div>
-                {r.card && <div style={{ fontSize: 9, color: "#f87171" }}>+ {r.card} картка!</div>}
-                {isToday && <div style={{ fontSize: 9, color: "#4ade80" }}>сьогодні</div>}
+                <div style={{ fontSize: 9, color: "#9ca3af" }}>День {pos}</div>
+                <div style={{ fontSize: 16 }}>{isPast ? "✅" : r.medal}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: isLast ? "#fbbf24" : "#e5e7eb" }}>{r.bucks}💵</div>
               </div>
             );
           })}
         </div>
-        <button style={{ ...sx.smallBtn, width: "100%", marginTop: 10 }} onClick={onClose}>Закрити</button>
+        <button style={{ ...sx.smallBtn, width: "100%", marginTop: 14 }} onClick={onClose}>Закрити</button>
       </div>
     </div>
   );
@@ -3654,7 +3780,7 @@ function FriendProfileModal({ friend, onClose, allCards }) {
         <p style={{ textAlign: "center", color: "#9ca3af", fontSize: 12 }}>⚔️ Дуелі: {friend.duelWins || 0} перемог / {friend.duelLosses || 0} поразок</p>
         {favCard && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 6 }}>
-            <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 4px" }}>🏆 Найцінніша картка</p>
+            <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 4px" }}>⭐ Улюблена картка</p>
             <CardFace card={favCard} small />
           </div>
         )}
@@ -5079,6 +5205,7 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
     const ev = {
       xpX2: xpX2Toggle,
       id: "abuse_" + Date.now(),
+      superQuestId: "abuse_spins500",
       bucksX2: true, chanceX2: true, discount: Number(abuseDiscount) || 0, expiresAt: Date.now() + (Number(abuseMinutes) || 15) * 60000, bannerText, bannerColor,
       tempCard: cardTemp && abuseCardName && abuseCardImg ? { id: "temp_" + Date.now(), name: abuseCardName, season: abuseCardSeason, origin: `Подія ADMIN ABUSE${abuseCardSeason ? ` — ${abuseCardSeason}` : ""}`, rarity: "Ексклюзивна", price: 999999, img: abuseCardImg, tempEvent: true, dropChance: Math.max(0, Number(abuseCardChance) || 2) / 100, expiresAt: Date.now() + (Number(abuseCardTempMin) || 15) * 60000 } : null,
     };
