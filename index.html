@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin a Soccer Card</title>
+<title>Spin Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -138,6 +138,7 @@ const SUPERQUEST_POOL = [
   { id: "sq_legendary", icon: "⭐", label: "Отримай 20 Легендарних карток", target: 20, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Легендарна"]) || 0, rewardXP: 2500, rewardBucks: 1200, boostHours: 12 },
   { id: "sq_exclusive", icon: "👑", label: "Отримай 3 Ексклюзивні картки", target: 3, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Ексклюзивна"]) || 0, rewardXP: 3500, rewardBucks: 2000, boostHours: 24, premiumOnly: true },
   { id: "sq_mythic", icon: "💠", label: "Отримай 40 Міфічних карток", target: 40, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Міфічна"]) || 0, rewardXP: 2800, rewardBucks: 1000, boostHours: 12, premiumOnly: true },
+  { id: "sq_market", icon: "🏷", label: "Продай 40 карток на ринку", target: 40, getStat: (w) => (w.lotStats && w.lotStats.sold) || 0, rewardXP: 2500, rewardBucks: 1200, boostHours: 12 },
 ];
 function eligibleSuperquests(w) { return SUPERQUEST_POOL.filter((q) => !q.premiumOnly || w.passPremium); }
 function currentSuperquest(w) {
@@ -165,6 +166,9 @@ const ACHIEVEMENTS = [
   { id: "duel_win_25", icon: "⚔️", name: "Майстер дуелей", desc: "Виграйте 25 дуелей", bonus: 1800, check: (w) => (w.duelStats && w.duelStats.wins || 0) >= 25 },
   { id: "gifter", icon: "🎁", name: "Щедра душа", desc: "Подаруйте картку другу", bonus: 150, check: (w) => (w.giftsSent || 0) >= 1 },
   { id: "pass_complete", icon: "🎓", name: "Пройти пасс", desc: "Досягніть максимального рівня SOCCER PASS за сезон", bonus: 1000, check: (w) => (w.passLevel || 0) >= PASS_MAX_LEVEL },
+  { id: "market_first", icon: "🏷", name: "Перший продаж", desc: "Продайте свою першу картку на ринку", bonus: 150, check: (w) => ((w.lotStats && w.lotStats.sold) || 0) >= 1 },
+  { id: "market_25", icon: "🛍️", name: "Торговець", desc: "Продайте 25 карток на ринку", bonus: 700, check: (w) => ((w.lotStats && w.lotStats.sold) || 0) >= 25 },
+  { id: "market_tycoon", icon: "💹", name: "Магнат біржі", desc: "Заробіть 50 000 💵 на ринку", bonus: 2000, check: (w) => ((w.lotStats && w.lotStats.earned) || 0) >= 50000 },
 ];
 const COST_LEVELS = [150, 200, 250, 300, 500, 1000, 1500, 2000, 2500];
 const DECAY_INTERVAL_MS = 15 * 1000;
@@ -261,6 +265,8 @@ const PASS_DAILY_QUEST_POOL = [
   { id: "duel_win", label: (n) => `Виграй ${n} дуел${n === 1 ? "ь" : "і"}`, min: 1, max: 2 },
   { id: "duel_play", label: (n) => `Зіграй ${n} дуел${n === 1 ? "ь" : "і"}`, min: 1, max: 3 },
   { id: "card_mythic", label: () => `Отримай Міфічну картку`, min: 1, max: 1 },
+  { id: "market_sell", label: (n) => `Продай ${n} ${n === 1 ? "картку" : "картки"} на ринку`, min: 1, max: 3 },
+  { id: "market_buy", label: (n) => `Купи ${n} ${n === 1 ? "лот" : "лоти"} на ринку`, min: 1, max: 2 },
 ];
 function generateDailyQuests(nick) {
   const rng = seededRandom(parseInt(simpleHash(nick + "_passday_" + todayStr()), 16) % 2147483646);
@@ -283,6 +289,9 @@ const DEFAULT_SEASON_QUESTS = [
   { id: "sq6", label: "Виграй 15 дуелей", type: "duel_win", target: 15, xp: 1000, premiumOnly: true },
   { id: "sq7", label: "Отримай Легендарну картку", type: "card_legendary", target: 1, xp: 900, premiumOnly: true },
   { id: "sq8", label: "Зроби 300 прокрутів у казино", type: "spins", target: 300, xp: 1000, premiumOnly: true },
+  { id: "sq9", label: "Продай 10 карток на ринку", type: "market_sell", target: 10, xp: 800, premiumOnly: false },
+  { id: "sq10", label: "Купи 5 лотів гравців на ринку", type: "market_buy", target: 5, xp: 700, premiumOnly: false },
+  { id: "sq11", label: "Заробити 20 000 💵 на ринку", type: "market_earn", target: 20000, xp: 1000, premiumOnly: true },
 ];
 const DAILY_ROULETTE_TABLE = [
   { type: "bucks", amount: 200, weight: 26, label: "200 💵" },
@@ -3534,10 +3543,43 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
 const LOT_MIN_MS = 60000, LOT_MAX_MS = 300000; // бот приходить через 1–5 хвилин
 const LOT_MIN_F = 0.5, LOT_MAX_F = 0.9;        // жорстка стеля/підлога від базової ціни
 function lotSlots(w) { return w && w.passPremium ? 5 : 3; }
+// Курс рідкостей — схожий на справжній графік: "шум" кількох масштабів + постійна перевага дорогих рідкостей
+// + "лідер" (75-хвилинні вікна з плавним переходом): найчастіше вигідніше Міфічні / Легендарні / Ексклюзивні, іноді Епічні, дуже рідко Рідкісні.
+const RARITY_BIAS = { "Рідкісна": -0.035, "Епічна": -0.005, "Міфічна": 0.012, "Легендарна": 0.012, "Ексклюзивна": 0.012 };
+const LEADER_WINDOW_MS = 75 * 60000;
+const LEADER_WEIGHTS = { "Рідкісна": 3, "Епічна": 15, "Міфічна": 30, "Легендарна": 27, "Ексклюзивна": 25 };
+function hash01(s) { // FNV-1a + фіналізатор: рівномірне число [0,1)
+  s = String(s);
+  let x = 2166136261;
+  for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); }
+  x ^= x >>> 16; x = Math.imul(x, 2246822507); x ^= x >>> 13; x = Math.imul(x, 3266489909); x ^= x >>> 16;
+  return (x >>> 0) / 4294967296;
+}
+function mktRng(str) { // якісне зерно: сусідні рядки дають незалежні послідовності
+  const r = seededRandom(Math.floor(hash01(str) * 2147483000) + 7);
+  r(); r();
+  return r;
+}
+function vnoise(seed, t, period) {
+  const x = t / period, i = Math.floor(x), f = x - i, sm = f * f * (3 - 2 * f);
+  const a = hash01(seed + "_" + i), b = hash01(seed + "_" + (i + 1));
+  return (a + (b - a) * sm) * 2 - 1; // [-1, 1]
+}
+function leaderOf(win) {
+  const rng = mktRng("lead" + win);
+  return weightedPick(rng, LEADER_WEIGHTS);
+}
+function leaderStrength(rarity, ts) {
+  const x = ts / LEADER_WINDOW_MS, i = Math.floor(x), f = x - i, sm = f * f * (3 - 2 * f);
+  const a = leaderOf(i) === rarity ? 1 : 0, b = leaderOf(i + 1) === rarity ? 1 : 0;
+  return a + (b - a) * sm;
+}
 function marketMult(rarity, ts) {
-  const ph = (parseInt(simpleHash(String(rarity)), 16) % 628) / 100;
-  const t = ts / 60000; // хвилини
-  const m = 1 + 0.10 * Math.sin(t / 17 + ph) + 0.05 * Math.sin(t / 5.3 + ph * 2.1);
+  const m = 1 + (RARITY_BIAS[rarity] || 0)
+    + 0.05 * vnoise(rarity + "a", ts, 22 * 60000)
+    + 0.028 * vnoise(rarity + "b", ts, 7 * 60000)
+    + 0.012 * vnoise(rarity + "c", ts, 2.3 * 60000)
+    + 0.06 * leaderStrength(rarity, ts);
   return Math.min(1.15, Math.max(0.85, m));
 }
 function lotFactor(card, lot, cards) {
@@ -3589,7 +3631,15 @@ function settleLots(w, now, cards) {
   });
   n.lotHistory = [...sold.slice().reverse(), ...(w.lotHistory || [])].slice(0, 15);
   const st = w.lotStats || { sold: 0, earned: 0 };
-  n.lotStats = { sold: (st.sold || 0) + sold.length, earned: (st.earned || 0) + sold.reduce((a, x) => a + x.price, 0) };
+  const earnedNow = sold.reduce((a, x) => a + x.price, 0);
+  n.lotStats = { sold: (st.sold || 0) + sold.length, earned: (st.earned || 0) + earnedNow };
+  if (sold.length > 0) {
+    // квести: копіюємо вкладені об'єкти, щоб не мутувати старий гаманець
+    if (w.passDailyQuests) n.passDailyQuests = JSON.parse(JSON.stringify(w.passDailyQuests));
+    n.passSeasonQuestProgress = { ...(w.passSeasonQuestProgress || {}) };
+    bumpPassQuest(n, "market_sell", sold.length);
+    bumpPassQuest(n, "market_earn", earnedNow);
+  }
   return { wallet: n, sold, returned };
 }
 function fmtMMSS(ms) {
@@ -3599,8 +3649,8 @@ function fmtMMSS(ms) {
 // ---- живий ринок: лоти ботів (детерміновані від часу, однакові для всіх гравців) ----
 // Ціна лота 0.92–1.10 від базової: навіть найдешевший лот дорожчий за максимальну ціну, яку бот платить гравцеві (0.9),
 // тому "купити в бота → продати боту" ніколи не приносить прибутку.
-const BOT_LOT_PERIODS = [7, 9, 11, 8, 13, 10]; // хвилини життя кожного лота
-const BOT_LOT_WEIGHTS = { "Рідкісна": 45, "Епічна": 30, "Міфічна": 15, "Легендарна": 10 };
+const BOT_LOT_PERIODS = Array.from({ length: 30 }, (_, i) => 6 + ((i * 7) % 15)); // 30 лотів, кожен живе 6–20 хв
+const BOT_LOT_WEIGHTS = { "Рідкісна": 38, "Епічна": 30, "Міфічна": 17, "Легендарна": 12, "Ексклюзивна": 3 };
 const HOT_WINDOW_MS = 20 * 60000; // "гарячий попит" міняється кожні 20 хвилин
 const TRADER_RANKS = [
   { min: 0, name: "Новачок", icon: "🌱" }, { min: 5, name: "Торговець", icon: "🛍️" }, { min: 20, name: "Ділок", icon: "💼" },
@@ -3619,11 +3669,11 @@ function botLotWindow(i, now) {
   return { inst, start: inst * P - off, end: (inst + 1) * P - off };
 }
 function botLotPool(cards) {
-  return cards.filter((c) => !c.tempEvent && c.rarity !== "Ексклюзивна").sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return cards.filter((c) => !c.tempEvent).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 function botLot(i, inst, pool) {
   if (!pool || pool.length === 0) return null;
-  const rng = seededRandom((parseInt(simpleHash("mkt" + i + "_" + inst), 16) % 2147483000) + 7);
+  const rng = mktRng("mkt" + i + "_" + inst);
   const rarity = weightedPick(rng, BOT_LOT_WEIGHTS);
   const sub = pool.filter((c) => c.rarity === rarity);
   const src = sub.length ? sub : pool;
@@ -3634,33 +3684,39 @@ function botLot(i, inst, pool) {
   if (buyer === seller) buyer = BOT_NAMES[(BOT_NAMES.indexOf(seller) + 1) % BOT_NAMES.length];
   return { key: i + "_" + inst, card, price: Math.max(1, Math.round(card.price * f)), factor: f, seller, buyer };
 }
-// "гарячий попит": 2 картки, за які в цьому 20-хвилинному вікні боти платять максимум (+15 п.п., але не вище 0.9)
+// "гарячий попит": по одній картці з двох рідкостей, які зараз найбільше в ціні (за курсом ринку); ціна +15 п.п., але не вище 0.9
 function hotCardIds(ts, cards) {
   const pool = botLotPool(cards);
   if (pool.length === 0) return [];
   const win = Math.floor(ts / HOT_WINDOW_MS);
-  const rng = seededRandom((parseInt(simpleHash("hot" + win), 16) % 2147483000) + 11);
+  const mid = win * HOT_WINDOW_MS + HOT_WINDOW_MS / 2;
+  const rng = mktRng("hot" + win);
+  const ranked = RARITY_ORDER.map((r) => ({ r, m: marketMult(r, mid) })).sort((x, y) => y.m - x.m);
   const ids = [];
-  for (let tries = 0; tries < 12 && ids.length < 2; tries++) {
-    const rarity = weightedPick(rng, BOT_LOT_WEIGHTS);
-    const sub = pool.filter((c) => c.rarity === rarity);
-    const src = sub.length ? sub : pool;
-    const c = src[Math.floor(rng() * src.length)];
-    if (!ids.includes(c.id)) ids.push(c.id);
+  for (const { r } of ranked) {
+    if (ids.length >= 2) break;
+    const sub = pool.filter((c) => c.rarity === r);
+    if (sub.length === 0) continue;
+    ids.push(sub[Math.floor(rng() * sub.length)].id);
   }
   return ids;
 }
+function lotEstimate(c, ts, hot) {
+  const m = marketMult(c.rarity, ts), bonus = hot ? 0.15 : 0;
+  const cl = (x) => Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, x));
+  return [Math.round(c.price * cl(0.6 * m + bonus)), Math.round(c.price * cl(0.8 * m + bonus))];
+}
 function MarketSpark({ rarity, now, w, h }) {
   const pts = [];
-  for (let k = 11; k >= 0; k--) pts.push(marketMult(rarity, now - k * 300000));
+  for (let k = 23; k >= 0; k--) pts.push(marketMult(rarity, now - k * 150000));
   const y = (v) => h - 2 - ((v - 0.85) / 0.3) * (h - 4);
-  const d = pts.map((v, i) => (i / 11 * w).toFixed(1) + "," + y(v).toFixed(1)).join(" ");
+  const d = pts.map((v, i) => (i / 23 * w).toFixed(1) + "," + y(v).toFixed(1)).join(" ");
   const area = "0," + h + " " + d + " " + w + "," + h;
   return (
     <svg width={w} height={h} viewBox={"0 0 " + w + " " + h} style={{ display: "block" }}>
       <polygon points={area} fill={RARITY_COLOR[rarity]} opacity="0.16" />
       <polyline points={d} fill="none" stroke={RARITY_COLOR[rarity]} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={w} cy={y(pts[11])} r="2.8" fill={RARITY_COLOR[rarity]} style={{ animation: "mktPulse 1.6s ease-in-out infinite" }} />
+      <circle cx={w} cy={y(pts[23])} r="2.8" fill={RARITY_COLOR[rarity]} style={{ animation: "mktPulse 1.6s ease-in-out infinite" }} />
     </svg>
   );
 }
@@ -3683,16 +3739,7 @@ function MarketPicker({ wallet, cards, onPick, chosen, onClose, hotIds }) {
     return (db - da) || (b.price - a.price);
   });
   const dupTotal = owned.reduce((s, c) => s + Math.max(0, (wallet.collection[c.id] || 0) - 1), 0);
-  const est = (c) => {
-    const m = marketMult(c.rarity, snap), bonus = hotSet.has(c.id) ? 0.15 : 0;
-    const lo = Math.round(c.price * Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, 0.6 * m + bonus)));
-    const hi = Math.round(c.price * Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, 0.8 * m + bonus)));
-    return [lo, hi];
-  };
-  const chosenCard = chosen ? cards.find((c) => c.id === chosen) : null;
-  const chosenIsFav = chosenCard && favSet.has(chosenCard.id);
-  const chosenIsLast = chosenCard && (wallet.collection[chosenCard.id] || 0) <= 1;
-  const chosenHot = chosenCard && hotSet.has(chosenCard.id);
+  const est = (c) => lotEstimate(c, snap, hotSet.has(c.id));
   const chip = (act, col) => ({ fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "4px 9px", borderRadius: 999, background: act ? col : "#111827", color: act ? "#1a1400" : col, border: "1px solid " + col });
   return (
     <div style={{ background: "linear-gradient(180deg,#0f172a,#0b0f1a)", border: "1px solid #374151", borderRadius: 16, padding: 12, marginTop: 12, animation: "fadeSlideUp 0.25s ease" }}>
@@ -3739,32 +3786,44 @@ function MarketPicker({ wallet, cards, onPick, chosen, onClose, hotIds }) {
           );
         })}
       </div>
-      {chosenCard && (
-        <div style={{ marginTop: 10, background: "#1f2937", borderRadius: 14, padding: 10, border: "1px solid " + RARITY_COLOR[chosenCard.rarity] + "88", animation: "fadeSlideUp 0.2s ease" }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <CardFace card={chosenCard} small />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: RARITY_COLOR[chosenCard.rarity] }}>{RARITY_EMOJI[chosenCard.rarity]} {chosenCard.name}</div>
-              <div style={{ fontSize: 11, color: "#9ca3af", margin: "3px 0" }}>
-                Базова ціна {fmtBucks(chosenCard.price)} · бот платить 50–90%
-              </div>
-              <div style={{ fontSize: 12, color: "#fbbf24", fontWeight: 800 }}>≈ {est(chosenCard)[0]}–{est(chosenCard)[1]} 💵 {chosenHot && <span style={{ color: "#fdba74" }}>🔥 гарячий попит</span>}</div>
-            </div>
-          </div>
-          {(chosenIsFav || chosenIsLast) && (
-            <div style={{ fontSize: 11, color: "#fde68a", margin: "8px 0 0" }}>⚠️ {chosenIsFav ? "Це улюблена картка" : ""}{chosenIsFav && chosenIsLast ? " і " : ""}{chosenIsLast ? (chosenIsFav ? "остання копія" : "Це остання копія") : ""} — у колекції її не буде, доки лот не скасовано.</div>
-          )}
-          <button style={{ ...sx.primaryBtn, marginTop: 8 }} onClick={() => onPick(chosenCard.id, true)}>🏷 Виставити на ринок</button>
-        </div>
-      )}
     </div>
   );
 }
-function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
+function ListConfirmModal({ card, wallet, hot, now, onCancel, onConfirm }) {
+  const [lo, hi] = lotEstimate(card, now, hot);
+  const isFav = (wallet.favoriteCards || []).includes(card.id);
+  const isLast = (wallet.collection[card.id] || 0) <= 1;
+  const pct = Math.round((marketMult(card.rarity, now) - 1) * 100);
+  return (
+    <div style={sx.modalOverlay} onClick={onCancel}>
+      <div style={{ ...sx.modal, textAlign: "center", border: "1px solid " + RARITY_COLOR[card.rarity] + "88" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "center", animation: "popIn 0.4s ease" }}><CardFace card={card} /></div>
+        <h3 style={{ margin: "10px 0 2px", color: RARITY_COLOR[card.rarity] }}>{RARITY_EMOJI[card.rarity]} {card.name}</h3>
+        <p style={{ margin: "0 0 6px", fontSize: 11, color: "#9ca3af" }}>Базова ціна {fmtBucks(card.price)} · бот платить 50–90% · курс {pct > 0 ? "+" : ""}{pct}%</p>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#fbbf24", marginBottom: 4 }}>≈ {lo}–{hi} 💵</div>
+        {hot && <div style={{ fontSize: 12, color: "#fdba74", marginBottom: 4 }}>🔥 Гарячий попит — максимальна ціна!</div>}
+        {(isFav || isLast) && (
+          <div style={{ fontSize: 11, color: "#fde68a", margin: "6px 0" }}>⚠️ {isFav ? "Це улюблена картка" : ""}{isFav && isLast ? " і " : ""}{isLast ? (isFav ? "остання копія" : "Це остання копія") : ""} — у колекції її не буде, доки лот не скасовано.</div>
+        )}
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button style={{ ...sx.smallBtn, flex: 1, padding: "10px 0", fontSize: 12 }} onClick={onCancel}>Скасувати</button>
+          <button style={{ ...sx.primaryBtn, flex: 2 }} onClick={onConfirm}>🏷 Виставити</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBusy }) {
+  const busyRef = useRef(false); // власний прапорець: спільний з іншими вкладками міг "залипнути" і мовчки блокувати дії
   const [now, setNow] = useState(Date.now());
   const [picking, setPicking] = useState(false);
   const [chosen, setChosen] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
+  const pickerRef = useRef(null);
+  const [lotRarity, setLotRarity] = useState(null);
+  const [lotSort, setLotSort] = useState("rarity");
+  const [lotShown, setLotShown] = useState(9);
+  useEffect(() => { if (picking && pickerRef.current) pickerRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [picking]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const lots = wallet.lots || [];
   const slots = lotSlots(wallet);
@@ -3780,7 +3839,7 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
     try {
       const card = cards.find((c) => c.id === cardId);
       const n = createLot(wallet, card, Date.now());
-      if (!n) { showToast("Не вдалося виставити: немає вільного слота або картки", "err"); return; }
+      if (!n) { setChosen(null); showToast("Не вдалося виставити: немає вільного слота або картки", "err"); return; }
       await saveWallet(n);
       setChosen(null); setPicking(false);
       showToast("🏷 «" + card.name + "» на ринку — покупець з'явиться за 1–5 хв", "ok");
@@ -3833,6 +3892,7 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
       const mb = {};
       Object.keys(w.mktBought || {}).forEach((k) => { if (w.mktBought[k] > Date.now()) mb[k] = w.mktBought[k]; });
       mb[lot.key] = end; w.mktBought = mb;
+      bumpPassQuest(w, "market_buy");
       await saveWallet(w);
       showToast("Куплено у " + lot.seller + ": " + lot.card.name + "!", "ok");
     } finally { busyRef.current = false; }
@@ -3860,18 +3920,30 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
   const tiles = [0, 1, 2, 3, 4];
   const hotLeft = hotEnd - now;
 
+  const rankIdx2 = { "Рідкісна": 0, "Епічна": 1, "Міфічна": 2, "Легендарна": 3, "Ексклюзивна": 4 };
+  const allLots = BOT_LOT_PERIODS.map((_, i) => { const wnd = botLotWindow(i, now); const lot = botLot(i, wnd.inst, pool); return lot ? { i, wnd, lot } : null; }).filter(Boolean);
+  const lotCounts = {};
+  allLots.forEach((x) => { lotCounts[x.lot.card.rarity] = (lotCounts[x.lot.card.rarity] || 0) + 1; });
+  const visibleLots = allLots.filter((x) => !lotRarity || x.lot.card.rarity === lotRarity).sort((a, b) => {
+    if (lotSort === "priceAsc") return a.lot.price - b.lot.price;
+    if (lotSort === "priceDesc") return b.lot.price - a.lot.price;
+    if (lotSort === "ending") return a.wnd.end - b.wnd.end;
+    if (lotSort === "deal") return a.lot.factor - b.lot.factor;
+    return (rankIdx2[b.lot.card.rarity] - rankIdx2[a.lot.card.rarity]) || (b.lot.price - a.lot.price);
+  });
+  const lotChip = (act, col) => ({ fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "4px 9px", borderRadius: 999, background: act ? col : "#111827", color: act ? "#1a1400" : col, border: "1px solid " + col });
   const sectionTitle = { margin: "20px 0 8px", fontSize: 14, color: "#fbbf24", display: "flex", alignItems: "center", gap: 6 };
   return (
     <>
       {/* ---- шапка біржі ---- */}
       <div style={{ borderRadius: 16, padding: 14, marginBottom: 10, position: "relative", overflow: "hidden", background: "linear-gradient(120deg,#0e7490,#312e81,#86198f,#0e7490)", backgroundSize: "300% 100%", animation: "gradientShift 10s linear infinite", border: "1px solid #67e8f955" }}>
-        <span style={{ position: "absolute", right: -8, top: -14, fontSize: 70, opacity: 0.15, transform: "rotate(12deg)" }}>💹</span>
+        <span style={{ position: "absolute", right: -8, top: -14, fontSize: 70, opacity: 0.15, transform: "rotate(12deg)", pointerEvents: "none" }}>💹</span>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <b style={{ fontSize: 17, color: "#fff" }}>Біржа карток</b>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 800, color: "#fecaca", background: "#7f1d1d99", padding: "2px 7px", borderRadius: 99 }}>
             <span style={{ width: 6, height: 6, borderRadius: 99, background: "#ef4444", animation: "mktPulse 1.2s ease-in-out infinite" }} /> LIVE
           </span>
-          <button onClick={() => setShowInfo(!showInfo)} style={{ marginLeft: "auto", background: "#00000055", border: "none", color: "#e5e7eb", borderRadius: 99, width: 22, height: 22, cursor: "pointer", fontSize: 12 }}>ℹ️</button>
+          <button onClick={() => setShowInfo(!showInfo)} style={{ marginLeft: "auto", position: "relative", zIndex: 2, background: "#00000066", border: "1px solid #ffffff44", color: "#e5e7eb", borderRadius: 99, width: 26, height: 26, cursor: "pointer", fontSize: 13, padding: 0 }}>ℹ️</button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           <span style={{ fontSize: 22 }}>{rank.cur.icon}</span>
@@ -3885,7 +3957,7 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
         </div>
         {showInfo && (
           <p style={{ margin: "10px 0 0", fontSize: 11, color: "#e5e7eb", lineHeight: 1.5, background: "#00000055", borderRadius: 10, padding: 8 }}>
-            Виставте картку — бот купить її через 1–5 хв за 50–90% базової ціни. Точна сума залежить від курсу рідкості в момент угоди, а картки з 🔥 гарячого попиту продаються найдорожче. Ціну вибирає ринок, а не ви.
+            Виставте картку — покупець з'явиться через 1–5 хв і заплатить 50–90% базової ціни. Точна сума залежить від курсу рідкості в момент угоди. 🔥 Гарячий попит — картки тих рідкостей, що зараз у ціні: їх купують найдорожче. Ціну вибирає ринок, а не ви.
           </p>
         )}
       </div>
@@ -3900,7 +3972,7 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
               <div key={rep} style={{ display: "flex", flexShrink: 0 }}>
                 {tickerItems.map((e, i) => (
                   <span key={rep + "_" + i} style={{ fontSize: 11, color: e.mine ? "#bbf7d0" : "#9ca3af", whiteSpace: "nowrap", padding: "0 14px" }}>
-                    {e.mine ? "🟢" : "🤖"} {e.text} <b style={{ color: RARITY_COLOR[e.rarity] || "#fbbf24" }}>{e.price} 💵</b> <span style={{ color: "#374151" }}>•</span>
+                    {e.mine ? "🟢" : "👤"} {e.text} <b style={{ color: RARITY_COLOR[e.rarity] || "#fbbf24" }}>{e.price} 💵</b> <span style={{ color: "#374151" }}>•</span>
                   </span>
                 ))}
               </div>
@@ -3942,7 +4014,8 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
       </div>
 
       {/* ---- гарячий попит ---- */}
-      <h3 style={sectionTitle}>🔥 Гарячий попит <span style={{ fontWeight: 400, color: hotLeft < 120000 ? "#f87171" : "#9ca3af", fontSize: 11 }}>· ще {fmtMMSS(hotLeft)}</span></h3>
+      <h3 style={{ ...sectionTitle, marginBottom: 2 }}>🔥 Гарячий попит <span style={{ fontWeight: 400, color: hotLeft < 120000 ? "#f87171" : "#9ca3af", fontSize: 11 }}>· ще {fmtMMSS(hotLeft)}</span></h3>
+      <p style={{ margin: "0 0 8px", fontSize: 11, color: "#9ca3af" }}>Рідкості, які зараз у ціні — тут платять максимум.</p>
       <div style={{ display: "flex", gap: 10 }}>
         {hotIds.map((id) => {
           const card = cards.find((c) => c.id === id);
@@ -3956,8 +4029,9 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
                 <div style={{ fontSize: 10, color: "#fdba74", margin: "2px 0" }}>платять до 90%!</div>
                 <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 4 }}>{have > 0 ? "У вас: " + have : "Немає"}</div>
                 {have > 0 && lots.length < slots && (
-                  <button style={{ ...sx.smallBtn, fontSize: 10, padding: "4px 8px", background: "#c2410c", color: "#fff" }} onClick={() => { setPicking(true); setChosen(id); }}>Продати</button>
+                  <button style={{ ...sx.smallBtn, fontSize: 10, padding: "4px 8px", background: "#c2410c", color: "#fff" }} onClick={() => setChosen(id)}>Продати</button>
                 )}
+                {have > 0 && lots.length >= slots && <span style={{ fontSize: 9, color: "#f87171" }}>Слоти зайняті</span>}
               </div>
             </div>
           );
@@ -4012,7 +4086,10 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
         })}
       </div>
 
-      {picking && <MarketPicker wallet={wallet} cards={cards} chosen={chosen} hotIds={hotIds} onPick={(id, confirm) => { if (confirm) doList(id); else setChosen(id); }} onClose={() => { setPicking(false); setChosen(null); }} />}
+      {picking && <div ref={pickerRef} style={{ scrollMarginTop: 70 }}><MarketPicker wallet={wallet} cards={cards} chosen={chosen} hotIds={hotIds} onPick={(id) => setChosen(id)} onClose={() => { setPicking(false); setChosen(null); }} /></div>}
+      {chosen && cards.find((c) => c.id === chosen) && (
+        <ListConfirmModal card={cards.find((c) => c.id === chosen)} wallet={wallet} hot={hotIds.includes(chosen)} now={now} onCancel={() => setChosen(null)} onConfirm={() => doList(chosen)} />
+      )}
 
       {/* ---- стрічка ---- */}
       <h3 style={sectionTitle}>🔔 Останні угоди</h3>
@@ -4020,20 +4097,33 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
         {feedShown.length === 0 && <p style={{ fontSize: 11, color: "#6b7280", textAlign: "center", margin: 8 }}>Поки що тихо…</p>}
         {feedShown.map((e, i) => (
           <div key={e.ts + "_" + i} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", fontSize: 11, padding: "5px 6px", borderRadius: 8, background: e.mine ? "#052e1666" : "transparent", color: e.mine ? "#bbf7d0" : "#9ca3af", animation: i === 0 ? "fadeSlideUp 0.4s ease" : "none" }}>
-            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.mine ? "🟢" : "🤖"} {e.text}</span>
+            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.mine ? "🟢" : "👤"} {e.text}</span>
             <span style={{ whiteSpace: "nowrap", color: RARITY_COLOR[e.rarity] || "#fbbf24", fontWeight: 700 }}>{e.price} 💵</span>
           </div>
         ))}
       </div>
 
-      {/* ---- лоти ботів ---- */}
-      <h3 style={{ ...sectionTitle, marginBottom: 4 }}>🛒 Лоти ботів</h3>
-      <p style={{ margin: "0 0 10px", fontSize: 11, color: "#9ca3af" }}>Боти виставляють картки — лоти зникають самі, тож встигніть забрати. Ціни близькі до каталогу.</p>
+      {/* ---- лоти гравців ---- */}
+      <h3 style={{ ...sectionTitle, marginBottom: 8 }}>🛒 Лоти гравців <span style={{ fontWeight: 400, color: "#9ca3af", fontSize: 11 }}>· {visibleLots.length}</span></h3>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+        <span onClick={() => { setLotRarity(null); setLotShown(9); }} style={lotChip(!lotRarity, "#e5e7eb")}>Усі {allLots.length}</span>
+        {RARITY_ORDER.map((r) => (
+          <span key={r} onClick={() => { setLotRarity(lotRarity === r ? null : r); setLotShown(9); }} style={{ ...lotChip(lotRarity === r, RARITY_COLOR[r]), opacity: lotCounts[r] ? 1 : 0.45 }}>{RARITY_EMOJI[r]} {lotCounts[r] || 0}</span>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 12, color: "#9ca3af" }}>Сортувати:</span>
+        <SortDropdown value={lotSort} onChange={setLotSort} options={[
+          { value: "rarity", label: "За рідкістю" },
+          { value: "priceAsc", label: "Ціна: спочатку дешеві" },
+          { value: "priceDesc", label: "Ціна: спочатку дорогі" },
+          { value: "ending", label: "Скоро зникнуть" },
+          { value: "deal", label: "Найвигідніші" },
+        ]} />
+      </div>
+      {visibleLots.length === 0 && <p style={{ fontSize: 12, color: "#6b7280", textAlign: "center", margin: "12px 0" }}>Зараз немає лотів цієї рідкості — вони оновлюються щохвилини.</p>}
       <div style={sx.shopGrid}>
-        {BOT_LOT_PERIODS.map((_, i) => {
-          const wnd = botLotWindow(i, now);
-          const lot = botLot(i, wnd.inst, pool);
-          if (!lot) return null;
+        {visibleLots.slice(0, lotShown).map(({ wnd, lot }) => {
           const mine = !!bought[lot.key];
           const left = wnd.end - now;
           const lifePct = Math.max(0, Math.min(100, (left / (wnd.end - wnd.start)) * 100));
@@ -4043,7 +4133,7 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
             <div key={lot.key} style={{ ...sx.shopCard, opacity: mine ? 0.5 : 1, border: "1px solid " + RARITY_COLOR[lot.card.rarity] + (urgent ? "" : "66"), boxShadow: urgent ? "0 0 14px #f8717188" : "0 3px 12px " + RARITY_COLOR[lot.card.rarity] + "22", animation: urgent ? "mktPulseBox 1s ease-in-out infinite" : "none" }}>
               <CardFace card={lot.card} />
               <div style={{ ...sx.discountTag, background: diff < 0 ? "linear-gradient(135deg,#16a34a,#15803d)" : "linear-gradient(135deg,#6b7280,#374151)" }}>{diff > 0 ? "+" : ""}{diff}%</div>
-              <div style={{ marginTop: 4, fontSize: 9, color: "#6b7280", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🤖 {lot.seller}</div>
+              <div style={{ marginTop: 4, fontSize: 9, color: "#6b7280", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {lot.seller}</div>
               <div style={{ fontSize: 12, color: "#fbbf24", fontWeight: 800 }}>{fmtBucks(lot.price)}</div>
               <div style={{ width: "100%", height: 3, background: "#0b0f1a", borderRadius: 99, overflow: "hidden", margin: "3px 0" }}>
                 <div style={{ width: lifePct + "%", height: "100%", background: urgent ? "#f87171" : "#22d3ee", transition: "width 1s linear" }} />
@@ -4054,6 +4144,9 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef }) {
           );
         })}
       </div>
+      {visibleLots.length > lotShown && (
+        <button onClick={() => setLotShown(lotShown + 9)} style={{ ...sx.smallBtn, width: "100%", marginTop: 10, padding: "10px 0", fontSize: 12 }}>Показати ще ({visibleLots.length - lotShown})</button>
+      )}
     </>
   );
 }
