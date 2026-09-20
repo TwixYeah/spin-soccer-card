@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin a Soccer Card</title>
+<title>Spin Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -569,7 +569,7 @@ function newWallet() {
     keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [], favoriteCards: [], maintCompClaimed: [], onboardingSeen: false, dismissedBanners: [],
     spinsLifetime: 0, rarityLifetime: {}, superQuestIndex: 0, superQuestBaseline: 0, superQuestClaims: 0,
     abuseQuestProgress: 0, abuseQuestId: "", abuseQuestClaimed: [],
-    lots: [], lotHistory: [], mktBought: {}, lotStats: { sold: 0, earned: 0 }, lotUnseen: 0, lotRankClaimed: [], mktWish: [], cheapCopies: {},
+    lots: [], lotHistory: [], mktBought: {}, lotStats: { sold: 0, earned: 0 }, lotUnseen: 0, lotRankClaimed: [], mktWish: [], cheapCopies: {}, cheapCost: {},
   };
 }
 // доповнює старі гаманці (створені до v10) новими полями, щоб нічого не падало
@@ -580,9 +580,24 @@ function withDefaults(w) {
 
 /* ============================== BADGE ============================== */
 // Назва рідкості: "Ексклюзивна" завжди переливається райдужним градієнтом (як її рамка)
-function RName({ r, children, style }) {
-  if (r === "Ексклюзивна") return <span className="rb-text" style={style}>{children || r}</span>;
+function RName({ r, children, style, noRing }) {
+  if (r === "Ексклюзивна") {
+    const t = <span className="rb-text" style={style}>{children || r}</span>;
+    if (noRing) return t;
+    // слово "Ексклюзивна" завжди в райдужній рамці (як рамка самої картки)
+    return (
+      <span className="rainbow-ring" style={{ borderRadius: 999, padding: 1.5, display: "inline-flex", verticalAlign: "middle" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", background: "#0b0f1a", borderRadius: 999, padding: "1px 7px" }}>{t}</span>
+      </span>
+    );
+  }
   return <span style={{ color: RARITY_COLOR[r], ...(style || {}) }}>{children || r}</span>;
+}
+// "пігулка" з назвою рідкості: для Ексклюзивної — райдужна рамка, для інших — рамка кольору рідкості
+function RarityPill({ r, size, children }) {
+  const ex = r === "Ексклюзивна";
+  const inner = <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: size || 11, padding: "3px 9px", borderRadius: 999, background: "#0b0f1a", border: ex ? "none" : "1px solid " + RARITY_COLOR[r] }}>{children}</span>;
+  return ex ? <span className="rainbow-ring" style={{ borderRadius: 999, padding: 1.5, display: "inline-flex" }}>{inner}</span> : inner;
 }
 // градієнт ніку -> дзеркальний (a b c b a), щоб анімація зациклювалась без помітного стрибка
 function loopGradient(color) {
@@ -2225,11 +2240,11 @@ const ONBOARDING_STEPS = [
   { navId: "quests", goTab: "quests", icon: "📋", title: "Квести", color: "#a78bfa",
     desc: "SOCCER PASS: щоденні й сезонні квести дають XP для 40 рівнів пасу — з безкоштовними та преміум-нагородами.\nЄ й суперквести — великі завдання з подвійними баксами. Квести бувають навіть про ринок." },
   { navId: "collection", goTab: "collection", icon: "📚", title: "Колекція", color: "#4ade80",
-    desc: "Усі ваші картки. Фільтр за рідкістю з прогресом, улюблені ⭐, позначка NEW та підказка «найближче до завершення».\nДублікати можна продати одним натиском — або вигідніше виставити на ринку." },
+    desc: "Колекція отриманих вами карток, ви можете поглянути на картки які ви отримали саме тут або ж продати їх якщо вони вам не подобаються." },
   { navId: "achievements", goTab: "achievements", icon: "🏅", title: "Досягнення", color: "#f59e0b",
     desc: "Виконуйте досягнення — це додаткові бакси. Іноді адмін роздає особливі «ексклюзивні» досягнення за події.\nКоли в Магазині, Квестах чи Досягненнях є щось нове, назва вкладки світиться." },
   { navId: "profile", goTab: "profile", icon: "👤", title: "Профіль", color: "#f87171",
-    desc: "Аватар, колір ніку (з преміум-пасом — плавно переливний градієнтний нік), друзі та статистика." },
+    desc: "Ваш профіль та ваша інформація знаходиться тут, ви можете додати своїх друзів щоб разом пограти в Дуелі." },
   { navId: "profile", goTab: "profile", icon: "⚔️", title: "Дуелі", color: "#a855f7",
     desc: "Дуель 1 на 1: створіть кімнату й запросіть друга (або зіграйте проти бота). За відведений час обидва крутять рулетку: Міфічна дає +1, Легендарна +3, Ексклюзивна +8 очок.\nГрати можна без ставки або на бакси — переможець забирає банк." },
 ];
@@ -2623,8 +2638,8 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
             const card = enriched.find((c) => c.id === id);
             const per = Math.round(card.price * 0.4 * bucksMult(abuseEvent, wallet));
             const removeCount = Math.min(cnt, Math.max(0, (w.collection[id] || 0) - 1));
+            gained += salePayout(w, id, removeCount, per, w.collection[id] || 0);
             w.collection[id] = (w.collection[id] || 0) - removeCount;
-            gained += per * removeCount;
           });
           if (!w.bucksInfinite) w.bucks += gained;
           await saveWallet(w);
@@ -2651,9 +2666,11 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
                   const n = bulkResults.cards.filter((c) => c.rarity === r).length;
                   if (n === 0) return null;
                   return (
-                    <div key={r} style={{ background: "#111827", border: `1px solid ${RARITY_COLOR[r]}`, borderRadius: 8, padding: "4px 10px" }}>
-                      <RName r={r} style={{ fontWeight: 800, fontSize: 12 }}>{r}: {n}</RName>
-                    </div>
+                    <RainbowWrap key={r} on={r === "Ексклюзивна"} radius={10} pad={1.5}>
+                      <div style={{ background: "#111827", border: r === "Ексклюзивна" ? "none" : `1px solid ${RARITY_COLOR[r]}`, borderRadius: 8, padding: "4px 10px" }}>
+                        <RName noRing r={r} style={{ fontWeight: 800, fontSize: 12 }}>{r}: {n}</RName>
+                      </div>
+                    </RainbowWrap>
                   );
                 })}
               </div>
@@ -2855,7 +2872,7 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
       {passCardChoice && (
         <div style={sx.modalOverlay} onClick={() => setPassCardChoice(null)}>
           <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: RARITY_COLOR[passCardChoice.rarity] }}>Оберіть <RName r={passCardChoice.rarity}>{passCardChoice.rarity.toLowerCase()}</RName> картку</h3>
+            <h3 style={{ marginTop: 0, color: RARITY_COLOR[passCardChoice.rarity] }}>Оберіть <RName noRing r={passCardChoice.rarity}>{passCardChoice.rarity.toLowerCase()}</RName> картку</h3>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               {passCardChoice.options.map((c) => (
                 <div key={c.id} style={{ textAlign: "center" }}>
@@ -3242,7 +3259,6 @@ function DailyRouletteModal({ wallet, saveWallet, allCards, showToast, abuseEven
       showToast(won.type === "jackpot" ? "ДЖЕКПОТ!! 🎉🎉🎉" : `Виграно: ${won.label}`, "ok");
     }, 1650);
   }
-  const totalWeight = DAILY_ROULETTE_TABLE.reduce((a, p) => a + p.weight, 0);
   return (
     <div style={sx.modalOverlay} onClick={() => !spinning && onClose()}>
       <div style={{ ...sx.modal, textAlign: "center", background: "linear-gradient(160deg,#2e1065,#111827)", border: "1px solid #7c3aed" }} onClick={(e) => e.stopPropagation()}>
@@ -3261,19 +3277,6 @@ function DailyRouletteModal({ wallet, saveWallet, allCards, showToast, abuseEven
         {!prize && <button disabled={spinning} style={{ ...sx.primaryBtn }} onClick={spin}>{spinning ? "Крутиться…" : "Крутити!"}</button>}
         {prize && <button style={{ ...sx.primaryBtn }} onClick={onClose}>Забрати й закрити</button>}
 
-        {!spinning && !prize && (
-          <div style={{ marginTop: 16, textAlign: "left" }}>
-            <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>🎯 Можливі призи:</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 140, overflowY: "auto" }}>
-              {DAILY_ROULETTE_TABLE.map((p, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: colorFor(p) }}>
-                  <span>{iconFor(p)}</span><span style={{ flex: 1 }}>{p.label}</span>
-                  <span style={{ color: "#6b7280" }}>{(p.weight / totalWeight * 100).toFixed(1)}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -3499,6 +3502,8 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
       if (!isCatalog && slot.price < slot.card.price * 0.5) {
         w.cheapCopies = w.cheapCopies || {};
         w.cheapCopies[slot.card.id] = (w.cheapCopies[slot.card.id] || 0) + 1;
+        w.cheapCost = w.cheapCost || {};
+        w.cheapCost[slot.card.id] = (w.cheapCost[slot.card.id] || 0) + slot.price;
       }
       if (slot.free) { w.freeShopClaimed = true; w.freeSlotBucket = bucket; }
       if (!isCatalog) {
@@ -3515,14 +3520,26 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
   const allSold = boughtIndices.length >= 10;
   return (
     <div style={sx.tabWrap}>
-      <div style={{
-        borderRadius: 14, padding: "14px 14px 12px", marginBottom: 12, position: "relative", overflow: "hidden",
-        background: "linear-gradient(135deg,#164e63,#0c2d3a 60%,#0b0f1a)", border: "1px solid #22d3ee55",
-      }}>
-        <span style={{ position: "absolute", top: -12, right: -6, fontSize: 56, opacity: 0.14, transform: "rotate(12deg)" }}>🛍️</span>
-        <h2 style={{ margin: "0 0 2px", fontSize: 18, color: "#67e8f9" }}>🛒 Магазин акцій</h2>
-        <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>10 випадкових знижок, оновлюються щохвилини</p>
-      </div>
+      {sub !== "market" && (
+        <div style={{
+          borderRadius: 14, padding: "14px 14px 12px", marginBottom: 12, position: "relative", overflow: "hidden",
+          background: sub === "deals" ? "linear-gradient(135deg,#164e63,#0c2d3a 60%,#0b0f1a)" : "linear-gradient(135deg,#312e81,#1e1b4b 60%,#0b0f1a)",
+          border: sub === "deals" ? "1px solid #22d3ee55" : "1px solid #818cf855",
+        }}>
+          <span style={{ position: "absolute", top: -12, right: -6, fontSize: 56, opacity: 0.14, transform: "rotate(12deg)", pointerEvents: "none" }}>{sub === "deals" ? "🛍️" : "📚"}</span>
+          {sub === "deals" ? (
+            <>
+              <h2 style={{ margin: "0 0 2px", fontSize: 18, color: "#67e8f9" }}>🛒 Магазин акцій</h2>
+              <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>10 випадкових знижок, оновлюються щохвилини</p>
+            </>
+          ) : (
+            <>
+              <h2 style={{ margin: "0 0 2px", fontSize: 18, color: "#a5b4fc" }}>📚 Всі картки</h2>
+              <p style={{ margin: 0, fontSize: 11, color: "#9ca3af" }}>Каталог: купуйте будь-яку картку за її ціну</p>
+            </>
+          )}
+        </div>
+      )}
       <div style={sx.authTabs}>
         <button onClick={() => setSub("deals")} style={{ ...sx.authTabBtn, ...(sub === "deals" ? sx.authTabActive : {}) }}>Акції</button>
         <button onClick={() => setSub("catalog")} style={{ ...sx.authTabBtn, ...(sub === "catalog" ? sx.authTabActive : {}) }}>Всі картки</button>
@@ -3595,7 +3612,7 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
       {specialPick && (
         <div style={sx.modalOverlay} onClick={() => setSpecialPick(null)}>
           <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: RARITY_COLOR[specialPick.rarity] }}>Оберіть <RName r={specialPick.rarity}>{specialPick.rarity.toLowerCase()}</RName> картку</h3>
+            <h3 style={{ marginTop: 0, color: RARITY_COLOR[specialPick.rarity] }}>Оберіть <RName noRing r={specialPick.rarity}>{specialPick.rarity.toLowerCase()}</RName> картку</h3>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               {specialPick.options.map((c) => (
                 <div key={c.id} style={{ textAlign: "center" }}>
@@ -3634,6 +3651,21 @@ function sellableCopies(w, id) {
   const have = (w.collection && w.collection[id]) || 0;
   const cheap = Math.min((w.cheapCopies && w.cheapCopies[id]) || 0, have);
   return have - cheap;
+}
+// виплата за миттєвий продаж: "дешеві" копії (куплені зі знижкою від 50%) продаються не дорожче, ніж за них заплатили,
+// і йдуть першими — так знижки не можна перетворити на баксі
+function salePayout(w, id, count, per, haveBefore) {
+  let total = 0, have = haveBefore;
+  let cheap = Math.min((w.cheapCopies && w.cheapCopies[id]) || 0, have);
+  let cost = (w.cheapCost && w.cheapCost[id]) || 0;
+  for (let k = 0; k < count; k++) {
+    if (cheap > 0) { const avg = cost / cheap; total += Math.min(per, Math.round(avg)); cost -= avg; cheap--; }
+    else total += per;
+    have--;
+  }
+  w.cheapCopies = { ...(w.cheapCopies || {}), [id]: cheap };
+  w.cheapCost = { ...(w.cheapCost || {}), [id]: Math.max(0, Math.round(cost)) };
+  return total;
 }
 function lotSlots(w) { return w && w.passPremium ? 5 : 3; }
 // Курс рідкостей — схожий на справжній графік: "шум" кількох масштабів + постійна перевага дорогих рідкостей
@@ -3932,10 +3964,12 @@ function MarketPicker({ wallet, cards, onPick, chosen, onClose, hotIds }) {
     </div>
   );
 }
-function ListConfirmModal({ card, wallet, hot, now, onCancel, onConfirm }) {
+function ListConfirmModal({ card, wallet, hot, now, maxQty, onCancel, onConfirm }) {
+  const [qty, setQty] = useState(1);
   const [lo, hi] = lotEstimate(card, now, hot);
   const isFav = (wallet.favoriteCards || []).includes(card.id);
-  const isLast = (wallet.collection[card.id] || 0) <= 1;
+  const have = wallet.collection[card.id] || 0;
+  const takesLast = qty >= have;
   const pct = Math.round((marketMult(card.rarity, now) - 1) * 100);
   return (
     <div style={sx.modalOverlay} onClick={onCancel}>
@@ -3943,14 +3977,25 @@ function ListConfirmModal({ card, wallet, hot, now, onCancel, onConfirm }) {
         <div style={{ display: "flex", justifyContent: "center", animation: "popIn 0.4s ease" }}><CardFace card={card} /></div>
         <h3 style={{ margin: "10px 0 2px", color: RARITY_COLOR[card.rarity] }}>{RARITY_EMOJI[card.rarity]} {card.name}</h3>
         <p style={{ margin: "0 0 6px", fontSize: 11, color: "#9ca3af" }}>Базова ціна {fmtBucks(card.price)} · бот платить 50–90% · курс {pct > 0 ? "+" : ""}{pct}%</p>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#fbbf24", marginBottom: 4 }}>≈ {lo}–{hi} 💵</div>
+        {maxQty > 1 && (
+          <div style={{ margin: "8px 0", padding: 8, background: "#111827", borderRadius: 12 }}>
+            <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>Скільки штук виставити (у вас {have}, вільних слотів достатньо для {maxQty})</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <button style={{ ...sx.smallBtn, width: 36, height: 36, fontSize: 18, padding: 0 }} disabled={qty <= 1} onClick={() => setQty(Math.max(1, qty - 1))}>−</button>
+              <b style={{ fontSize: 22, color: "#fbbf24", minWidth: 36 }}>{qty}</b>
+              <button style={{ ...sx.smallBtn, width: 36, height: 36, fontSize: 18, padding: 0 }} disabled={qty >= maxQty} onClick={() => setQty(Math.min(maxQty, qty + 1))}>+</button>
+              <button style={{ ...sx.smallBtn, fontSize: 11 }} onClick={() => setQty(maxQty)}>Макс.</button>
+            </div>
+          </div>
+        )}
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#fbbf24", marginBottom: 4 }}>≈ {lo * qty}–{hi * qty} 💵{qty > 1 ? " (усього)" : ""}</div>
         {hot && <div style={{ fontSize: 12, color: "#fdba74", marginBottom: 4 }}>🔥 Гарячий попит — максимальна ціна!</div>}
-        {(isFav || isLast) && (
-          <div style={{ fontSize: 11, color: "#fde68a", margin: "6px 0" }}>⚠️ {isFav ? "Це улюблена картка" : ""}{isFav && isLast ? " і " : ""}{isLast ? (isFav ? "остання копія" : "Це остання копія") : ""} — у колекції її не буде, доки лот не скасовано.</div>
+        {(isFav || takesLast) && (
+          <div style={{ fontSize: 11, color: "#fde68a", margin: "6px 0" }}>⚠️ {isFav ? "Це улюблена картка" : ""}{isFav && takesLast ? " і " : ""}{takesLast ? (isFav ? "буде виставлено всі копії" : (have <= 1 ? "Це остання копія" : "Буде виставлено всі копії")) : ""} — у колекції {have <= qty ? "її не буде" : "залишиться менше"}, доки лоти не скасовано.</div>
         )}
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button style={{ ...sx.smallBtn, flex: 1, padding: "10px 0", fontSize: 12 }} onClick={onCancel}>Скасувати</button>
-          <button style={{ ...sx.primaryBtn, flex: 2 }} onClick={onConfirm}>🏷 Виставити</button>
+          <button style={{ ...sx.primaryBtn, flex: 2 }} onClick={() => onConfirm(qty)}>🏷 Виставити{qty > 1 ? " ×" + qty : ""}</button>
         </div>
       </div>
     </div>
@@ -3962,9 +4007,10 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
   const [picking, setPicking] = useState(false);
   const [chosen, setChosen] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [quickPlan, setQuickPlan] = useState(null);
   const pickerRef = useRef(null);
   const [lotRarity, setLotRarity] = useState(null);
-  const [lotOnly, setLotOnly] = useState(null); // null | "new" | "wish"
+  const [lotOnly, setLotOnly] = useState(null); // null | "wish"
   const [lotSort, setLotSort] = useState("rarity");
   const [lotShown, setLotShown] = useState(9);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -3984,15 +4030,20 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
   const claimed = wallet.lotRankClaimed || [];
   const claimable = TRADER_RANKS.filter((r, i) => i <= rank.idx && r.reward > 0 && !claimed.includes(r.name));
 
-  async function doList(cardId) {
+  async function doList(cardId, qty) {
     if (busyRef.current) return; busyRef.current = true;
     try {
       const card = cards.find((c) => c.id === cardId);
-      const n = createLot(wallet, card, Date.now());
-      if (!n) { setChosen(null); showToast("Не вдалося виставити: немає вільного слота або картку не можна продати", "err"); return; }
-      await saveWallet(n);
+      let w = wallet, done = 0;
+      for (let k = 0; k < (qty || 1); k++) {
+        const n = createLot(w, card, Date.now());
+        if (!n) break;
+        w = n; done++;
+      }
+      if (done === 0) { setChosen(null); showToast("Не вдалося виставити: немає вільного слота або картку не можна продати", "err"); return; }
+      await saveWallet(w);
       setChosen(null); setPicking(false);
-      showToast("🏷 «" + card.name + "» на ринку — покупець з'явиться за 1–5 хв", "ok");
+      showToast("🏷 «" + card.name + "»" + (done > 1 ? " ×" + done : "") + " на ринку — покупець з'явиться за 1–5 хв", "ok");
     } finally { busyRef.current = false; }
   }
   async function doCancel(lotId) {
@@ -4004,25 +4055,40 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
       showToast("Лот скасовано — картку повернуто в колекцію", "ok");
     } finally { busyRef.current = false; }
   }
-  // ⚡ швидко: заповнити вільні слоти дублікатами (спершу "гарячі", потім найдорожчі); останні копії й улюблені не чіпаємо
-  async function quickDupes() {
-    if (busyRef.current) return; busyRef.current = true;
+  // ⚡ швидко: план — лише ЗАЙВІ копії (по одній копії кожної картки завжди лишається), спершу "гарячі", потім найдорожчі
+  function buildQuickPlan() {
+    const freeN = slots - lots.length;
+    if (freeN <= 0) { showToast("Усі слоти зайняті", "err"); return; }
+    const favSet = new Set(wallet.favoriteCards || []);
+    const extraOf = (c) => Math.min((wallet.collection[c.id] || 0) - 1, sellableCopies(wallet, c.id));
+    const cand = cards.filter((c) => !c.tempEvent && !favSet.has(c.id) && extraOf(c) > 0)
+      .sort((a, b) => ((hotIds.includes(b.id) ? 1 : 0) - (hotIds.includes(a.id) ? 1 : 0)) || (b.price - a.price));
+    const plan = [];
+    let left = freeN;
+    for (const c of cand) {
+      if (left <= 0) break;
+      const n = Math.min(extraOf(c), left);
+      if (n > 0) { plan.push({ id: c.id, n }); left -= n; }
+    }
+    if (plan.length === 0) { showToast("Дублікатів немає — останні копії й улюблені картки не чіпаємо", "err"); return; }
+    setQuickPlan(plan);
+  }
+  async function runQuickPlan() {
+    if (busyRef.current || !quickPlan) return; busyRef.current = true;
     try {
-      const freeN = slots - lots.length;
-      if (freeN <= 0) { showToast("Усі слоти зайняті", "err"); return; }
-      const favSet = new Set(wallet.favoriteCards || []);
-      const cand = cards.filter((c) => !c.tempEvent && (wallet.collection[c.id] || 0) > 1 && !favSet.has(c.id))
-        .sort((a, b) => ((hotIds.includes(b.id) ? 1 : 0) - (hotIds.includes(a.id) ? 1 : 0)) || (b.price - a.price));
       let w = wallet, added = 0;
-      for (const c of cand) {
-        while (added < freeN && (w.collection[c.id] || 0) > 1) {
+      for (const step of quickPlan) {
+        const c = cards.find((x) => x.id === step.id);
+        if (!c) continue;
+        for (let k = 0; k < step.n; k++) {
+          if ((w.collection[step.id] || 0) <= 1) break; // ніколи не забираємо останню копію
           const n = createLot(w, c, Date.now());
           if (!n) break;
           w = n; added++;
         }
-        if (added >= freeN) break;
       }
-      if (added === 0) { showToast("Немає дублікатів для швидкого продажу", "err"); return; }
+      setQuickPlan(null);
+      if (added === 0) { showToast("Нічого виставляти", "err"); return; }
       await saveWallet(w);
       showToast("⚡ Виставлено дублікатів: " + added, "ok");
     } finally { busyRef.current = false; }
@@ -4096,11 +4162,10 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
   const isNewCard = (id) => !((wallet.collection[id] || 0) > 0) && !(wallet.obtainedAt && wallet.obtainedAt[id]);
   const lotCounts = {};
   allLots.forEach((x) => { lotCounts[x.lot.card.rarity] = (lotCounts[x.lot.card.rarity] || 0) + 1; });
-  const newCount = allLots.filter((x) => isNewCard(x.lot.card.id)).length;
   const wishCount = allLots.filter((x) => wish.includes(x.lot.card.id)).length;
   const visibleLots = allLots
     .filter((x) => !lotRarity || x.lot.card.rarity === lotRarity)
-    .filter((x) => lotOnly === "new" ? isNewCard(x.lot.card.id) : lotOnly === "wish" ? wish.includes(x.lot.card.id) : true)
+    .filter((x) => lotOnly === "wish" ? wish.includes(x.lot.card.id) : true)
     .sort((a, b) => {
       if (lotSort === "priceAsc") return a.lot.price - b.lot.price;
       if (lotSort === "priceDesc") return b.lot.price - a.lot.price;
@@ -4234,7 +4299,7 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
       {/* ---- мої лоти ---- */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "20px 0 8px", gap: 6 }}>
         <h3 style={{ margin: 0, fontSize: 14, color: "#fbbf24" }}>🎯 Мої лоти <span style={{ color: "#9ca3af", fontWeight: 400 }}>{lots.length}/{slots}</span></h3>
-        <button disabled={lots.length >= slots} onClick={quickDupes} style={{ ...sx.smallBtn, fontSize: 10, background: lots.length >= slots ? "#1f2937" : "linear-gradient(90deg,#0891b2,#0e7490)", color: "#fff", opacity: lots.length >= slots ? 0.5 : 1 }}>⚡ Дублікати в слоти</button>
+        <button disabled={lots.length >= slots} onClick={buildQuickPlan} style={{ ...sx.smallBtn, fontSize: 10, background: lots.length >= slots ? "#1f2937" : "linear-gradient(90deg,#0891b2,#0e7490)", color: "#fff", opacity: lots.length >= slots ? 0.5 : 1 }}>⚡ Дублікати в слоти</button>
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {[0, 1, 2, 3, 4].map((s) => {
@@ -4281,7 +4346,34 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
 
       {picking && <div ref={pickerRef} style={{ scrollMarginTop: 70 }}><MarketPicker wallet={wallet} cards={cards} chosen={chosen} hotIds={hotIds} onPick={(id) => setChosen(id)} onClose={() => { setPicking(false); setChosen(null); }} /></div>}
       {chosen && cards.find((c) => c.id === chosen) && (
-        <ListConfirmModal card={cards.find((c) => c.id === chosen)} wallet={wallet} hot={hotIds.includes(chosen)} now={now} onCancel={() => setChosen(null)} onConfirm={() => doList(chosen)} />
+        <ListConfirmModal key={chosen} card={cards.find((c) => c.id === chosen)} wallet={wallet} hot={hotIds.includes(chosen)} now={now} maxQty={Math.max(1, Math.min(sellableCopies(wallet, chosen), slots - lots.length))} onCancel={() => setChosen(null)} onConfirm={(q) => doList(chosen, q)} />
+      )}
+
+      {quickPlan && (
+        <div style={sx.modalOverlay} onClick={() => setQuickPlan(null)}>
+          <div style={{ ...sx.modal, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 4px", color: "#67e8f9" }}>⚡ Швидкий продаж дублікатів</h3>
+            <p style={{ margin: "0 0 10px", fontSize: 11, color: "#9ca3af" }}>Виставляємо лише зайві копії: по одній копії кожної картки залишиться в колекції.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto", marginBottom: 12 }}>
+              {quickPlan.map((st) => {
+                const c = cards.find((x) => x.id === st.id);
+                if (!c) return null;
+                const [lo, hi] = lotEstimate(c, now, hotIds.includes(c.id));
+                return (
+                  <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#111827", borderRadius: 10, padding: "6px 10px", textAlign: "left" }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: RARITY_COLOR[c.rarity], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hotIds.includes(c.id) ? "🔥 " : ""}{RARITY_EMOJI[c.rarity]} {c.name}</span>
+                    <b style={{ color: "#e5e7eb", fontSize: 12 }}>×{st.n}</b>
+                    <span style={{ fontSize: 10, color: "#fbbf24", whiteSpace: "nowrap" }}>≈ {lo * st.n}–{hi * st.n} 💵</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...sx.smallBtn, flex: 1, padding: "10px 0", fontSize: 12 }} onClick={() => setQuickPlan(null)}>Скасувати</button>
+              <button style={{ ...sx.primaryBtn, flex: 2 }} onClick={runQuickPlan}>⚡ Виставити</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ---- стрічка ---- */}
@@ -4306,7 +4398,6 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
         ))}
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-        <span onClick={() => { setLotOnly(lotOnly === "new" ? null : "new"); setLotShown(9); }} style={softChip(lotOnly === "new", "#4ade80")}>🆕 Нові для мене {newCount}</span>
         <span onClick={() => { setLotOnly(lotOnly === "wish" ? null : "wish"); setLotShown(9); }} style={softChip(lotOnly === "wish", "#fbbf24")}>⭐ Бажані {wishCount}</span>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center", justifyContent: "space-between" }}>
@@ -4369,7 +4460,8 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
       if (count > 1) {
         const dup = count - 1;
         totalCopies += dup;
-        totalBucks += Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)) * dup;
+        const tmp = { cheapCopies: { ...(wallet.cheapCopies || {}) }, cheapCost: { ...(wallet.cheapCost || {}) } };
+        totalBucks += salePayout(tmp, c.id, dup, Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)), count);
       }
     });
     return { totalCopies, totalBucks };
@@ -4382,7 +4474,7 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
       const count = w.collection[c.id] || 0;
       if (count > 1) {
         const dup = count - 1;
-        gained += Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)) * dup;
+        gained += salePayout(w, c.id, dup, Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)), count);
         w.collection[c.id] = 1;
       }
     });
@@ -4395,8 +4487,10 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
     const card = cards.find((c) => c.id === id);
     if (!card) { showToast("Цю картку більше не існує в грі", "err"); return; }
     if (card.tempEvent) { showToast("Тимчасові/подієві картки не можна продати", "err"); return; }
-    const price = Math.round(card.price * 0.4 * bucksMult(abuseEvent, wallet));
+    const per = Math.round(card.price * 0.4 * bucksMult(abuseEvent, wallet));
     const w = JSON.parse(JSON.stringify(wallet));
+    if ((w.collection[id] || 0) < 1) return;
+    const price = salePayout(w, id, 1, per, w.collection[id] || 0);
     w.collection[id] -= 1; if (!w.bucksInfinite) w.bucks += price;
     await saveWallet(w);
     setDetail(null);
@@ -5314,7 +5408,7 @@ function DuelSetupModal({ wallet, saveWallet, nick, friendsData, onClose, onEnte
               <p style={{ fontSize: 12, color: "#e5e7eb", margin: "0 0 8px" }}>🏆 Хто за відведений час набере більше очок — перемагає!</p>
               <div style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
                 {[["Міфічна", "+1"], ["Легендарна", "+3"], ["Ексклюзивна", "+8"]].map(([r, p]) => (
-                  <span key={r} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 999, background: "#0b0f1a", border: "1px solid " + (r === "Ексклюзивна" ? "#a855f7" : RARITY_COLOR[r]) }}><RName r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></span>
+                  <RarityPill key={r} r={r}><RName noRing r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></RarityPill>
                 ))}
               </div>
             </div>
@@ -5681,14 +5775,12 @@ function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, 
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 6, margin: "10px 0 16px", flexWrap: "wrap" }}>
           {[["Міфічна", "+1"], ["Легендарна", "+3"], ["Ексклюзивна", "+8"]].map(([r, p]) => (
-            <span key={r} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, background: "#111827", border: "1px solid " + (r === "Ексклюзивна" ? "#a855f7" : RARITY_COLOR[r]) }}><RName r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></span>
+            <RarityPill key={r} r={r} size={10}><RName noRing r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></RarityPill>
           ))}
         </div>
         {reel && <div key={reel.id} style={{ display: "flex", justifyContent: "center", marginBottom: 14, animation: "popIn 0.35s ease" }}><CardFace card={reel} /></div>}
         <button disabled={spinning} onClick={doSpin} style={{
-          ...sx.primaryBtn, maxWidth: 240, fontSize: 17, fontWeight: 900, letterSpacing: 1,
-          background: spinning ? "#374151" : "linear-gradient(90deg,#f59e0b,#ef4444,#a855f7,#ef4444,#f59e0b)", backgroundSize: "200% 100%",
-          animation: spinning ? "none" : "flowX 3s linear infinite", boxShadow: spinning ? "none" : "0 6px 22px #ef444455", color: "#fff",
+          ...sx.primaryBtn, maxWidth: 240, fontSize: 17, fontWeight: 900, letterSpacing: 1, opacity: spinning ? 0.6 : 1,
         }}>{spinning ? "Крутиться…" : "⚔️ КРУТИТИ!"}</button>
       </div>
       {timeLeft > 20 && (
