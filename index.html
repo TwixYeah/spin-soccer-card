@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin Soccer Card</title>
+<title>Spin a Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -580,24 +580,17 @@ function withDefaults(w) {
 
 /* ============================== BADGE ============================== */
 // Назва рідкості: "Ексклюзивна" завжди переливається райдужним градієнтом (як її рамка)
-function RName({ r, children, style, noRing }) {
-  if (r === "Ексклюзивна") {
-    const t = <span className="rb-text" style={style}>{children || r}</span>;
-    if (noRing) return t;
-    // слово "Ексклюзивна" завжди в райдужній рамці (як рамка самої картки)
-    return (
-      <span className="rainbow-ring" style={{ borderRadius: 999, padding: 1.5, display: "inline-flex", verticalAlign: "middle" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", background: "#0b0f1a", borderRadius: 999, padding: "1px 7px" }}>{t}</span>
-      </span>
-    );
-  }
+function RName({ r, children, style }) {
+  // "Ексклюзивна" — лише переливний текст (без рамки навколо слова)
+  if (r === "Ексклюзивна") return <span className="rb-text" style={style}>{children || r}</span>;
   return <span style={{ color: RARITY_COLOR[r], ...(style || {}) }}>{children || r}</span>;
 }
-// "пігулка" з назвою рідкості: для Ексклюзивної — райдужна рамка, для інших — рамка кольору рідкості
-function RarityPill({ r, size, children }) {
+// "пігулка" очок у дуелях: Ексклюзивна має СТАТИЧНУ кольорову обводку (без анімації), plain — зовсім без кольорової обводки
+function RarityPill({ r, size, plain, children }) {
   const ex = r === "Ексклюзивна";
-  const inner = <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: size || 11, padding: "3px 9px", borderRadius: 999, background: "#0b0f1a", border: ex ? "none" : "1px solid " + RARITY_COLOR[r] }}>{children}</span>;
-  return ex ? <span className="rainbow-ring" style={{ borderRadius: 999, padding: 1.5, display: "inline-flex" }}>{inner}</span> : inner;
+  const base = { display: "inline-flex", alignItems: "center", gap: 4, fontSize: size || 11, padding: "3px 9px", borderRadius: 999 };
+  if (ex && !plain) return <span style={{ ...base, border: "1.5px solid transparent", background: "linear-gradient(#0b0f1a,#0b0f1a) padding-box, linear-gradient(90deg,#f87171,#fbbf24,#4ade80,#22d3ee,#a855f7) border-box" }}>{children}</span>;
+  return <span style={{ ...base, background: "#0b0f1a", border: "1px solid " + (ex ? "#4b5563" : RARITY_COLOR[r]) }}>{children}</span>;
 }
 // градієнт ніку -> дзеркальний (a b c b a), щоб анімація зациклювалась без помітного стрибка
 function loopGradient(color) {
@@ -989,6 +982,7 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [wallet, setWallet] = useState(null);
   const [tab, setTab] = useState("casino");
+  const [casinoSub, setCasinoSub] = useState("spin"); // Рулетка | Дуелі | Ринок
   const [event, setEvent] = useState(null);
   const [abuseEvent, setAbuseEvent] = useState(null);
   const [adBanner, setAdBanner] = useState(null);
@@ -1844,9 +1838,12 @@ function App() {
             </div>
           </div>
         )}
-        {tab === "casino" && <CasinoTab wallet={wallet} saveWallet={saveWallet} profile={profile} nick={nick}
+        {tab === "casino" && <CasinoSubTabs sub={casinoSub} setSub={setCasinoSub} wallet={wallet} />}
+        {tab === "casino" && casinoSub === "duels" && <DuelsHub wallet={wallet} saveWallet={saveWallet} nick={nick} showToast={showToast} allCards={allCards} onEnterDuel={setDuelRoom} maintState={maintState} onGoProfile={() => setTab("profile")} />}
+        {tab === "casino" && casinoSub === "market" && <div style={sx.tabWrap}><MarketSection wallet={wallet} saveWallet={saveWallet} showToast={showToast} cards={allCards()} busyRef={busyRef} /></div>}
+        {tab === "casino" && casinoSub === "spin" && <CasinoTab wallet={wallet} saveWallet={saveWallet} profile={profile} nick={nick}
           abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} showToast={showToast} busyRef={busyRef} tileBanner={tileBanner} />}
-        {tab === "casino" && <PassWidget wallet={wallet} nick={nick} allCards={allCards} showToast={showToast} saveWallet={saveWallet}
+        {tab === "casino" && casinoSub === "spin" && <PassWidget wallet={wallet} nick={nick} allCards={allCards} showToast={showToast} saveWallet={saveWallet}
           claimPassLevel={claimPassLevel} claimPassQuest={claimPassQuest} buyPassPremium={buyPassPremium}
           passCardChoice={passCardChoice} confirmPassCardChoice={confirmPassCardChoice} setPassCardChoice={setPassCardChoice}
           skipConfirm={skipConfirm} setSkipConfirm={setSkipConfirm} askSkipLevel={askSkipLevel} confirmSkipLevel={confirmSkipLevel} SKIP_LEVEL_PRICE={SKIP_LEVEL_PRICE}
@@ -1856,7 +1853,7 @@ function App() {
         {tab === "collection" && <CollectionTab wallet={wallet} saveWallet={saveWallet} showToast={showToast} allCards={allCards} abuseEvent={abuseEvent} />}
         {tab === "achievements" && <AchievementsTab wallet={wallet} saveWallet={saveWallet} allCards={allCards} showToast={showToast} />}
         {tab === "profile" && <ProfileTab profile={profile} saveProfile={saveProfile} wallet={wallet} saveWallet={saveWallet}
-          nick={nick} onLogout={doLogout} showToast={showToast} onEnterDuel={setDuelRoom} allCards={allCards} siteSettings={siteSettings} maintState={maintState} claimStreakReward={claimStreakReward} setNickColor={setNickColor} passSeason={passSeason} changeOwnPassword={changeOwnPassword} />}
+          nick={nick} onLogout={doLogout} showToast={showToast} openDuels={() => { setCasinoSub("duels"); setTab("casino"); }} allCards={allCards} siteSettings={siteSettings} maintState={maintState} claimStreakReward={claimStreakReward} setNickColor={setNickColor} passSeason={passSeason} changeOwnPassword={changeOwnPassword} />}
         {tab === "admin" && isSuperAdmin(nick) && <AdminTab showToast={showToast} setGlobalShopNonce={setGlobalShopNonce}
           setAbuseEvent={setAbuseEvent} setRarityOverride={setRarityOverride} customCards={customCards} setCustomCards={setCustomCards} profile={profile} myNick={nick} allCards={allCards} siteSettings={siteSettings} setSiteSettings={setSiteSettings} resetOnboarding={resetOnboarding} />}
       </div>
@@ -1954,12 +1951,12 @@ function TopBar({ profile, wallet, abuseEvent, onLogout }) {
     </div>
   );
 }
-const NAV_GLOW = { shop: "#22d3ee", quests: "#a78bfa", achievements: "#fbbf24" };
+const NAV_GLOW = { casino: "#22d3ee", shop: "#22d3ee", quests: "#a78bfa", achievements: "#fbbf24" };
 // що нового чекає гравця: продано лот (Магазин), виконаний квест (Квести), доступне досягнення (Досягнення)
 function computeNavBadges(w, passEnded, cards) {
   if (!w) return {};
   const out = {};
-  if ((w.lotUnseen || 0) > 0) out.shop = true;
+  if ((w.lotUnseen || 0) > 0) out.casino = true; // ринок живе на екрані "Крутити"
   if (!passEnded) {
     const dq = (w.passDailyQuests && w.passDailyQuests.quests) || [];
     const sc = w.passSeasonClaimedQuests || [], sp = w.passSeasonQuestProgress || {};
@@ -2232,21 +2229,21 @@ function passRewardLabel(r) {
 }
 const ONBOARDING_STEPS = [
   { navId: "casino", goTab: "casino", icon: "🎰", title: "Крутити", color: "#fbbf24",
-    desc: "Головний екран: крутіть рулетку й отримуйте футбольні картки п'яти рідкостей — від Рідкісної до Ексклюзивної.\nЄ гарант рідкості, а щодня за вхід ви отримуєте бакси: що довша серія, то більша нагорода." },
+    desc: "Головний екран: крутіть рулетку й отримуйте футбольні картки п'яти рідкостей — від Рідкісної до Ексклюзивної.\nЄ гарант рідкості, а щодня за вхід ви отримуєте бакси: що довша серія, то більша нагорода.\nУгорі — три вкладки: Рулетка, Дуелі та Ринок." },
+  { sel: '[data-tour="casino-market"]', goTab: "casino", icon: "🏷", title: "Ринок", color: "#22d3ee",
+    desc: "Вкладка «Ринок» на екрані Крутити. Виставляйте свої дублікати: покупець з'явиться за 1–5 хвилин, а сума залежить від курсу рідкості (🔥 гарячий попит платить найбільше).\nТут же можна купувати лоти інших гравців, стежити за курсом, підвищувати ранг торговця й забирати нагороди." },
+  { sel: '[data-tour="casino-duels"]', goTab: "casino", icon: "⚔️", title: "Дуелі", color: "#a855f7",
+    desc: "Вкладка «Дуелі» на екрані Крутити. Дуель 1 на 1: створіть кімнату й запросіть друга (або зіграйте проти бота). За відведений час обидва крутять рулетку: Міфічна дає +1, Легендарна +3, Ексклюзивна +8 очок.\nГрати можна без ставки або на бакси — переможець забирає банк." },
   { navId: "shop", goTab: "shop", icon: "🛒", title: "Магазин", color: "#22d3ee",
     desc: "Тут купуєте картки за бакси. Щохвилини з'являються 10 випадкових знижок, а в каталозі можна купити будь-яку картку за її ціну.\nТам же — картки сезону за ключі зі знижкою." },
-  { sel: '[data-tour="shop-market"]', goTab: "shop", icon: "🏷", title: "Ринок", color: "#22d3ee",
-    desc: "Вкладка «Ринок» усередині Магазину. Виставляйте свої дублікати: покупець з'явиться за 1–5 хвилин, а сума залежить від курсу рідкості (🔥 гарячий попит платить найбільше).\nТут же можна купувати лоти інших гравців, стежити за курсом, підвищувати ранг торговця й забирати нагороди." },
   { navId: "quests", goTab: "quests", icon: "📋", title: "Квести", color: "#a78bfa",
     desc: "SOCCER PASS: щоденні й сезонні квести дають XP для 40 рівнів пасу — з безкоштовними та преміум-нагородами.\nЄ й суперквести — великі завдання з подвійними баксами. Квести бувають навіть про ринок." },
   { navId: "collection", goTab: "collection", icon: "📚", title: "Колекція", color: "#4ade80",
     desc: "Колекція отриманих вами карток, ви можете поглянути на картки які ви отримали саме тут або ж продати їх якщо вони вам не подобаються." },
   { navId: "achievements", goTab: "achievements", icon: "🏅", title: "Досягнення", color: "#f59e0b",
-    desc: "Виконуйте досягнення — це додаткові бакси. Іноді адмін роздає особливі «ексклюзивні» досягнення за події.\nКоли в Магазині, Квестах чи Досягненнях є щось нове, назва вкладки світиться." },
+    desc: "Виконуйте досягнення — це додаткові бакси. Іноді адмін роздає особливі «ексклюзивні» досягнення за події.\nКоли на екрані Крутити, у Квестах чи Досягненнях є щось нове, назва вкладки світиться." },
   { navId: "profile", goTab: "profile", icon: "👤", title: "Профіль", color: "#f87171",
     desc: "Ваш профіль та ваша інформація знаходиться тут, ви можете додати своїх друзів щоб разом пограти в Дуелі." },
-  { navId: "profile", goTab: "profile", icon: "⚔️", title: "Дуелі", color: "#a855f7",
-    desc: "Дуель 1 на 1: створіть кімнату й запросіть друга (або зіграйте проти бота). За відведений час обидва крутять рулетку: Міфічна дає +1, Легендарна +3, Ексклюзивна +8 очок.\nГрати можна без ставки або на бакси — переможець забирає банк." },
 ];
 function useTargetRect(sel) {
   const [rect, setRect] = useState(null);
@@ -2668,7 +2665,7 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
                   return (
                     <RainbowWrap key={r} on={r === "Ексклюзивна"} radius={10} pad={1.5}>
                       <div style={{ background: "#111827", border: r === "Ексклюзивна" ? "none" : `1px solid ${RARITY_COLOR[r]}`, borderRadius: 8, padding: "4px 10px" }}>
-                        <RName noRing r={r} style={{ fontWeight: 800, fontSize: 12 }}>{r}: {n}</RName>
+                        <RName r={r} style={{ fontWeight: 800, fontSize: 12 }}>{r}: {n}</RName>
                       </div>
                     </RainbowWrap>
                   );
@@ -2872,7 +2869,7 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
       {passCardChoice && (
         <div style={sx.modalOverlay} onClick={() => setPassCardChoice(null)}>
           <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: RARITY_COLOR[passCardChoice.rarity] }}>Оберіть <RName noRing r={passCardChoice.rarity}>{passCardChoice.rarity.toLowerCase()}</RName> картку</h3>
+            <h3 style={{ marginTop: 0, color: RARITY_COLOR[passCardChoice.rarity] }}>Оберіть <RName r={passCardChoice.rarity}>{passCardChoice.rarity.toLowerCase()}</RName> картку</h3>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               {passCardChoice.options.map((c) => (
                 <div key={c.id} style={{ textAlign: "center" }}>
@@ -3520,7 +3517,7 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
   const allSold = boughtIndices.length >= 10;
   return (
     <div style={sx.tabWrap}>
-      {sub !== "market" && (
+      {(
         <div style={{
           borderRadius: 14, padding: "14px 14px 12px", marginBottom: 12, position: "relative", overflow: "hidden",
           background: sub === "deals" ? "linear-gradient(135deg,#164e63,#0c2d3a 60%,#0b0f1a)" : "linear-gradient(135deg,#312e81,#1e1b4b 60%,#0b0f1a)",
@@ -3543,7 +3540,6 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
       <div style={sx.authTabs}>
         <button onClick={() => setSub("deals")} style={{ ...sx.authTabBtn, ...(sub === "deals" ? sx.authTabActive : {}) }}>Акції</button>
         <button onClick={() => setSub("catalog")} style={{ ...sx.authTabBtn, ...(sub === "catalog" ? sx.authTabActive : {}) }}>Всі картки</button>
-        <button data-tour="shop-market" onClick={() => setSub("market")} style={{ ...sx.authTabBtn, ...(sub === "market" ? sx.authTabActive : {}) }}>🏷 Ринок{(wallet.lots || []).length > 0 ? " · " + (wallet.lots || []).length : ""}</button>
       </div>
       {sub === "deals" && (
         <>
@@ -3608,11 +3604,10 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
           </div>
         </>
       )}
-      {sub === "market" && <MarketSection wallet={wallet} saveWallet={saveWallet} showToast={showToast} cards={allCards()} busyRef={busyRef} />}
       {specialPick && (
         <div style={sx.modalOverlay} onClick={() => setSpecialPick(null)}>
           <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: RARITY_COLOR[specialPick.rarity] }}>Оберіть <RName noRing r={specialPick.rarity}>{specialPick.rarity.toLowerCase()}</RName> картку</h3>
+            <h3 style={{ marginTop: 0, color: RARITY_COLOR[specialPick.rarity] }}>Оберіть <RName r={specialPick.rarity}>{specialPick.rarity.toLowerCase()}</RName> картку</h3>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               {specialPick.options.map((c) => (
                 <div key={c.id} style={{ textAlign: "center" }}>
@@ -5042,16 +5037,11 @@ function ChangePasswordModal({ changeOwnPassword, onClose }) {
     </div>
   );
 }
-function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, showToast, onEnterDuel, allCards, siteSettings, maintState, claimStreakReward, setNickColor, passSeason, changeOwnPassword }) {
-  const maintSoon = maintState && maintState.phase && maintState.phase !== "off";
-  const [showStreak, setShowStreak] = useState(false);
-  const [friendInput, setFriendInput] = useState("");
+
+// друзі гравця (спільно для Профілю та вкладки Дуелі)
+function useFriendsData(wallet, nick, allCards, intervalMs) {
   const [friendsData, setFriendsData] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
-  const [showDuel, setShowDuel] = useState(false);
-  const [viewFriend, setViewFriend] = useState(null);
-  const [giftTarget, setGiftTarget] = useState(null);
-  const [showPassChange, setShowPassChange] = useState(false);
   const [friendsBusy, setFriendsBusy] = useState(false);
   const loadFriends = useCallback(async () => {
     setFriendsBusy(true);
@@ -5077,7 +5067,106 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
     setIncomingRequests((await sGet("friend_requests_" + nick, true)) || []);
     setFriendsBusy(false);
   }, [wallet.friends, nick]);
-  useEffect(() => { loadFriends(); const t = setInterval(loadFriends, 3000); return () => clearInterval(t); }, [loadFriends]);
+  useEffect(() => { loadFriends(); const t = setInterval(loadFriends, intervalMs || 3000); return () => clearInterval(t); }, [loadFriends, intervalMs]);
+  return { friendsData, incomingRequests, setIncomingRequests, friendsBusy, loadFriends };
+}
+// ============================== ДУЕЛІ (вкладка на екрані "Крутити") ==============================
+function DuelsHub({ wallet, saveWallet, nick, showToast, allCards, onEnterDuel, maintState, onGoProfile }) {
+  const { friendsData } = useFriendsData(wallet, nick, allCards, 8000);
+  const [showDuel, setShowDuel] = useState(false);
+  const [prefill, setPrefill] = useState(null);
+  const maintSoon = maintState && maintState.phase && maintState.phase !== "off";
+  const ds = wallet.duelStats || { wins: 0, losses: 0, streak: 0, bestStreak: 0 };
+  const total = (ds.wins || 0) + (ds.losses || 0);
+  const winRate = total ? Math.round(((ds.wins || 0) / total) * 100) : 0;
+  const stat = (icon, label, value, col) => (
+    <div style={{ flex: 1, minWidth: 0, background: "linear-gradient(160deg,#111827,#0b0f1a)", border: "1px solid #1f2937", borderRadius: 12, padding: "10px 4px", textAlign: "center" }}>
+      <div style={{ fontSize: 16 }}>{icon}</div>
+      <div style={{ fontSize: 20, fontWeight: 900, color: col }}>{value}</div>
+      <div style={{ fontSize: 9, color: "#6b7280" }}>{label}</div>
+    </div>
+  );
+  const step = (n, text) => (
+    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+      <span style={{ width: 20, height: 20, borderRadius: 99, background: "linear-gradient(135deg,#7c3aed,#4c1d95)", color: "#fff", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</span>
+      <span style={{ fontSize: 12, color: "#d1d5db", lineHeight: 1.4 }}>{text}</span>
+    </div>
+  );
+  return (
+    <div style={sx.tabWrap}>
+      <div style={{ borderRadius: 16, padding: 14, marginBottom: 12, position: "relative", overflow: "hidden", background: "linear-gradient(90deg,#4c1d95,#1e1b4b,#7c3aed,#1e1b4b,#4c1d95)", backgroundSize: "200% 100%", animation: "flowX 8s linear infinite", border: "1px solid #7c3aed" }}>
+        <span style={{ position: "absolute", right: -6, top: -10, fontSize: 64, opacity: 0.14, transform: "rotate(12deg)", pointerEvents: "none" }}>⚔️</span>
+        <h2 style={{ margin: "0 0 2px", fontSize: 19, color: "#f5f3ff" }}>⚔️ Дуелі</h2>
+        <p style={{ margin: 0, fontSize: 11, color: "#ddd6fe" }}>1 на 1: хто за відведений час набере більше очок за цінні картки</p>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        {stat("🏆", "перемог", ds.wins || 0, "#4ade80")}
+        {stat("💔", "поразок", ds.losses || 0, "#f87171")}
+        {stat("🔥", "серія (рекорд " + (ds.bestStreak || 0) + ")", ds.streak || 0, "#fbbf24")}
+        {stat("📈", "виграшів", winRate + "%", "#67e8f9")}
+      </div>
+      <div style={{ background: "#0f172a", border: "1px solid #1f2937", borderRadius: 14, padding: 12, marginBottom: 12 }}>
+        <b style={{ fontSize: 13, color: "#c4b5fd", display: "block", marginBottom: 8 }}>Як це працює</b>
+        {step(1, "Створіть кімнату й запросіть друга — або зіграйте проти бота.")}
+        {step(2, "Обидва крутять рулетку, поки йде час. Очки дають лише цінні картки:")}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "0 0 8px 28px" }}>
+          {[["Міфічна", "+1"], ["Легендарна", "+3"], ["Ексклюзивна", "+8"]].map(([r, p]) => (
+            <RarityPill key={r} r={r}><RName r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></RarityPill>
+          ))}
+        </div>
+        {step(3, "Грайте без ставки або на бакси — переможець забирає банк.")}
+      </div>
+      <button disabled={maintSoon} style={{ ...sx.primaryBtn, marginBottom: 14, opacity: maintSoon ? 0.4 : 1 }} onClick={() => { setPrefill(null); setShowDuel(true); }}>{maintSoon ? "⚔️ Скоро технічна перерва" : "⚔️ Нова дуель"}</button>
+      <h3 style={{ margin: "0 0 8px", fontSize: 14, color: "#fbbf24" }}>👥 Викликати друга</h3>
+      {friendsData.length === 0 && (
+        <div style={{ background: "#111827", borderRadius: 12, padding: 12, textAlign: "center" }}>
+          <p style={{ margin: "0 0 8px", fontSize: 12, color: "#9ca3af" }}>Ви поки не додали друзів. Додайте їх у Профілі — і граймо разом!</p>
+          <button style={sx.smallBtn} onClick={onGoProfile}>👤 До профілю</button>
+        </div>
+      )}
+      {friendsData.map((f) => {
+        const online = Date.now() - f.lastSeen < 120000;
+        return (
+          <div key={f.nick} style={{ display: "flex", alignItems: "center", gap: 8, background: "#1f2937", borderRadius: 10, padding: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 20 }}>{f.avatar}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, display: "flex", alignItems: "center" }}><ColoredNick nick={f.nick} color={f.nickColor} /><VerBadge v={f.verified} /></div>
+              <div style={{ fontSize: 10, color: "#6b7280" }}>{online ? "🟢 в мережі" : "востаннє " + timeAgo(f.lastSeen)} · 🏆 {f.duelWins} / 💔 {f.duelLosses}</div>
+            </div>
+            <button disabled={maintSoon} style={{ ...sx.smallBtn, background: "#7c3aed", fontSize: 11, opacity: maintSoon ? 0.4 : 1 }} onClick={() => { setPrefill({ nick: f.nick }); setShowDuel(true); }}>⚔️ Викликати</button>
+          </div>
+        );
+      })}
+      {showDuel && <DuelSetupModal wallet={wallet} saveWallet={saveWallet} nick={nick} friendsData={friendsData} onClose={() => { setShowDuel(false); setPrefill(null); }} onEnterDuel={onEnterDuel} showToast={showToast} allCards={allCards} maintState={maintState} prefillOpponent={prefill} />}
+    </div>
+  );
+}
+// підвкладки екрана "Крутити": Рулетка | Дуелі | Ринок
+function CasinoSubTabs({ sub, setSub, wallet }) {
+  const lots = (wallet.lots || []).length;
+  const items = [
+    { id: "spin", label: "🎰 Рулетка" },
+    { id: "duels", label: "⚔️ Дуелі", tour: "casino-duels" },
+    { id: "market", label: "🏷 Ринок" + (lots > 0 ? " · " + lots : ""), tour: "casino-market" },
+  ];
+  return (
+    <div style={{ ...sx.tabWrap, animation: "none" }}>
+      <div style={sx.authTabs}>
+        {items.map((it) => (
+          <button key={it.id} data-tour={it.tour} onClick={() => setSub(it.id)} style={{ ...sx.authTabBtn, ...(sub === it.id ? sx.authTabActive : {}) }}>{it.label}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, showToast, openDuels, allCards, siteSettings, maintState, claimStreakReward, setNickColor, passSeason, changeOwnPassword }) {
+  const maintSoon = maintState && maintState.phase && maintState.phase !== "off";
+  const [showStreak, setShowStreak] = useState(false);
+  const [friendInput, setFriendInput] = useState("");
+  const [viewFriend, setViewFriend] = useState(null);
+  const [giftTarget, setGiftTarget] = useState(null);
+  const [showPassChange, setShowPassChange] = useState(false);
+  const { friendsData, incomingRequests, setIncomingRequests, friendsBusy, loadFriends } = useFriendsData(wallet, nick, allCards, 3000);
 
   async function sendFriendRequest() {
     const key = friendInput.trim().toLowerCase();
@@ -5229,14 +5318,13 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button disabled={maintSoon} style={{ ...sx.smallBtn, flex: 1, background: "#7c3aed", opacity: maintSoon ? 0.4 : 1 }} onClick={() => setShowDuel(true)}>{maintSoon ? "⚔️ Скоро перерва" : "⚔️ Дуель"}</button>
+        <button style={{ ...sx.smallBtn, flex: 1, background: "#7c3aed" }} onClick={openDuels}>⚔️ Дуелі →</button>
         <button style={{ ...sx.smallBtn, flex: 1 }} onClick={onLogout}>🚪 Вийти</button>
       </div>
       {showPassChange && <ChangePasswordModal changeOwnPassword={changeOwnPassword} onClose={() => setShowPassChange(false)} />}
       {showStreak && <StreakModal wallet={wallet} nick={nick} claimStreakReward={claimStreakReward} onClose={() => setShowStreak(false)} />}
       {viewFriend && <FriendProfileModal friend={viewFriend} onClose={() => setViewFriend(null)} allCards={allCards} />}
       {giftTarget && <GiftCardModal wallet={wallet} saveWallet={saveWallet} nick={nick} friend={giftTarget} allCards={allCards} onClose={() => setGiftTarget(null)} showToast={showToast} />}
-      {showDuel && <DuelSetupModal wallet={wallet} saveWallet={saveWallet} nick={nick} friendsData={friendsData} onClose={() => setShowDuel(false)} onEnterDuel={onEnterDuel} showToast={showToast} allCards={allCards} maintState={maintState} />}
     </div>
   );
 }
@@ -5408,7 +5496,7 @@ function DuelSetupModal({ wallet, saveWallet, nick, friendsData, onClose, onEnte
               <p style={{ fontSize: 12, color: "#e5e7eb", margin: "0 0 8px" }}>🏆 Хто за відведений час набере більше очок — перемагає!</p>
               <div style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
                 {[["Міфічна", "+1"], ["Легендарна", "+3"], ["Ексклюзивна", "+8"]].map(([r, p]) => (
-                  <RarityPill key={r} r={r}><RName noRing r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></RarityPill>
+                  <RarityPill key={r} r={r} plain><RName r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></RarityPill>
                 ))}
               </div>
             </div>
@@ -5775,7 +5863,7 @@ function DuelScreen({ room, nick, wallet, saveWallet, allCards, rarityOverride, 
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 6, margin: "10px 0 16px", flexWrap: "wrap" }}>
           {[["Міфічна", "+1"], ["Легендарна", "+3"], ["Ексклюзивна", "+8"]].map(([r, p]) => (
-            <RarityPill key={r} r={r} size={10}><RName noRing r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></RarityPill>
+            <RarityPill key={r} r={r} size={10}><RName r={r} style={{ fontWeight: 700 }} /> <b style={{ color: "#e5e7eb" }}>{p}</b></RarityPill>
           ))}
         </div>
         {reel && <div key={reel.id} style={{ display: "flex", justifyContent: "center", marginBottom: 14, animation: "popIn 0.35s ease" }}><CardFace card={reel} /></div>}
