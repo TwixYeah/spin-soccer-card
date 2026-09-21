@@ -36,6 +36,20 @@
   .nav-glow-bar { position: absolute; left: 50%; bottom: 1px; width: 26px; height: 3px; margin-left: -13px; border-radius: 99px; animation: navGlowBar 1.3s ease-in-out infinite; }
   @keyframes navLabelGlow { 0%,100% { text-shadow: 0 0 2px var(--nc); } 50% { text-shadow: 0 0 9px var(--nc), 0 0 3px var(--nc); } }
   .nav-glow-label { animation: navLabelGlow 1.3s ease-in-out infinite; font-weight: 800; }
+  /* тіло новини (і в редакторі, і у читача) */
+  .news-body { font-size: 13px; line-height: 1.55; color: #e5e7eb; word-break: break-word; overflow-x: auto; }
+  .news-body h1, .news-body h2, .news-body h3, .news-body h4 { margin: 10px 0 6px; color: #fbbf24; line-height: 1.25; }
+  .news-body h1 { font-size: 19px; } .news-body h2 { font-size: 16px; } .news-body h3 { font-size: 14px; }
+  .news-body p, .news-body div { margin: 0 0 6px; }
+  .news-body ul, .news-body ol { margin: 0 0 8px; padding-left: 20px; }
+  .news-body table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
+  .news-body th, .news-body td { border: 1px solid #374151; padding: 6px 8px; text-align: left; }
+  .news-body th { background: #1f2937; color: #fde68a; }
+  .news-body tr:nth-child(even) td { background: #0f172a; }
+  .news-body blockquote { margin: 8px 0; padding: 6px 12px; border-left: 3px solid #a855f7; background: #1e1b4b55; border-radius: 0 8px 8px 0; }
+  .news-body a { color: #67e8f9; text-decoration: underline; }
+  .news-body hr { border: none; border-top: 1px solid #374151; margin: 10px 0; }
+  .news-body code { background: #111827; padding: 1px 5px; border-radius: 4px; }
   /* загальний "живий" відгук кнопок */
   button { transition: transform 0.12s ease, filter 0.15s ease, opacity 0.15s ease; }
   button:not(:disabled):active { transform: scale(0.96); }
@@ -194,7 +208,6 @@ const ACHIEVEMENTS = [
   { id: "market_hot_10", icon: "🔮", name: "Ринковий провидець", desc: "Продайте 10 карток під час гарячого попиту", bonus: 1500, check: (w) => ((w.lotStats && w.lotStats.hot) || 0) >= 10 },
   { id: "market_100", icon: "🐺", name: "Біржовий вовк", desc: "Продайте 100 карток на ринку", bonus: 3000, check: (w) => ((w.lotStats && w.lotStats.sold) || 0) >= 100 },
   { id: "market_earn_250k", icon: "💹", name: "Мільйонер біржі", desc: "Заробіть 250 000 💵 на ринку", bonus: 5000, check: (w) => ((w.lotStats && w.lotStats.earned) || 0) >= 250000 },
-  { id: "market_titan", icon: "🏛️", name: "Титан ринку", desc: "Досягніть рангу «Титан ринку» (200 угод)", bonus: 5000, check: (w) => ((w.lotStats && w.lotStats.sold) || 0) >= 200 },
   { id: "mythic_10", icon: "💜", name: "Мисливець на міфіків", desc: "Майте 10 різних Міфічних карток", bonus: 1200, check: (w, cards) => cards.filter((c) => c.rarity === "Міфічна" && (w.collection[c.id] || 0) > 0).length >= 10 },
   { id: "legendary_10", icon: "🥇", name: "Легендарний колекціонер", desc: "Майте 10 різних Легендарних карток", bonus: 2500, check: (w, cards) => cards.filter((c) => c.rarity === "Легендарна" && (w.collection[c.id] || 0) > 0).length >= 10 },
   { id: "exclusive_10", icon: "👑", name: "Імператор ексклюзивів", desc: "Майте 10 різних Ексклюзивних карток", bonus: 5000, check: (w, cards) => cards.filter((c) => c.rarity === "Ексклюзивна" && (w.collection[c.id] || 0) > 0).length >= 10 },
@@ -202,10 +215,9 @@ const ACHIEVEMENTS = [
   { id: "rich_1m", icon: "🏦", name: "Мільйонер", desc: "Накопичте 1 000 000 баксів одночасно", bonus: 6000, check: (w) => (w.bucks || 0) >= 1000000 },
   { id: "streak_200", icon: "🌟", name: "Легенда серії", desc: "Заходьте на сайт 200 днів поспіль", bonus: 6000, check: (w) => (w.streak || 0) >= 200 },
   { id: "duel_win_50", icon: "🛡️", name: "Гладіатор", desc: "Виграйте 50 дуелей", bonus: 3000, check: (w) => (w.duelStats && w.duelStats.wins || 0) >= 50 },
-  { id: "duel_win_100", icon: "🏟️", name: "Легенда арени", desc: "Виграйте 100 дуелей", bonus: 8000, check: (w) => (w.duelStats && w.duelStats.wins || 0) >= 100 },
   { id: "duel_streak_10", icon: "⚡", name: "Незламний", desc: "Виграйте 10 дуелей поспіль", bonus: 2500, check: (w) => (w.duelStats && w.duelStats.bestStreak || 0) >= 10 },
   { id: "favorite_5", icon: "⭐", name: "Улюбленці", desc: "Позначте 5 улюблених карток", bonus: 200, check: (w) => (w.favoriteCards || []).length >= 5 },
-  { id: "gifter_10", icon: "🎀", name: "Меценат", desc: "Подаруйте 10 карток друзям", bonus: 1000, check: (w) => (w.giftsSent || 0) >= 10 },
+  { id: "gifter_10", icon: "🎀", name: "Золоте серце", desc: "Подаруйте 10 карток друзям", bonus: 1000, check: (w) => (w.giftsSent || 0) >= 10 },
 ];
 const COST_LEVELS = [150, 200, 250, 300, 500, 1000, 1500, 2000, 2500];
 const DECAY_INTERVAL_MS = 15 * 1000;
@@ -1205,6 +1217,7 @@ function App() {
         } catch (e) { console.error("poll: grants processing failed", e); }
 
         try {
+          refreshMarketFlow(false);
           // ринок ботів: закриваємо лоти, у яких вийшов час (працює навіть коли вкладка "Колекція" закрита)
           const lw = walletRef.current;
           if (lw && (lw.lots || []).some((l) => l.sellAt <= Date.now())) {
@@ -1212,6 +1225,7 @@ function App() {
             if (res) {
               setWallet({ ...res.wallet }); walletRef.current = res.wallet;
               await sSet("wallet_" + curNick, res.wallet, true);
+              recordMarketFlow(res.sold.map((s) => ({ r: s.rarity, type: "sell" })));
               if (res.sold.length === 1) showToast(`🏷 ${res.sold[0].buyer} купив «${res.sold[0].name}» за ${res.sold[0].price} 💵`, "ok");
               else if (res.sold.length > 1) showToast(`🏷 Продано ${res.sold.length} лотів на ${res.sold.reduce((a, x) => a + x.price, 0)} 💵`, "ok");
               if (res.returned.length) showToast("Частину карток повернуто в колекцію: їх більше немає в грі", "info");
@@ -1859,6 +1873,7 @@ function App() {
         {tab === "casino" && <CasinoSubTabs sub={casinoSub} setSub={setCasinoSub} wallet={wallet} />}
         {tab === "casino" && casinoSub === "duels" && <DuelsHub wallet={wallet} saveWallet={saveWallet} nick={nick} showToast={showToast} allCards={allCards} onEnterDuel={setDuelRoom} maintState={maintState} onGoProfile={() => setTab("profile")} />}
         {tab === "casino" && casinoSub === "market" && <div style={sx.tabWrap}><MarketSection wallet={wallet} saveWallet={saveWallet} showToast={showToast} cards={allCards()} busyRef={busyRef} /></div>}
+        {tab === "casino" && casinoSub === "spin" && <NewsCard nick={nick} />}
         {tab === "casino" && casinoSub === "spin" && <CasinoTab wallet={wallet} saveWallet={saveWallet} profile={profile} nick={nick}
           abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} showToast={showToast} busyRef={busyRef} tileBanner={tileBanner} />}
         {tab === "casino" && casinoSub === "spin" && <PassWidget wallet={wallet} nick={nick} allCards={allCards} showToast={showToast} saveWallet={saveWallet}
@@ -3712,12 +3727,63 @@ function leaderStrength(rarity, ts) {
   const a = leaderOf(i) === rarity ? 1 : 0, b = leaderOf(i + 1) === rarity ? 1 : 0;
   return a + (b - a) * sm;
 }
+// ---- спільний стан ринку: обсяги угод УСІХ гравців (продажі/покупки за 5-хвилинками) ----
+// Багато продажів рідкості → її ціна падає (пропозиція перевищує попит), багато покупок → росте.
+// Один спільний запис "market_flow" у Firestore; невеликі втрати при одночасних записах допустимі (це наближений показник).
+const FLOW_BUCKET_MS = 5 * 60000;
+const FLOW_WEIGHTS = [1, 0.85, 0.7, 0.55, 0.4, 0.25]; // вплив угод за останні 30 хв (свіжіші важать більше)
+let MARKET_FLOW = { b: {} };
+let __flowLoadedAt = 0;
+function flowEffect(rarity, ts) {
+  const bi = Math.floor(ts / FLOW_BUCKET_MS);
+  let net = 0;
+  for (let k = 0; k < FLOW_WEIGHTS.length; k++) {
+    const bk = MARKET_FLOW.b && MARKET_FLOW.b[bi - k];
+    const v = bk && bk[rarity];
+    if (v) net += FLOW_WEIGHTS[k] * ((v[1] || 0) - (v[0] || 0)); // куплено − продано
+  }
+  return Math.max(-0.12, Math.min(0.12, net * 0.03));
+}
+function flowSummary(rarity, now) {
+  const bi = Math.floor(now / FLOW_BUCKET_MS);
+  let sold = 0, bought = 0;
+  for (let k = 0; k < FLOW_WEIGHTS.length; k++) {
+    const bk = MARKET_FLOW.b && MARKET_FLOW.b[bi - k];
+    const v = bk && bk[rarity];
+    if (v) { sold += v[0] || 0; bought += v[1] || 0; }
+  }
+  return { sold, bought };
+}
+async function refreshMarketFlow(force) {
+  if (!force && Date.now() - __flowLoadedAt < 45000) return;
+  __flowLoadedAt = Date.now();
+  const v = await sGet("market_flow", true);
+  if (v && v.b) MARKET_FLOW = v;
+}
+async function recordMarketFlow(events) {
+  try {
+    const cur = (await sGet("market_flow", true)) || { b: {} };
+    const b = cur.b || {};
+    const bi = Math.floor(Date.now() / FLOW_BUCKET_MS);
+    events.forEach((e) => {
+      const bk = b[bi] || (b[bi] = {});
+      const t = bk[e.r] || (bk[e.r] = [0, 0]);
+      t[e.type === "sell" ? 0 : 1] += e.n || 1;
+    });
+    Object.keys(b).forEach((k) => { if (Number(k) < bi - 40) delete b[k]; }); // зберігаємо ~3 години
+    cur.b = b;
+    MARKET_FLOW = cur;
+    __flowLoadedAt = Date.now();
+    await sSet("market_flow", cur, true);
+  } catch (e) { console.error("market flow failed", e); }
+}
 function marketMult(rarity, ts) {
-  const m = 1 + (RARITY_BIAS[rarity] || 0)
-    + 0.05 * vnoise(rarity + "a", ts, 22 * 60000)
+  // "фонове" хитання стало спокійнішим (×0.6): головний вплив на курс — реальні угоди гравців
+  const drift = 0.05 * vnoise(rarity + "a", ts, 22 * 60000)
     + 0.028 * vnoise(rarity + "b", ts, 7 * 60000)
     + 0.012 * vnoise(rarity + "c", ts, 2.3 * 60000)
     + 0.06 * leaderStrength(rarity, ts);
+  const m = 1 + (RARITY_BIAS[rarity] || 0) + 0.6 * drift + flowEffect(rarity, ts);
   return Math.min(1.15, Math.max(0.85, m));
 }
 function lotFactor(card, lot, cards) {
@@ -3876,7 +3942,8 @@ function hotCardIds(ts, cards) {
   return ids;
 }
 // скільки % від ціни картки платить бот "типово" (без 🔥): 70% × курс, у межах 50–90%
-function payPct(mult) { return Math.round(Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, 0.7 * mult)) * 100); }
+function payVal(mult) { return Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, 0.7 * mult)) * 100; }
+function payPct(mult) { return Math.round(payVal(mult)); }
 function lotEstimate(c, ts, hot) {
   const m = marketMult(c.rarity, ts), bonus = hot ? 0.15 : 0;
   const cl = (x) => Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, x));
@@ -3888,12 +3955,12 @@ function RainbowWrap({ on, radius, pad, block, children }) {
   if (!on) return children;
   return <div className="rainbow-ring" style={{ borderRadius: radius || 12, padding: pad || 2, display: block ? "block" : "flex", width: block ? "100%" : undefined }}>{children}</div>;
 }
-function MarketChip({ r, col, active, dim, onClick, children }) {
+function MarketChip({ r, col, active, dim, onClick, compact, children }) {
   const ex = r === "Ексклюзивна";
   const color = col || RARITY_COLOR[r];
   const chip = (
     <span onClick={onClick} style={{
-      fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "4px 9px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 3,
+      fontSize: compact ? 10 : 11, fontWeight: 700, cursor: "pointer", padding: compact ? "3px 6px" : "4px 9px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 2, whiteSpace: "nowrap",
       background: active ? (ex ? "linear-gradient(90deg," + RAINBOW_STOPS + ")" : color) : "#111827", color: active ? "#1a1400" : (ex ? "#e5e7eb" : color),
       border: ex ? "none" : "1px solid " + color, opacity: dim ? 0.45 : 1, userSelect: "none",
     }}>{children}</span>
@@ -4010,6 +4077,47 @@ function ListConfirmModal({ card, wallet, hot, now, maxQty, onCancel, onConfirm 
     </div>
   );
 }
+// графік: скільки % від ціни картки платить бот за останню годину (усі рідкості; вибрана — товстіша лінія)
+function MarketChart({ now, sel }) {
+  const W = 320, H = 132, L = 32, R = 12, T = 10, B = 20, N = 30, STEP = 120000;
+  const x = (i) => L + (i / N) * (W - L - R);
+  const yMin = 55, yMax = 85;
+  const y = (p) => T + (1 - (Math.min(yMax, Math.max(yMin, p)) - yMin) / (yMax - yMin)) * (H - T - B);
+  const series = (r) => Array.from({ length: N + 1 }, (_, i) => payVal(marketMult(r, now - (N - i) * STEP)));
+  const col = (r) => (r === "Ексклюзивна" ? "url(#mktExLine)" : RARITY_COLOR[r]);
+  const order = RARITY_ORDER.filter((r) => r !== sel).concat(sel ? [sel] : []);
+  const selSeries = sel ? series(sel) : null;
+  const pts = (arr) => arr.map((p, i) => x(i).toFixed(1) + "," + y(p).toFixed(1)).join(" ");
+  return (
+    <svg viewBox={"0 0 " + W + " " + H} style={{ width: "100%", height: "auto", display: "block" }}>
+      <defs>
+        <linearGradient id="mktExLine" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#f87171" /><stop offset="0.25" stopColor="#fbbf24" /><stop offset="0.5" stopColor="#4ade80" /><stop offset="0.75" stopColor="#22d3ee" /><stop offset="1" stopColor="#a855f7" />
+        </linearGradient>
+      </defs>
+      {[60, 70, 80].map((p) => (
+        <g key={p}>
+          <line x1={L} x2={W - R} y1={y(p)} y2={y(p)} stroke="#1f2937" strokeDasharray="3 4" />
+          <text x={L - 5} y={y(p) + 3} textAnchor="end" fontSize="9" fill="#6b7280">{p}%</text>
+        </g>
+      ))}
+      {[["-60 хв", 0], ["-30 хв", N / 2], ["зараз", N]].map(([t, i]) => (
+        <text key={t} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === N ? "end" : "middle"} fontSize="9" fill="#6b7280">{t}</text>
+      ))}
+      {selSeries && <polygon points={x(0) + "," + y(yMin) + " " + pts(selSeries) + " " + x(N) + "," + y(yMin)} fill={sel === "Ексклюзивна" ? "#a855f7" : RARITY_COLOR[sel]} opacity="0.13" />}
+      {order.map((r) => {
+        const on = r === sel;
+        return <polyline key={r} points={pts(series(r))} fill="none" stroke={col(r)} strokeWidth={on ? 2.8 : 1.3} strokeLinejoin="round" strokeLinecap="round" opacity={on ? 1 : 0.4} />;
+      })}
+      {selSeries && (
+        <g>
+          <circle cx={x(N)} cy={y(selSeries[N])} r="4" fill={sel === "Ексклюзивна" ? "#22d3ee" : RARITY_COLOR[sel]} style={{ animation: "mktPulse 1.6s ease-in-out infinite" }} />
+          <text x={x(N) - 6} y={y(selSeries[N]) - 8} textAnchor="end" fontSize="11" fontWeight="800" fill="#e5e7eb">{Math.round(selSeries[N])}%</text>
+        </g>
+      )}
+    </svg>
+  );
+}
 function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBusy }) {
   const busyRef = useRef(false); // власний прапорець: спільний з іншими вкладками міг "залипнути" і мовчки блокувати дії
   const [now, setNow] = useState(Date.now());
@@ -4017,12 +4125,15 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
   const [chosen, setChosen] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
   const [quickPlan, setQuickPlan] = useState(null);
+  const [selRarity, setSelRarity] = useState(null);
+  const [feedOpen, setFeedOpen] = useState(false);
   const pickerRef = useRef(null);
   const [lotRarity, setLotRarity] = useState(null);
   const [lotOnly, setLotOnly] = useState(null); // null | "wish"
   const [lotSort, setLotSort] = useState("rarity");
   const [lotShown, setLotShown] = useState(9);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => { refreshMarketFlow(true); const t = setInterval(() => refreshMarketFlow(false), 30000); return () => clearInterval(t); }, []);
   useEffect(() => { if (picking && pickerRef.current) pickerRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [picking]);
   // гравець зайшов на ринок — гасимо підсвітку "щось продано" в нижньому меню
   useEffect(() => { if ((wallet.lotUnseen || 0) > 0) saveWallet({ ...wallet, lotUnseen: 0 }); /* eslint-disable-next-line */ }, [wallet.lotUnseen]);
@@ -4118,6 +4229,7 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
       Object.keys(w.mktBought || {}).forEach((k) => { const v = w.mktBought[k]; const e = typeof v === "number" ? v : (v && v.e) || 0; if (e > Date.now()) mb[k] = v; });
       mb[lot.key] = { e: end, t: Date.now() }; w.mktBought = mb;
       bumpPassQuest(w, "market_buy");
+      recordMarketFlow([{ r: lot.card.rarity, type: "buy" }]);
       w.lotStats = { ...(w.lotStats || { sold: 0, earned: 0 }), bought: ((w.lotStats && w.lotStats.bought) || 0) + 1 };
       await saveWallet(w);
       showToast("Куплено у " + lot.seller + ": " + lot.card.name + "!", "ok");
@@ -4155,15 +4267,25 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
     }
   }
   feed.sort((a, b) => b.ts - a.ts);
-  const feedShown = feed.slice(0, 7);
+  const feedShown = feed.slice(0, 5);
   const lastSale = (wallet.lotHistory || [])[0];
   const freshSale = lastSale && now - lastSale.ts < 25000 && now - lastSale.ts >= 0 ? lastSale : null;
 
+  // курс
   const bestR = RARITY_ORDER.map((r) => ({ r, m: marketMult(r, now) })).sort((a, b) => b.m - a.m)[0];
+  const selR = selRarity || bestR.r;
+  const info = (r) => {
+    const m = marketMult(r, now), p = payPct(m), soon = payPct(marketMult(r, now + 120000));
+    return { p, trend: soon > p ? "↗" : soon < p ? "↘" : "→", level: m >= 1.05 ? "good" : m <= 0.95 ? "bad" : "mid" };
+  };
+  const selInfo = info(selR);
+  const selCol = selInfo.level === "good" ? "#4ade80" : selInfo.level === "bad" ? "#f87171" : "#fbbf24";
+  const selLabel = selInfo.level === "good" ? "вигідно продавати" : selInfo.level === "bad" ? "краще зачекати" : "звичайна ціна";
+  const flow = flowSummary(selR, now);
   const visibleTiles = wallet.passPremium ? 5 : 3;
   const hotLeft = hotEnd - now;
 
-  // ---- лоти гравців ----
+  // лоти гравців
   const rankIdx2 = { "Рідкісна": 0, "Епічна": 1, "Міфічна": 2, "Легендарна": 3, "Ексклюзивна": 4 };
   const slotStates = BOT_LOT_PERIODS.map((_, i) => currentSlotLot(i, now, pool, bought));
   const allLots = slotStates.map((st, i) => (st.lot ? { i, wnd: st.wnd, lot: st.lot } : null)).filter(Boolean);
@@ -4183,106 +4305,89 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
       return (rankIdx2[b.lot.card.rarity] - rankIdx2[a.lot.card.rarity]) || (b.lot.price - a.lot.price);
     });
 
-  const sectionTitle = { margin: "20px 0 8px", fontSize: 14, color: "#fbbf24", display: "flex", alignItems: "center", gap: 6 };
-  const softChip = (act, col) => ({ fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "4px 9px", borderRadius: 999, background: act ? col : "#111827", color: act ? "#1a1400" : col, border: "1px solid " + col, userSelect: "none" });
+  const title = { margin: "14px 0 6px", fontSize: 13, color: "#fbbf24", display: "flex", alignItems: "center", gap: 6 };
+  const card = { background: "linear-gradient(160deg,#111827,#0b0f1a)", border: "1px solid #1f2937", borderRadius: 14, padding: 10 };
+  const softChip = (act, col) => ({ fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "4px 9px", borderRadius: 999, background: act ? col : "#111827", color: act ? "#1a1400" : col, border: "1px solid " + col, userSelect: "none", whiteSpace: "nowrap" });
   return (
     <>
-      {/* ---- шапка біржі з рангом ---- */}
-      <div style={{ borderRadius: 16, padding: 14, marginBottom: 10, position: "relative", overflow: "hidden", background: "linear-gradient(90deg," + rank.cur.grad + ")", backgroundSize: "200% 100%", animation: "flowX 9s linear infinite", border: "1px solid #ffffff33" }}>
-        <span style={{ position: "absolute", right: -8, top: -14, fontSize: 70, opacity: 0.15, transform: "rotate(12deg)", pointerEvents: "none" }}>💹</span>
+      {/* ---- шапка: ранг ---- */}
+      <div style={{ borderRadius: 14, padding: "9px 12px", marginBottom: 8, position: "relative", overflow: "hidden", background: "linear-gradient(90deg," + rank.cur.grad + ")", backgroundSize: "200% 100%", animation: "flowX 9s linear infinite", border: "1px solid #ffffff33" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <b style={{ fontSize: 17, color: "#fff" }}>Біржа карток</b>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 800, color: "#fecaca", background: "#7f1d1d99", padding: "2px 7px", borderRadius: 99 }}>
-            <span style={{ width: 6, height: 6, borderRadius: 99, background: "#ef4444", animation: "mktPulse 1.2s ease-in-out infinite" }} /> LIVE
-          </span>
-          <button onClick={() => setShowInfo(!showInfo)} style={{ marginLeft: "auto", position: "relative", zIndex: 2, background: "#00000066", border: "1px solid #ffffff44", color: "#e5e7eb", borderRadius: 99, width: 26, height: 26, cursor: "pointer", fontSize: 13, padding: 0 }}>ℹ️</button>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           <span style={{ fontSize: 24, filter: "drop-shadow(0 2px 6px #0008)" }}>{rank.cur.icon}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: "#fff", fontWeight: 700 }}>{rank.cur.name} <span style={{ fontWeight: 400, color: "#e2e8f0" }}>· {stats.sold || 0} угод · {fmtBucks(stats.earned || 0)}</span></div>
-            <div style={{ height: 6, background: "#00000066", borderRadius: 99, marginTop: 4, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <b style={{ fontSize: 14, color: "#fff" }}>{rank.cur.name}</b>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 8, fontWeight: 800, color: "#fecaca", background: "#7f1d1d99", padding: "1px 6px", borderRadius: 99 }}><span style={{ width: 5, height: 5, borderRadius: 99, background: "#ef4444", animation: "mktPulse 1.2s ease-in-out infinite" }} />LIVE</span>
+              <span style={{ fontSize: 10, color: "#e2e8f0" }}>{stats.sold || 0} угод · {fmtBucks(stats.earned || 0)}</span>
+            </div>
+            <div style={{ height: 5, background: "#00000066", borderRadius: 99, margin: "4px 0 2px", overflow: "hidden" }}>
               <div style={{ width: rank.pct + "%", height: "100%", background: "linear-gradient(90deg,#fde68a,#f59e0b)", borderRadius: 99, transition: "width 0.6s ease" }} />
             </div>
-            <div style={{ fontSize: 9, color: "#e2e8f0", marginTop: 2 }}>{rank.next ? "До рангу «" + rank.next.name + "» " + rank.next.icon + ": ще " + (rank.next.min - (stats.sold || 0)) + " угод · нагорода " + rank.next.reward + " 💵" : "Максимальний ранг!"}</div>
+            <div style={{ fontSize: 9, color: "#e2e8f0" }}>{rank.next ? "До «" + rank.next.name + "» " + rank.next.icon + ": ще " + (rank.next.min - (stats.sold || 0)) + " угод · нагорода " + rank.next.reward + " 💵" : "Максимальний ранг!"}</div>
           </div>
+          <button onClick={() => setShowInfo(!showInfo)} style={{ position: "relative", zIndex: 2, background: "#00000066", border: "1px solid #ffffff44", color: "#e5e7eb", borderRadius: 99, width: 26, height: 26, cursor: "pointer", fontSize: 13, padding: 0 }}>ℹ️</button>
         </div>
         {claimable.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
             {claimable.map((r) => (
-              <button key={r.name} onClick={() => claimRank(r)} style={{ ...sx.smallBtn, background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400", fontWeight: 800, fontSize: 11, animation: "mktPulseBox 1.4s ease-in-out infinite", border: "none" }}>🎁 {r.icon} {r.name}: +{r.reward} 💵</button>
+              <button key={r.name} onClick={() => claimRank(r)} style={{ ...sx.smallBtn, padding: "4px 9px", background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400", fontWeight: 800, fontSize: 10, animation: "mktPulseBox 1.4s ease-in-out infinite", border: "none" }}>🎁 {r.icon} {r.name}: +{r.reward} 💵</button>
             ))}
           </div>
         )}
         {showInfo && (
-          <p style={{ margin: "10px 0 0", fontSize: 11, color: "#e5e7eb", lineHeight: 1.5, background: "#00000066", borderRadius: 10, padding: 8 }}>
-            Як це працює: 1) виставте картку — її купить бот за 1–5 хвилин. 2) Бот платить частину ціни картки (зазвичай 60–80%). Ця частка змінюється щохвилини — дивіться блок «Скільки платять зараз». 3) Картки з 🔥 гарячого попиту купують найдорожче (до 90%). 4) За кожен новий ранг торговця — нагорода. Картки, куплені в акціях зі знижкою від 50%, на ринок не приймаються.
+          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#e5e7eb", lineHeight: 1.5, background: "#00000066", borderRadius: 10, padding: 8 }}>
+            1) Виставте картку — її купить бот за 1–5 хвилин. 2) Він платить частину ціни картки (зазвичай 60–80%). 3) Ця частка залежить від угод усіх гравців: хто більше продає рідкість — тим вона дешевша, хто більше купує — тим дорожча. 4) Картки з 🔥 гарячого попиту купують найдорожче (до 90%). 5) За кожен ранг торговця — нагорода. Картки, куплені в акціях зі знижкою від 50%, на ринок не приймаються.
           </p>
         )}
       </div>
 
       {freshSale && (
-        <div style={{ background: "linear-gradient(90deg,#14532d,#166534)", border: "1px solid #4ade80", borderRadius: 12, padding: "10px 12px", marginBottom: 12, animation: "popIn 0.5s ease", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 24 }}>🤝</span>
-          <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#dcfce7" }}>
-            <b>Угода!</b> {freshSale.buyer} купив «{freshSale.name}»
-          </div>
-          <b style={{ color: "#fbbf24", fontSize: 14, whiteSpace: "nowrap" }}>+{freshSale.price} 💵</b>
+        <div style={{ background: "linear-gradient(90deg,#14532d,#166534)", border: "1px solid #4ade80", borderRadius: 12, padding: "8px 12px", marginBottom: 8, animation: "popIn 0.5s ease", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 20 }}>🤝</span>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#dcfce7" }}><b>Угода!</b> {freshSale.buyer} купив «{freshSale.name}»</div>
+          <b style={{ color: "#fbbf24", fontSize: 13, whiteSpace: "nowrap" }}>+{freshSale.price} 💵</b>
         </div>
       )}
 
-      {/* ---- скільки платять зараз ---- */}
-      <div style={{ background: "linear-gradient(160deg,#111827,#0b0f1a)", border: "1px solid #374151", borderRadius: 16, padding: 12 }}>
-        <b style={{ fontSize: 13, color: "#67e8f9" }}>💱 Скільки платять зараз</b>
-        <p style={{ margin: "4px 0 8px", fontSize: 11, color: "#9ca3af" }}>Бот купує картку за частину її ціни. Що довша смужка — то більше баксів ви отримаєте. Показник змінюється щохвилини.</p>
-        {RARITY_ORDER.map((r, idx) => {
-          const m = marketMult(r, now), pctNow = payPct(m), soon = payPct(marketMult(r, now + 120000));
-          const level = m >= 1.05 ? "good" : m <= 0.95 ? "bad" : "mid";
-          const col = level === "good" ? "#4ade80" : level === "bad" ? "#f87171" : "#fbbf24";
-          const label = level === "good" ? "Вигідно" : level === "bad" ? "Невигідно" : "Нормально";
-          const trend = soon > pctNow ? "↗" : soon < pctNow ? "↘" : "→";
-          const fill = Math.max(4, Math.min(100, ((pctNow - 50) / 40) * 100));
-          return (
-            <div key={r} style={{ padding: "7px 0", borderTop: idx ? "1px solid #1f2937" : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 700 }}>{RARITY_EMOJI[r]} <RName r={r} /></span>
-                <span style={{ fontSize: 10, fontWeight: 800, color: col, background: col + "22", padding: "2px 9px", borderRadius: 999 }}>{label} {trend}</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
-                <div style={{ flex: 1, height: 8, background: "#0b0f1a", borderRadius: 99, overflow: "hidden" }}>
-                  <div style={{ width: fill + "%", height: "100%", borderRadius: 99, background: r === "Ексклюзивна" ? "linear-gradient(90deg," + RAINBOW_STOPS + ")" : col, transition: "width 0.8s ease" }} />
-                </div>
-                <b style={{ fontSize: 12, color: "#e5e7eb", minWidth: 92, textAlign: "right" }}>платять ~{pctNow}%</b>
-              </div>
-            </div>
-          );
-        })}
-        <p style={{ margin: "8px 0 0", fontSize: 11, color: "#9ca3af" }}>💡 Зараз найкраще продавати: {RARITY_EMOJI[bestR.r]} <b><RName r={bestR.r} /></b> — ~{payPct(bestR.m)}% ціни картки</p>
+      {/* ---- графік: скільки платять ---- */}
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
+          <b style={{ fontSize: 13, color: "#67e8f9" }}>📈 Скільки платять за картку</b>
+          <span style={{ fontSize: 9, color: "#6b7280" }}>% від ціни · остання година</span>
+        </div>
+        <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "space-between", marginBottom: 6 }}>
+          {RARITY_ORDER.map((r) => (
+            <MarketChip compact key={r} r={r} active={selR === r} onClick={() => setSelRarity(r)}>{RARITY_EMOJI[r]} {info(r).p}% {info(r).trend}</MarketChip>
+          ))}
+        </div>
+        <MarketChart now={now} sel={selR} />
+        <div style={{ fontSize: 11, color: "#d1d5db", marginTop: 4, lineHeight: 1.45 }}>
+          <RName r={selR} /> зараз: <b style={{ color: selCol }}>~{selInfo.p}% ціни {selInfo.trend}</b> — {selLabel}.
+        </div>
+        <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>
+          Курс залежить від угод гравців: за останні 30 хв цієї рідкості <b style={{ color: "#f87171" }}>продано {flow.sold}</b>, <b style={{ color: "#4ade80" }}>куплено {flow.bought}</b>.
+        </div>
       </div>
 
       {/* ---- гарячий попит ---- */}
-      <h3 style={{ ...sectionTitle, marginBottom: 2 }}>🔥 Гарячий попит <span style={{ fontWeight: 400, color: hotLeft < 120000 ? "#f87171" : "#9ca3af", fontSize: 11 }}>· ще {fmtMMSS(hotLeft)}</span></h3>
-      <p style={{ margin: "0 0 8px", fontSize: 11, color: "#9ca3af" }}>Рідкості, які зараз у ціні — тут платять максимум.</p>
-      <div style={{ display: "flex", gap: 10 }}>
+      <h3 style={title}>🔥 Гарячий попит <span style={{ fontWeight: 400, color: hotLeft < 120000 ? "#f87171" : "#9ca3af", fontSize: 10 }}>· ще {fmtMMSS(hotLeft)} · платять до 90%</span></h3>
+      <div style={{ display: "flex", gap: 8 }}>
         {hotIds.map((id) => {
-          const card = cards.find((c) => c.id === id);
-          if (!card) return null;
+          const c = cards.find((x) => x.id === id);
+          if (!c) return null;
           const have = sellableCopies(wallet, id);
-          const ex = card.rarity === "Ексклюзивна";
+          const ex = c.rarity === "Ексклюзивна";
           return (
             <div key={id} style={{ flex: 1, minWidth: 0, display: "flex" }}>
-              <RainbowWrap on={ex} radius={16} pad={2} block>
-                <div style={{ borderRadius: 14, padding: 10, background: "linear-gradient(160deg,#431407,#1c1917)", border: ex ? "none" : "1px solid #f97316", boxShadow: "0 0 16px #f9731644", display: "flex", gap: 8, alignItems: "center" }}>
-                  <CardFace card={card} small />
+              <RainbowWrap on={ex} radius={14} pad={2} block>
+                <div style={{ borderRadius: 12, padding: 8, background: "linear-gradient(160deg,#431407,#1c1917)", border: ex ? "none" : "1px solid #f97316", display: "flex", gap: 7, alignItems: "center" }}>
+                  <CardFace card={c} small />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: RARITY_COLOR[card.rarity], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
-                    <div style={{ fontSize: 10, margin: "1px 0" }}><RName r={card.rarity} /></div>
-                    <div style={{ fontSize: 10, color: "#fdba74", margin: "2px 0" }}>платять до 90%!</div>
-                    <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 4 }}>{have > 0 ? "Можна продати: " + have : "Немає"}</div>
-                    {have > 0 && lots.length < slots && (
-                      <button style={{ ...sx.smallBtn, fontSize: 10, padding: "4px 8px", background: "#c2410c", color: "#fff" }} onClick={() => setChosen(id)}>Продати</button>
-                    )}
-                    {have > 0 && lots.length >= slots && <span style={{ fontSize: 9, color: "#f87171" }}>Слоти зайняті</span>}
+                    <div style={{ fontSize: 11, fontWeight: 800, color: RARITY_COLOR[c.rarity], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
+                    <div style={{ fontSize: 10, margin: "1px 0 3px" }}><RName r={c.rarity} /></div>
+                    {have > 0 && lots.length < slots
+                      ? <button style={{ ...sx.smallBtn, fontSize: 10, padding: "4px 9px", background: "#c2410c", color: "#fff" }} onClick={() => setChosen(id)}>Продати ({have})</button>
+                      : <span style={{ fontSize: 9, color: have > 0 ? "#f87171" : "#9ca3af" }}>{have > 0 ? "Слоти зайняті" : "У вас немає"}</span>}
                   </div>
                 </div>
               </RainbowWrap>
@@ -4292,16 +4397,17 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
       </div>
 
       {/* ---- мої лоти ---- */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "20px 0 8px", gap: 6 }}>
-        <h3 style={{ margin: 0, fontSize: 14, color: "#fbbf24" }}>🎯 Мої лоти <span style={{ color: "#9ca3af", fontWeight: 400 }}>{lots.length}/{slots}</span></h3>
-        <button disabled={lots.length >= slots} onClick={buildQuickPlan} style={{ ...sx.smallBtn, fontSize: 10, background: lots.length >= slots ? "#1f2937" : "linear-gradient(90deg,#0891b2,#0e7490)", color: "#fff", opacity: lots.length >= slots ? 0.5 : 1 }}>⚡ Дублікати в слоти</button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "14px 0 6px", gap: 6 }}>
+        <h3 style={{ margin: 0, fontSize: 13, color: "#fbbf24" }}>🎯 Мої лоти <span style={{ color: "#9ca3af", fontWeight: 400 }}>{lots.length}/{slots}</span></h3>
+        <button disabled={lots.length >= slots} onClick={buildQuickPlan} style={{ ...sx.smallBtn, fontSize: 10, padding: "5px 9px", background: lots.length >= slots ? "#1f2937" : "linear-gradient(90deg,#0891b2,#0e7490)", color: "#fff", opacity: lots.length >= slots ? 0.5 : 1 }}>⚡ Дублікати в слоти</button>
       </div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
         {[0, 1, 2, 3, 4].map((s) => {
+          const tileW = 88;
           if (s >= visibleTiles) {
             return (
-              <div key={"locked" + s} style={{ width: 96, minHeight: 156, borderRadius: 14, border: "1px dashed #374151", background: "repeating-linear-gradient(45deg,#0b0f1a,#0b0f1a 8px,#0f1420 8px,#0f1420 16px)", opacity: 0.7, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, textAlign: "center", padding: 6 }}>
-                <span style={{ fontSize: 22 }}>🔒</span><span style={{ fontSize: 10, color: "#fbbf24" }}>Преміум-пас</span>
+              <div key={"locked" + s} style={{ flex: "0 0 " + tileW + "px", minHeight: 128, borderRadius: 12, border: "1px dashed #374151", background: "repeating-linear-gradient(45deg,#0b0f1a,#0b0f1a 8px,#0f1420 8px,#0f1420 16px)", opacity: 0.7, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, textAlign: "center", padding: 4 }}>
+                <span style={{ fontSize: 18 }}>🔒</span><span style={{ fontSize: 9, color: "#fbbf24" }}>Преміум-пас</span>
               </div>
             );
           }
@@ -4309,32 +4415,33 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
           if (!lot) {
             const full = lots.length >= slots;
             return (
-              <div key={"empty" + s} onClick={() => { if (!full) { setPicking(true); setChosen(null); } }} style={{ width: 96, minHeight: 156, borderRadius: 14, border: "2px dashed #22c55e88", background: "radial-gradient(circle at 50% 40%,#052e1655,#0f1420)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                <span style={{ fontSize: 28, color: "#22c55e", animation: "mktPulse 2s ease-in-out infinite" }}>＋</span><span style={{ fontSize: 10, color: "#9ca3af" }}>Вільний слот</span>
+              <div key={"empty" + s} onClick={() => { if (!full) { setPicking(true); setChosen(null); } }} style={{ flex: "0 0 " + tileW + "px", minHeight: 128, borderRadius: 12, border: "2px dashed #22c55e88", background: "radial-gradient(circle at 50% 40%,#052e1655,#0f1420)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                <span style={{ fontSize: 24, color: "#22c55e", animation: "mktPulse 2s ease-in-out infinite" }}>＋</span><span style={{ fontSize: 9, color: "#9ca3af" }}>Вільний слот</span>
               </div>
             );
           }
-          const card = cards.find((c) => c.id === lot.cardId);
-          if (!card) return null;
+          const c = cards.find((x) => x.id === lot.cardId);
+          if (!c) return null;
           const total = Math.max(1, lot.sellAt - lot.listedAt);
           const pct = Math.min(100, Math.max(0, ((now - lot.listedAt) / total) * 100));
           const left = lot.sellAt - now;
-          const hot = hotCardIds(lot.sellAt, cards).includes(card.id);
-          const ex = card.rarity === "Ексклюзивна";
+          const hot = hotCardIds(lot.sellAt, cards).includes(c.id);
+          const ex = c.rarity === "Ексклюзивна";
           return (
-            <RainbowWrap key={lot.id} on={ex} radius={16} pad={2}>
-              <div style={{ width: 96, borderRadius: 14, padding: "8px 6px", background: "linear-gradient(160deg,#1a2035,#0f1420)", border: ex ? "none" : "1px solid " + RARITY_COLOR[card.rarity] + "88", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, boxShadow: "0 3px 12px " + RARITY_COLOR[card.rarity] + "33", position: "relative" }}>
-                {hot && <span style={{ position: "absolute", top: -6, right: -4, fontSize: 14, zIndex: 2 }}>🔥</span>}
-                <CardFace card={card} small />
-                <div style={{ fontSize: 10, color: "#e5e7eb", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#fbbf24" }}>≈ {lotPrice(card, lot, cards)} 💵</div>
-                <div style={{ width: "100%", height: 6, background: "#0b0f1a", borderRadius: 99, overflow: "hidden" }}>
-                  <div style={{ width: pct + "%", height: "100%", borderRadius: 99, background: "linear-gradient(90deg," + RARITY_COLOR[card.rarity] + ",#ffffffaa," + RARITY_COLOR[card.rarity] + ")", backgroundSize: "200% 100%", animation: "flowX 2s linear infinite", transition: "width 1s linear" }} />
+            <div key={lot.id} style={{ flex: "0 0 " + tileW + "px" }}>
+              <RainbowWrap on={ex} radius={14} pad={2} block>
+                <div style={{ borderRadius: 12, padding: "6px 4px", background: "linear-gradient(160deg,#1a2035,#0f1420)", border: ex ? "none" : "1px solid " + RARITY_COLOR[c.rarity] + "88", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative" }}>
+                  {hot && <span style={{ position: "absolute", top: -6, right: -3, fontSize: 13, zIndex: 2 }}>🔥</span>}
+                  <CardFace card={c} small />
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#fbbf24" }}>≈ {lotPrice(c, lot, cards)} 💵</div>
+                  <div style={{ width: "100%", height: 5, background: "#0b0f1a", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ width: pct + "%", height: "100%", borderRadius: 99, background: "linear-gradient(90deg," + RARITY_COLOR[c.rarity] + ",#ffffffaa," + RARITY_COLOR[c.rarity] + ")", backgroundSize: "200% 100%", animation: "flowX 2s linear infinite", transition: "width 1s linear" }} />
+                  </div>
+                  <div style={{ fontSize: 9, color: left > 0 ? "#9ca3af" : "#4ade80" }}>{left > 0 ? "⏳ " + fmtMMSS(left) : "🤝 угода…"}</div>
+                  <button style={{ ...sx.smallBtn, fontSize: 9, padding: "2px 6px" }} onClick={() => doCancel(lot.id)}>✕</button>
                 </div>
-                <div style={{ fontSize: 10, color: left > 0 ? "#9ca3af" : "#4ade80" }}>{left > 0 ? "⏳ " + fmtMMSS(left) : "🤝 угода…"}</div>
-                <button style={{ ...sx.smallBtn, fontSize: 9, padding: "3px 6px" }} onClick={() => doCancel(lot.id)}>✕ Скасувати</button>
-              </div>
-            </RainbowWrap>
+              </RainbowWrap>
+            </div>
           );
         })}
       </div>
@@ -4343,7 +4450,6 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
       {chosen && cards.find((c) => c.id === chosen) && (
         <ListConfirmModal key={chosen} card={cards.find((c) => c.id === chosen)} wallet={wallet} hot={hotIds.includes(chosen)} now={now} maxQty={Math.max(1, Math.min(sellableCopies(wallet, chosen), slots - lots.length))} onCancel={() => setChosen(null)} onConfirm={(q) => doList(chosen, q)} />
       )}
-
       {quickPlan && (
         <div style={sx.modalOverlay} onClick={() => setQuickPlan(null)}>
           <div style={{ ...sx.modal, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
@@ -4371,32 +4477,16 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
         </div>
       )}
 
-      {/* ---- стрічка ---- */}
-      <h3 style={sectionTitle}>🔔 Останні угоди</h3>
-      <div style={{ background: "#0b0f1a", border: "1px solid #1f2937", borderRadius: 12, padding: 6 }}>
-        {feedShown.length === 0 && <p style={{ fontSize: 11, color: "#6b7280", textAlign: "center", margin: 8 }}>Поки що тихо…</p>}
-        {feedShown.map((e, i) => (
-          <div key={e.ts + "_" + i} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", fontSize: 11, padding: "5px 6px", borderRadius: 8, background: e.mine ? "#052e1666" : "transparent", color: e.mine ? "#bbf7d0" : "#9ca3af", animation: i === 0 ? "fadeSlideUp 0.4s ease" : "none" }}>
-            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.mine ? "🟢" : "👤"} {e.text}</span>
-            <span className={e.rarity === "Ексклюзивна" ? "rb-text" : undefined} style={{ whiteSpace: "nowrap", color: RARITY_COLOR[e.rarity] || "#fbbf24", fontWeight: 700 }}>{e.price} 💵</span>
-          </div>
-        ))}
-      </div>
-
       {/* ---- лоти гравців ---- */}
-      <h3 style={{ ...sectionTitle, marginBottom: 2 }}>🛒 Лоти гравців <span style={{ fontWeight: 400, color: "#9ca3af", fontSize: 11 }}>· {visibleLots.length} із {allLots.length}</span></h3>
-      <p style={{ margin: "0 0 8px", fontSize: 10, color: "#6b7280" }}>Куплений лот зникає, а на його місці за ~30–70 с з'являється новий{restocking > 0 ? " · поповнюється: " + restocking : ""}.</p>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+      <h3 style={{ ...title, marginBottom: 2 }}>🛒 Лоти гравців <span style={{ fontWeight: 400, color: "#9ca3af", fontSize: 10 }}>· {visibleLots.length} із {allLots.length}{restocking > 0 ? " · поповнюється: " + restocking : ""}</span></h3>
+      <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 4, marginBottom: 4 }}>
         <MarketChip col="#e5e7eb" active={!lotRarity} onClick={() => { setLotRarity(null); setLotShown(9); }}>Усі {allLots.length}</MarketChip>
         {RARITY_ORDER.map((r) => (
           <MarketChip key={r} r={r} active={lotRarity === r} dim={!lotCounts[r]} onClick={() => { setLotRarity(lotRarity === r ? null : r); setLotShown(9); }}>{RARITY_EMOJI[r]} {lotCounts[r] || 0}</MarketChip>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center", justifyContent: "space-between" }}>
         <span onClick={() => { setLotOnly(lotOnly === "wish" ? null : "wish"); setLotShown(9); }} style={softChip(lotOnly === "wish", "#fbbf24")}>⭐ Бажані {wishCount}</span>
-      </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "#9ca3af" }}>Сортувати:</span>
         <SortDropdown value={lotSort} onChange={setLotSort} options={[
           { value: "rarity", label: "За рідкістю" },
           { value: "priceAsc", label: "Ціна: спочатку дешеві" },
@@ -4406,7 +4496,7 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
         ]} />
       </div>
       {visibleLots.length === 0 && <p style={{ fontSize: 12, color: "#6b7280", textAlign: "center", margin: "12px 0" }}>{lotOnly === "wish" ? "Позначте картки зірочкою ⭐ на лотах — і вони з'являться тут." : "Зараз немає лотів за цим фільтром — асортимент оновлюється щохвилини."}</p>}
-      <div style={sx.shopGrid}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         {visibleLots.slice(0, lotShown).map(({ wnd, lot }) => {
           const left = wnd.end - now;
           const lifePct = Math.max(0, Math.min(100, (left / (wnd.end - wnd.start)) * 100));
@@ -4415,27 +4505,47 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
           const ex = lot.card.rarity === "Ексклюзивна";
           const isNew = isNewCard(lot.card.id), wished = wish.includes(lot.card.id);
           return (
-            <RainbowWrap key={lot.key} on={ex} radius={14} pad={2} block>
-              <div style={{ ...sx.shopCard, position: "relative", border: ex ? "none" : "1px solid " + RARITY_COLOR[lot.card.rarity] + (urgent ? "" : "66"), boxShadow: urgent ? "0 0 14px #f8717188" : "0 3px 12px " + RARITY_COLOR[lot.card.rarity] + "22", animation: urgent ? "mktPulseBox 1s ease-in-out infinite" : "none" }}>
-                <CardFace card={lot.card} />
-                <span onClick={() => toggleWish(lot.card.id)} style={{ position: "absolute", top: 4, right: 4, fontSize: 15, cursor: "pointer", zIndex: 3, filter: wished ? "none" : "grayscale(1) opacity(0.55)" }}>⭐</span>
-                {isNew && <span style={{ position: "absolute", top: 26, right: 4, background: "#16a34a", color: "#fff", fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 5, zIndex: 3 }}>НОВА</span>}
-                <div style={{ marginTop: 4, fontSize: 9, color: "#6b7280", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {lot.seller}</div>
+            <RainbowWrap key={lot.key} on={ex} radius={13} pad={2} block>
+              <div style={{ position: "relative", borderRadius: 11, padding: "6px 4px", background: "linear-gradient(160deg,#151b2e,#0f1420)", border: ex ? "none" : "1px solid " + RARITY_COLOR[lot.card.rarity] + (urgent ? "" : "55"), boxShadow: urgent ? "0 0 12px #f8717188" : "none", animation: urgent ? "mktPulseBox 1s ease-in-out infinite" : "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                <span onClick={() => toggleWish(lot.card.id)} style={{ position: "absolute", top: 3, right: 4, fontSize: 13, cursor: "pointer", zIndex: 3, filter: wished ? "none" : "grayscale(1) opacity(0.5)" }}>⭐</span>
+                {isNew && <span style={{ position: "absolute", top: 4, left: 4, background: "#16a34a", color: "#fff", fontSize: 7, fontWeight: 800, padding: "1px 4px", borderRadius: 4, zIndex: 3 }}>НОВА</span>}
+                <CardFace card={lot.card} small />
+                <div style={{ fontSize: 10, color: "#e5e7eb", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{lot.card.name}</div>
                 <div style={{ fontSize: 12, color: "#fbbf24", fontWeight: 800 }}>{fmtBucks(lot.price)}</div>
-                <div style={{ fontSize: 9, color: diff < 0 ? "#4ade80" : "#9ca3af" }}>{diff === 0 ? "як у каталозі" : "на " + Math.abs(diff) + "% " + (diff < 0 ? "дешевше" : "дорожче") + " за каталог"}</div>
-                <div style={{ width: "100%", height: 3, background: "#0b0f1a", borderRadius: 99, overflow: "hidden", margin: "3px 0" }}>
+                <div style={{ fontSize: 8.5, color: diff < 0 ? "#4ade80" : "#9ca3af", textAlign: "center", lineHeight: 1.2 }}>{diff === 0 ? "як у каталозі" : diff < 0 ? "−" + Math.abs(diff) + "% від каталогу" : "+" + diff + "% до каталогу"}</div>
+                <div style={{ width: "100%", height: 3, background: "#0b0f1a", borderRadius: 99, overflow: "hidden", margin: "2px 0" }}>
                   <div style={{ width: lifePct + "%", height: "100%", background: urgent ? "#f87171" : "#22d3ee", transition: "width 1s linear" }} />
                 </div>
-                <div style={{ fontSize: 10, color: urgent ? "#f87171" : "#9ca3af", fontWeight: urgent ? 800 : 400 }}>{urgent ? "⚡ Останній шанс " : "⏱ "}{fmtMMSS(left)}</div>
-                <button onClick={() => buyBot(lot, wnd.end)} style={{ ...sx.smallBtn, width: "100%", marginTop: 4, background: "linear-gradient(90deg,#16a34a,#15803d)" }}>Купити</button>
+                <div style={{ fontSize: 9, color: urgent ? "#f87171" : "#9ca3af", fontWeight: urgent ? 800 : 400 }}>{urgent ? "⚡ " : "⏱ "}{fmtMMSS(left)}</div>
+                <button onClick={() => buyBot(lot, wnd.end)} style={{ ...sx.smallBtn, width: "100%", padding: "4px 0", fontSize: 11, background: "linear-gradient(90deg,#16a34a,#15803d)" }}>Купити</button>
               </div>
             </RainbowWrap>
           );
         })}
       </div>
       {visibleLots.length > lotShown && (
-        <button onClick={() => setLotShown(lotShown + 9)} style={{ ...sx.smallBtn, width: "100%", marginTop: 10, padding: "10px 0", fontSize: 12 }}>Показати ще ({visibleLots.length - lotShown})</button>
+        <button onClick={() => setLotShown(lotShown + 9)} style={{ ...sx.smallBtn, width: "100%", marginTop: 8, padding: "9px 0", fontSize: 12 }}>Показати ще ({visibleLots.length - lotShown})</button>
       )}
+
+      {/* ---- останні угоди (згорнуто) ---- */}
+      <div onClick={() => setFeedOpen(!feedOpen)} style={{ ...card, marginTop: 14, cursor: "pointer", padding: "8px 10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <b style={{ fontSize: 12, color: "#fbbf24" }}>🔔 Останні угоди</b>
+          {!feedOpen && feedShown[0] && <span style={{ flex: 1, minWidth: 0, fontSize: 10, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>· {feedShown[0].text}</span>}
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "#818cf8" }}>{feedOpen ? "▲" : "▼"}</span>
+        </div>
+        {feedOpen && (
+          <div style={{ marginTop: 6 }}>
+            {feedShown.length === 0 && <p style={{ fontSize: 11, color: "#6b7280", textAlign: "center", margin: 6 }}>Поки що тихо…</p>}
+            {feedShown.map((e, i) => (
+              <div key={e.ts + "_" + i} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", fontSize: 11, padding: "4px 6px", borderRadius: 8, background: e.mine ? "#052e1666" : "transparent", color: e.mine ? "#bbf7d0" : "#9ca3af" }}>
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.mine ? "🟢" : "👤"} {e.text}</span>
+                <span className={e.rarity === "Ексклюзивна" ? "rb-text" : undefined} style={{ whiteSpace: "nowrap", color: RARITY_COLOR[e.rarity] || "#fbbf24", fontWeight: 700 }}>{e.price} 💵</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </>
   );
 }
@@ -5073,6 +5183,251 @@ function useFriendsData(wallet, nick, allCards, intervalMs) {
   }, [wallet.friends, nick]);
   useEffect(() => { loadFriends(); const t = setInterval(loadFriends, intervalMs || 3000); return () => clearInterval(t); }, [loadFriends, intervalMs]);
   return { friendsData, incomingRequests, setIncomingRequests, friendsBusy, loadFriends };
+}
+// ============================== НОВИНИ (вкладка "Рулетка" + редактор в адмін-панелі) ==============================
+// Новини зберігаються одним спільним записом "news": { items: [{ id, title, version, ts, html }] } (найновіші першими).
+// Текст новини — це HTML із візуального редактора (жирний, курсив, підкреслення, таблиці…). Перед показом він
+// очищається білим списком тегів і стилів (sanitizeNewsHtml), тож навіть випадковий "поганий" код нікому не зашкодить.
+const NEWS_TAGS = new Set(["B", "STRONG", "I", "EM", "U", "S", "STRIKE", "DEL", "H1", "H2", "H3", "H4", "P", "BR", "DIV", "SPAN", "UL", "OL", "LI", "TABLE", "THEAD", "TBODY", "TR", "TH", "TD", "BLOCKQUOTE", "HR", "CODE", "PRE", "A", "SUB", "SUP", "FONT"]);
+const NEWS_DROP = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "NOSCRIPT", "TEMPLATE", "TEXTAREA", "SVG", "MATH", "LINK", "META", "FORM", "INPUT", "BUTTON", "SELECT", "AUDIO", "VIDEO", "CANVAS", "IMG"]);
+const NEWS_STYLES = ["color", "background-color", "text-align", "font-weight", "font-style", "text-decoration", "font-size"];
+function sanitizeNewsHtml(html) {
+  const doc = new DOMParser().parseFromString("<div>" + String(html || "") + "</div>", "text/html");
+  const root = doc.body.firstChild;
+  (function walk(node) {
+    Array.from(node.childNodes).forEach((ch) => {
+      if (ch.nodeType === 3) return;
+      if (ch.nodeType !== 1) { ch.remove(); return; }
+      if (NEWS_DROP.has(ch.tagName)) { ch.remove(); return; } // небезпечні теги видаляємо разом із вмістом
+      if (!NEWS_TAGS.has(ch.tagName)) { walk(ch); while (ch.firstChild) node.insertBefore(ch.firstChild, ch); ch.remove(); return; }
+      Array.from(ch.attributes).forEach((a) => {
+        const n = a.name.toLowerCase();
+        if (ch.tagName === "A" && n === "href") { if (!/^https?:\/\//i.test(a.value.trim())) ch.removeAttribute(a.name); }
+        else if (n === "style") {
+          const kept = a.value.split(";").map((s) => s.trim()).filter((s) => {
+            const idx = s.indexOf(":"); if (idx < 1) return false;
+            const prop = s.slice(0, idx).trim().toLowerCase(), val = s.slice(idx + 1).toLowerCase();
+            return NEWS_STYLES.includes(prop) && !/url\(|expression|javascript|@import/.test(val);
+          });
+          if (kept.length) ch.setAttribute("style", kept.join("; ")); else ch.removeAttribute("style");
+        }
+        else if (ch.tagName === "FONT" && (n === "color" || n === "size")) { /* лишаємо */ }
+        else if ((ch.tagName === "TD" || ch.tagName === "TH") && (n === "colspan" || n === "rowspan")) { /* лишаємо */ }
+        else ch.removeAttribute(a.name);
+      });
+      if (ch.tagName === "A") { ch.setAttribute("target", "_blank"); ch.setAttribute("rel", "noopener noreferrer nofollow"); }
+      walk(ch);
+    });
+  })(root);
+  return root.innerHTML;
+}
+function newsPlainText(html) {
+  const d = new DOMParser().parseFromString("<div>" + String(html || "") + "</div>", "text/html");
+  return (d.body.textContent || "").replace(/\s+/g, " ").trim();
+}
+function newsDateLabel(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: "numeric" }) + ", " + d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+}
+async function loadNews() {
+  const v = await sGet("news", true);
+  return v && Array.isArray(v.items) ? v.items : [];
+}
+function NewsBody({ html }) {
+  return <div className="news-body" dangerouslySetInnerHTML={{ __html: sanitizeNewsHtml(html) }} />;
+}
+function NewsVersionPill({ v }) {
+  if (!v) return null;
+  return <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", padding: "2px 9px", borderRadius: 999, background: "linear-gradient(90deg,#7c3aed,#2563eb,#0891b2,#2563eb,#7c3aed)", backgroundSize: "200% 100%", animation: "flowX 6s linear infinite" }}>v{String(v).replace(/^v/i, "")}</span>;
+}
+// картка новин на екрані "Рулетка": остання новина + кнопка "Усі новини"
+function NewsCard({ nick }) {
+  const [items, setItems] = useState(null);
+  const [seen, setSeen] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    async function load() { const list = await loadNews(); if (alive) setItems(list); }
+    load();
+    (async () => { const s = await sGet("news_seen_" + nick, false); if (alive) setSeen(s || ""); })();
+    const t = setInterval(load, 120000);
+    return () => { alive = false; clearInterval(t); };
+  }, [nick]);
+  if (!items || items.length === 0) return null;
+  const latest = items[0];
+  const unread = seen !== null && seen !== latest.id;
+  function openAll() {
+    setOpen(true); setExpanded(latest.id);
+    if (seen !== latest.id) { setSeen(latest.id); sSet("news_seen_" + nick, latest.id, false); }
+  }
+  const snippet = newsPlainText(latest.html).slice(0, 110);
+  return (
+    <div style={{ ...sx.tabWrap, paddingBottom: 0, animation: "none" }}>
+      <div onClick={openAll} style={{ cursor: "pointer", borderRadius: 14, padding: "10px 12px", marginBottom: 4, position: "relative", overflow: "hidden", background: "linear-gradient(90deg,#1e1b4b,#312e81,#1e3a8a,#312e81,#1e1b4b)", backgroundSize: "200% 100%", animation: "flowX 12s linear infinite", border: "1px solid " + (unread ? "#fbbf24" : "#4c1d95"), boxShadow: unread ? "0 0 16px #fbbf2455" : "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <b style={{ fontSize: 13, color: "#e0e7ff" }}>📰 Новини</b>
+          <NewsVersionPill v={latest.version} />
+          {unread && <span style={{ fontSize: 9, fontWeight: 800, color: "#1a1400", background: "#fbbf24", padding: "1px 7px", borderRadius: 99, animation: "mktPulse 1.4s ease-in-out infinite" }}>НОВЕ</span>}
+          <span style={{ marginLeft: "auto", fontSize: 10, color: "#a5b4fc" }}>📅 {new Date(latest.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}</span>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{latest.title}</div>
+        {snippet && <div style={{ fontSize: 11, color: "#c7d2fe", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{snippet}</div>}
+        <div style={{ fontSize: 10, color: "#818cf8", marginTop: 4 }}>Читати всі новини ({items.length}) →</div>
+      </div>
+      {open && (
+        <div style={sx.modalOverlay} onClick={() => setOpen(false)}>
+          <div style={{ ...sx.modal, maxWidth: 440, maxHeight: "82vh", overflowY: "auto", padding: 14 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
+              <h3 style={{ margin: 0, color: "#c7d2fe" }}>📰 Новини</h3>
+              <button style={{ ...sx.smallBtn, marginLeft: "auto" }} onClick={() => setOpen(false)}>✕</button>
+            </div>
+            {items.map((n) => {
+              const isOpen = expanded === n.id;
+              return (
+                <div key={n.id} style={{ background: "linear-gradient(160deg,#111827,#0b0f1a)", border: "1px solid " + (isOpen ? "#6366f1" : "#1f2937"), borderRadius: 14, padding: 12, marginBottom: 10 }}>
+                  <div onClick={() => setExpanded(isOpen ? null : n.id)} style={{ cursor: "pointer" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <NewsVersionPill v={n.version} />
+                      <span style={{ fontSize: 10, color: "#6b7280" }}>📅 {newsDateLabel(n.ts)}</span>
+                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#818cf8" }}>{isOpen ? "▲" : "▼"}</span>
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>{n.title}</div>
+                  </div>
+                  {isOpen && <div style={{ marginTop: 8, borderTop: "1px solid #1f2937", paddingTop: 8 }}><NewsBody html={n.html} /></div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+// візуальний редактор (contentEditable + панель кнопок)
+function RichEditor({ initialHtml, editorKey, onChange }) {
+  const ref = useRef(null);
+  useEffect(() => { if (ref.current) ref.current.innerHTML = initialHtml || ""; /* eslint-disable-next-line */ }, [editorKey]);
+  function exec(cmd, val) {
+    if (!ref.current) return;
+    ref.current.focus();
+    document.execCommand(cmd, false, val === undefined ? null : val);
+    onChange(ref.current.innerHTML);
+  }
+  function insertTable() {
+    const rows = Math.max(1, Math.min(20, Number(prompt("Скільки рядків (разом із заголовком)?", "3")) || 0));
+    const cols = Math.max(1, Math.min(8, Number(prompt("Скільки стовпців?", "3")) || 0));
+    if (!rows || !cols) return;
+    let html = "<table><thead><tr>" + Array.from({ length: cols }, (_, i) => "<th>Заголовок " + (i + 1) + "</th>").join("") + "</tr></thead><tbody>";
+    for (let r = 1; r < rows; r++) html += "<tr>" + Array.from({ length: cols }, () => "<td>&nbsp;</td>").join("") + "</tr>";
+    html += "</tbody></table><p><br></p>";
+    exec("insertHTML", html);
+  }
+  function insertLink() {
+    const url = prompt("Посилання (https://…)", "https://");
+    if (url && /^https?:\/\//i.test(url)) exec("createLink", url);
+  }
+  const tb = (label, title, fn, style) => (
+    <button type="button" title={title} onMouseDown={(e) => e.preventDefault()} onClick={fn} style={{ ...sx.smallBtn, padding: "5px 9px", fontSize: 12, minWidth: 30, ...(style || {}) }}>{label}</button>
+  );
+  return (
+    <div style={{ border: "1px solid #374151", borderRadius: 12, overflow: "hidden", marginBottom: 8, background: "#0b0f1a" }}>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", padding: 6, background: "#111827", borderBottom: "1px solid #1f2937", alignItems: "center" }}>
+        {tb(<b>Ж</b>, "Жирний", () => exec("bold"))}
+        {tb(<i>К</i>, "Курсив", () => exec("italic"))}
+        {tb(<u>П</u>, "Підкреслений", () => exec("underline"))}
+        {tb(<s>З</s>, "Закреслений", () => exec("strikeThrough"))}
+        {tb("H2", "Великий заголовок", () => exec("formatBlock", "<h2>"))}
+        {tb("H3", "Менший заголовок", () => exec("formatBlock", "<h3>"))}
+        {tb("¶", "Звичайний абзац", () => exec("formatBlock", "<p>"))}
+        {tb("• ", "Маркований список", () => exec("insertUnorderedList"))}
+        {tb("1.", "Нумерований список", () => exec("insertOrderedList"))}
+        {tb("❝", "Цитата", () => exec("formatBlock", "<blockquote>"))}
+        {tb("▦", "Вставити таблицю", insertTable)}
+        {tb("🔗", "Посилання", insertLink)}
+        {tb("―", "Роздільна лінія", () => exec("insertHorizontalRule"))}
+        {tb("⇤", "По лівому краю", () => exec("justifyLeft"))}
+        {tb("⇔", "По центру", () => exec("justifyCenter"))}
+        <label title="Колір тексту" style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "#9ca3af" }}>
+          🎨<input type="color" defaultValue="#fbbf24" onChange={(e) => exec("foreColor", e.target.value)} style={{ width: 26, height: 24, padding: 0, border: "none", background: "none" }} />
+        </label>
+        {tb("🧹", "Прибрати форматування", () => exec("removeFormat"))}
+      </div>
+      <div ref={ref} className="news-body" contentEditable suppressContentEditableWarning onInput={() => onChange(ref.current.innerHTML)} style={{ minHeight: 140, padding: 10, outline: "none" }} />
+    </div>
+  );
+}
+// адмін-панель: написати, змінити чи видалити новину
+function AdminNews({ showToast }) {
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [title, setTitle] = useState("");
+  const [version, setVersion] = useState("");
+  const [html, setHtml] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editorKey, setEditorKey] = useState(0);
+  const [initial, setInitial] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { loadNews().then((l) => { setItems(l); setLoaded(true); }); }, []);
+  function resetForm() { setTitle(""); setVersion(""); setHtml(""); setInitial(""); setEditingId(null); setEditorKey((k) => k + 1); }
+  async function persist(list) {
+    const ok = await sSet("news", { items: list }, true);
+    if (!ok) { showToast("Не вдалося зберегти новини — спробуйте ще раз", "err"); return false; }
+    setItems(list); return true;
+  }
+  async function publish() {
+    if (busy) return;
+    const clean = sanitizeNewsHtml(html);
+    if (!title.trim()) { showToast("Додайте заголовок новини", "err"); return; }
+    if (!newsPlainText(clean)) { showToast("Текст новини порожній", "err"); return; }
+    setBusy(true);
+    try {
+      let list;
+      if (editingId) list = items.map((n) => (n.id === editingId ? { ...n, title: title.trim(), version: version.trim(), html: clean, edited: Date.now() } : n));
+      else list = [{ id: "n_" + Date.now(), title: title.trim(), version: version.trim(), ts: Date.now(), html: clean }, ...items].slice(0, 60);
+      if (await persist(list)) { showToast(editingId ? "Новину оновлено ✅" : "Новину опубліковано для всіх гравців ✅", "ok"); resetForm(); }
+    } finally { setBusy(false); }
+  }
+  function startEdit(n) { setEditingId(n.id); setTitle(n.title); setVersion(n.version || ""); setHtml(n.html); setInitial(n.html); setEditorKey((k) => k + 1); }
+  async function remove(n) {
+    if (!window.confirm("Видалити новину «" + n.title + "»?")) return;
+    const list = items.filter((x) => x.id !== n.id);
+    if (await persist(list)) { showToast("Новину видалено", "ok"); if (editingId === n.id) resetForm(); }
+  }
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <h3 style={{ color: "#fbbf24", fontSize: 14 }}>📰 Новини для всіх гравців</h3>
+      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+        <input placeholder="Версія (напр. 1.5)" value={version} onChange={(e) => setVersion(e.target.value)} style={{ ...sx.input, marginBottom: 0, flex: "0 0 34%" }} />
+        <input placeholder="Заголовок новини" value={title} onChange={(e) => setTitle(e.target.value)} style={{ ...sx.input, marginBottom: 0, flex: 1 }} />
+      </div>
+      <RichEditor editorKey={editorKey} initialHtml={initial} onChange={setHtml} />
+      {newsPlainText(html) && (
+        <div style={{ background: "#0f172a", border: "1px dashed #4c1d95", borderRadius: 12, padding: 10, marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>Так побачать гравці:</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><NewsVersionPill v={version} /><span style={{ fontSize: 10, color: "#6b7280" }}>📅 {newsDateLabel(Date.now())}</span></div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>{title || "Заголовок"}</div>
+          <NewsBody html={html} />
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        <button disabled={busy} style={{ ...sx.primaryBtn, flex: 2, opacity: busy ? 0.6 : 1 }} onClick={publish}>{busy ? "Зберігаю…" : editingId ? "💾 Зберегти зміни" : "📢 Опублікувати"}</button>
+        {(editingId || title || newsPlainText(html)) && <button style={{ ...sx.smallBtn, flex: 1 }} onClick={resetForm}>Очистити</button>}
+      </div>
+      {!loaded && <p style={{ fontSize: 11, color: "#6b7280" }}>Завантажую список…</p>}
+      {items.map((n) => (
+        <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#111827", border: "1px solid #1f2937", borderRadius: 10, padding: "6px 10px", marginBottom: 6 }}>
+          <NewsVersionPill v={n.version} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</div>
+            <div style={{ fontSize: 10, color: "#6b7280" }}>📅 {newsDateLabel(n.ts)}{n.edited ? " · змінено" : ""}</div>
+          </div>
+          <button style={{ ...sx.smallBtn, fontSize: 11 }} onClick={() => startEdit(n)}>✏️</button>
+          <button style={{ ...sx.smallBtn, fontSize: 11 }} onClick={() => remove(n)}>🗑</button>
+        </div>
+      ))}
+    </div>
+  );
 }
 // ============================== ДУЕЛІ (вкладка на екрані "Крутити") ==============================
 function DuelsHub({ wallet, saveWallet, nick, showToast, allCards, onEnterDuel, maintState, onGoProfile }) {
@@ -6525,6 +6880,8 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
         <button style={sx.primaryBtn} onClick={publishTileBanner}>Опублікувати для всіх</button>
         <button style={{ ...sx.smallBtn, background: "#7f1d1d" }} onClick={removeTileBanner}>Зняти банер</button>
       </div>
+
+      <AdminNews showToast={showToast} />
 
       <h3 style={{ color: "#fbbf24", fontSize: 14 }}>Повідомлення всім гравцям</h3>
       <input placeholder="Ваше ім'я/нік для підпису" value={senderName} onChange={(e) => setSenderName(e.target.value)} style={sx.input} />
