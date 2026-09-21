@@ -36,20 +36,6 @@
   .nav-glow-bar { position: absolute; left: 50%; bottom: 1px; width: 26px; height: 3px; margin-left: -13px; border-radius: 99px; animation: navGlowBar 1.3s ease-in-out infinite; }
   @keyframes navLabelGlow { 0%,100% { text-shadow: 0 0 2px var(--nc); } 50% { text-shadow: 0 0 9px var(--nc), 0 0 3px var(--nc); } }
   .nav-glow-label { animation: navLabelGlow 1.3s ease-in-out infinite; font-weight: 800; }
-  /* тіло новини (і в редакторі, і у читача) */
-  .news-body { font-size: 13px; line-height: 1.55; color: #e5e7eb; word-break: break-word; overflow-x: auto; }
-  .news-body h1, .news-body h2, .news-body h3, .news-body h4 { margin: 10px 0 6px; color: #fbbf24; line-height: 1.25; }
-  .news-body h1 { font-size: 19px; } .news-body h2 { font-size: 16px; } .news-body h3 { font-size: 14px; }
-  .news-body p, .news-body div { margin: 0 0 6px; }
-  .news-body ul, .news-body ol { margin: 0 0 8px; padding-left: 20px; }
-  .news-body table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
-  .news-body th, .news-body td { border: 1px solid #374151; padding: 6px 8px; text-align: left; }
-  .news-body th { background: #1f2937; color: #fde68a; }
-  .news-body tr:nth-child(even) td { background: #0f172a; }
-  .news-body blockquote { margin: 8px 0; padding: 6px 12px; border-left: 3px solid #a855f7; background: #1e1b4b55; border-radius: 0 8px 8px 0; }
-  .news-body a { color: #67e8f9; text-decoration: underline; }
-  .news-body hr { border: none; border-top: 1px solid #374151; margin: 10px 0; }
-  .news-body code { background: #111827; padding: 1px 5px; border-radius: 4px; }
   /* загальний "живий" відгук кнопок */
   button { transition: transform 0.12s ease, filter 0.15s ease, opacity 0.15s ease; }
   button:not(:disabled):active { transform: scale(0.96); }
@@ -73,7 +59,6 @@
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
 
-const LOGOS = {main:'',footer:''};
 // підготовлені наперед подієві картки (Кʼєлліні, Дель Пʼєро) — НЕ додаються нікуди самі,
 // чекають, поки адмін натисне "Випустити" / "Роздати всім" у своїй панелі
 const PREPARED_EVENT_CARDS = {
@@ -221,10 +206,6 @@ const ACHIEVEMENTS = [
 ];
 const COST_LEVELS = [150, 200, 250, 300, 500, 1000, 1500, 2000, 2500];
 const DECAY_INTERVAL_MS = 15 * 1000;
-const STREAK_WEEK1 = [
-  { bucks: 100, medal: "🥉" }, { bucks: 150, medal: "🥉" }, { bucks: 200, medal: "🥈" },
-  { bucks: 250, medal: "🥈" }, { bucks: 300, medal: "🥇" }, { bucks: 400, medal: "🏆" }, { bucks: 600, medal: "⚽🏆" },
-];
 const STREAK_5_REWARDS = [100, 250, 450, 700, 1000];
 function getStreakReward(day, seedKey) {
   const idx = (day - 1) % 5;
@@ -1873,7 +1854,6 @@ function App() {
         {tab === "casino" && <CasinoSubTabs sub={casinoSub} setSub={setCasinoSub} wallet={wallet} />}
         {tab === "casino" && casinoSub === "duels" && <DuelsHub wallet={wallet} saveWallet={saveWallet} nick={nick} showToast={showToast} allCards={allCards} onEnterDuel={setDuelRoom} maintState={maintState} onGoProfile={() => setTab("profile")} />}
         {tab === "casino" && casinoSub === "market" && <div style={sx.tabWrap}><MarketSection wallet={wallet} saveWallet={saveWallet} showToast={showToast} cards={allCards()} busyRef={busyRef} /></div>}
-        {tab === "casino" && casinoSub === "spin" && <NewsCard nick={nick} />}
         {tab === "casino" && casinoSub === "spin" && <CasinoTab wallet={wallet} saveWallet={saveWallet} profile={profile} nick={nick}
           abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} showToast={showToast} busyRef={busyRef} tileBanner={tileBanner} />}
         {tab === "casino" && casinoSub === "spin" && <PassWidget wallet={wallet} nick={nick} allCards={allCards} showToast={showToast} saveWallet={saveWallet}
@@ -2774,7 +2754,6 @@ function PassWidget({ wallet, nick, allCards, showToast, saveWallet, claimPassLe
   const pct = level >= PASS_MAX_LEVEL ? 100 : Math.min(100, Math.round((xpIntoLevel / xpForNext) * 100));
   const seasonName = (passSeason && passSeason.name) || "BACK TO SCHOOL";
   const seasonEmoji = (passSeason && passSeason.avatarEmoji) || "🎓";
-  const daysLeft = passSeason && passSeason.endDate ? Math.max(0, Math.ceil((new Date(passSeason.endDate).getTime() - Date.now()) / 86400000)) : null;
   const seasonEndTarget = (passSeason && passSeason.endDate) || "2026-10-01T00:00:00";
   const countdown = useCountdownTo(seasonEndTarget);
 
@@ -3312,7 +3291,7 @@ function DailyRouletteModal({ wallet, saveWallet, allCards, showToast, abuseEven
   );
 }
 const RARITY_EMOJI = { "Рідкісна": "🔹", "Епічна": "🔮", "Міфічна": "💠", "Легендарна": "⭐", "Ексклюзивна": "👑" };
-const HIDDEN_ORIGINS = ["Виграно в казино 🎰", "Party 🎉", "Куплено в каталозі 🛒"];
+const HIDDEN_ORIGINS = ["Виграно в казино 🎰", "Party 🎉", "Куплено в каталозі 🛒", "Куплено на ринку гравців 🏷", "Куплено на ринку ботів 🏷"];
 function originDisplayLabel(origin) {
   if (!origin || HIDDEN_ORIGINS.includes(origin)) return null;
   if (origin === "Магазин ключів 🔑") return "SOCCER PASS 🎫";
@@ -3455,7 +3434,6 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
   // у цьому ж бакеті (інакше після покупки картка показувалась би "куплено" зі своєю справжньою,
   // випадковою знижкою замість "БЕЗКОШТОВНО")
   if (!wallet.freeShopClaimed || wallet.freeSlotBucket === bucket) {
-    const freeCard = slots[0].card;
     const freePrice = 0;
     slots[0] = { ...slots[0], discount: 100, price: freePrice, free: true, guaranteed: true };
   }
@@ -3744,16 +3722,6 @@ function flowEffect(rarity, ts) {
   }
   return Math.max(-0.12, Math.min(0.12, net * 0.03));
 }
-function flowSummary(rarity, now) {
-  const bi = Math.floor(now / FLOW_BUCKET_MS);
-  let sold = 0, bought = 0;
-  for (let k = 0; k < FLOW_WEIGHTS.length; k++) {
-    const bk = MARKET_FLOW.b && MARKET_FLOW.b[bi - k];
-    const v = bk && bk[rarity];
-    if (v) { sold += v[0] || 0; bought += v[1] || 0; }
-  }
-  return { sold, bought };
-}
 async function refreshMarketFlow(force) {
   if (!force && Date.now() - __flowLoadedAt < 45000) return;
   __flowLoadedAt = Date.now();
@@ -3941,9 +3909,6 @@ function hotCardIds(ts, cards) {
   }
   return ids;
 }
-// скільки % від ціни картки платить бот "типово" (без 🔥): 70% × курс, у межах 50–90%
-function payVal(mult) { return Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, 0.7 * mult)) * 100; }
-function payPct(mult) { return Math.round(payVal(mult)); }
 function lotEstimate(c, ts, hot) {
   const m = marketMult(c.rarity, ts), bonus = hot ? 0.15 : 0;
   const cl = (x) => Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, x));
@@ -4077,44 +4042,21 @@ function ListConfirmModal({ card, wallet, hot, now, maxQty, onCancel, onConfirm 
     </div>
   );
 }
-// графік: скільки % від ціни картки платить бот за останню годину (усі рідкості; вибрана — товстіша лінія)
-function MarketChart({ now, sel }) {
-  const W = 320, H = 132, L = 32, R = 12, T = 10, B = 20, N = 30, STEP = 120000;
-  const x = (i) => L + (i / N) * (W - L - R);
-  const yMin = 55, yMax = 85;
-  const y = (p) => T + (1 - (Math.min(yMax, Math.max(yMin, p)) - yMin) / (yMax - yMin)) * (H - T - B);
-  const series = (r) => Array.from({ length: N + 1 }, (_, i) => payVal(marketMult(r, now - (N - i) * STEP)));
-  const col = (r) => (r === "Ексклюзивна" ? "url(#mktExLine)" : RARITY_COLOR[r]);
-  const order = RARITY_ORDER.filter((r) => r !== sel).concat(sel ? [sel] : []);
-  const selSeries = sel ? series(sel) : null;
-  const pts = (arr) => arr.map((p, i) => x(i).toFixed(1) + "," + y(p).toFixed(1)).join(" ");
+// міні-графік курсу рідкості за останню годину (24 точки)
+function MarketSpark({ rarity, now, w, h }) {
+  const pts = [];
+  for (let k = 23; k >= 0; k--) pts.push(marketMult(rarity, now - k * 150000));
+  const y = (v) => h - 2 - ((v - 0.85) / 0.3) * (h - 4);
+  const d = pts.map((v, i) => (i / 23 * w).toFixed(1) + "," + y(v).toFixed(1)).join(" ");
+  const area = "0," + h + " " + d + " " + w + "," + h;
+  const ex = rarity === "Ексклюзивна";
+  const col = ex ? "#22d3ee" : RARITY_COLOR[rarity];
   return (
-    <svg viewBox={"0 0 " + W + " " + H} style={{ width: "100%", height: "auto", display: "block" }}>
-      <defs>
-        <linearGradient id="mktExLine" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#f87171" /><stop offset="0.25" stopColor="#fbbf24" /><stop offset="0.5" stopColor="#4ade80" /><stop offset="0.75" stopColor="#22d3ee" /><stop offset="1" stopColor="#a855f7" />
-        </linearGradient>
-      </defs>
-      {[60, 70, 80].map((p) => (
-        <g key={p}>
-          <line x1={L} x2={W - R} y1={y(p)} y2={y(p)} stroke="#1f2937" strokeDasharray="3 4" />
-          <text x={L - 5} y={y(p) + 3} textAnchor="end" fontSize="9" fill="#6b7280">{p}%</text>
-        </g>
-      ))}
-      {[["-60 хв", 0], ["-30 хв", N / 2], ["зараз", N]].map(([t, i]) => (
-        <text key={t} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === N ? "end" : "middle"} fontSize="9" fill="#6b7280">{t}</text>
-      ))}
-      {selSeries && <polygon points={x(0) + "," + y(yMin) + " " + pts(selSeries) + " " + x(N) + "," + y(yMin)} fill={sel === "Ексклюзивна" ? "#a855f7" : RARITY_COLOR[sel]} opacity="0.13" />}
-      {order.map((r) => {
-        const on = r === sel;
-        return <polyline key={r} points={pts(series(r))} fill="none" stroke={col(r)} strokeWidth={on ? 2.8 : 1.3} strokeLinejoin="round" strokeLinecap="round" opacity={on ? 1 : 0.4} />;
-      })}
-      {selSeries && (
-        <g>
-          <circle cx={x(N)} cy={y(selSeries[N])} r="4" fill={sel === "Ексклюзивна" ? "#22d3ee" : RARITY_COLOR[sel]} style={{ animation: "mktPulse 1.6s ease-in-out infinite" }} />
-          <text x={x(N) - 6} y={y(selSeries[N]) - 8} textAnchor="end" fontSize="11" fontWeight="800" fill="#e5e7eb">{Math.round(selSeries[N])}%</text>
-        </g>
-      )}
+    <svg width={w} height={h} viewBox={"0 0 " + w + " " + h} style={{ display: "block" }}>
+      {ex && <defs><linearGradient id="exSpark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#f87171" /><stop offset="0.25" stopColor="#fbbf24" /><stop offset="0.5" stopColor="#4ade80" /><stop offset="0.75" stopColor="#22d3ee" /><stop offset="1" stopColor="#a855f7" /></linearGradient></defs>}
+      <polygon points={area} fill={col} opacity="0.14" />
+      <polyline points={d} fill="none" stroke={ex ? "url(#exSpark)" : col} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={w} cy={y(pts[23])} r="2.8" fill={col} style={{ animation: "mktPulse 1.6s ease-in-out infinite" }} />
     </svg>
   );
 }
@@ -4125,7 +4067,6 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
   const [chosen, setChosen] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
   const [quickPlan, setQuickPlan] = useState(null);
-  const [selRarity, setSelRarity] = useState(null);
   const [feedOpen, setFeedOpen] = useState(false);
   const pickerRef = useRef(null);
   const [lotRarity, setLotRarity] = useState(null);
@@ -4224,7 +4165,6 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
       w.collection[lot.card.id] = (w.collection[lot.card.id] || 0) + 1;
       if (!w.obtainedAt[lot.card.id]) w.obtainedAt[lot.card.id] = Date.now();
       w.maxCount[lot.card.id] = Math.max(w.maxCount[lot.card.id] || 0, w.collection[lot.card.id]);
-      w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[lot.card.id] = "Куплено на ринку гравців 🏷";
       const mb = {};
       Object.keys(w.mktBought || {}).forEach((k) => { const v = w.mktBought[k]; const e = typeof v === "number" ? v : (v && v.e) || 0; if (e > Date.now()) mb[k] = v; });
       mb[lot.key] = { e: end, t: Date.now() }; w.mktBought = mb;
@@ -4273,15 +4213,6 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
 
   // курс
   const bestR = RARITY_ORDER.map((r) => ({ r, m: marketMult(r, now) })).sort((a, b) => b.m - a.m)[0];
-  const selR = selRarity || bestR.r;
-  const info = (r) => {
-    const m = marketMult(r, now), p = payPct(m), soon = payPct(marketMult(r, now + 120000));
-    return { p, trend: soon > p ? "↗" : soon < p ? "↘" : "→", level: m >= 1.05 ? "good" : m <= 0.95 ? "bad" : "mid" };
-  };
-  const selInfo = info(selR);
-  const selCol = selInfo.level === "good" ? "#4ade80" : selInfo.level === "bad" ? "#f87171" : "#fbbf24";
-  const selLabel = selInfo.level === "good" ? "вигідно продавати" : selInfo.level === "bad" ? "краще зачекати" : "звичайна ціна";
-  const flow = flowSummary(selR, now);
   const visibleTiles = wallet.passPremium ? 5 : 3;
   const hotLeft = hotEnd - now;
 
@@ -4349,24 +4280,29 @@ function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBu
         </div>
       )}
 
-      {/* ---- графік: скільки платять ---- */}
-      <div style={card}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
-          <b style={{ fontSize: 13, color: "#67e8f9" }}>📈 Скільки платять за картку</b>
-          <span style={{ fontSize: 9, color: "#6b7280" }}>% від ціни · остання година</span>
+      {/* ---- курс ---- */}
+      <div style={{ background: "linear-gradient(160deg,#111827,#0b0f1a)", border: "1px solid #374151", borderRadius: 14, padding: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 6 }}>
+          <b style={{ fontSize: 13, color: "#67e8f9" }}>📈 Курс ринку</b>
+          <span style={{ fontSize: 10, color: "#6b7280" }}>остання година</span>
         </div>
-        <div style={{ display: "flex", gap: 4, flexWrap: "nowrap", justifyContent: "space-between", marginBottom: 6 }}>
-          {RARITY_ORDER.map((r) => (
-            <MarketChip compact key={r} r={r} active={selR === r} onClick={() => setSelRarity(r)}>{RARITY_EMOJI[r]} {info(r).p}% {info(r).trend}</MarketChip>
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6 }}>
+          {RARITY_ORDER.map((r) => {
+            const m = marketMult(r, now), up = marketMult(r, now + 120000) >= m, pct = Math.round((m - 1) * 100);
+            const best = bestR.r === r, ex = r === "Ексклюзивна";
+            return (
+              <RainbowWrap key={r} on={ex} radius={12} pad={2} block>
+                <div style={{ background: "#0b0f1a", borderRadius: 10, padding: "6px 4px", textAlign: "center", border: ex ? "none" : "1px solid " + RARITY_COLOR[r] + (best ? "" : "44"), boxShadow: best ? "0 0 12px " + (ex ? "#a855f7" : RARITY_COLOR[r]) + "66" : "none" }}>
+                  <div style={{ fontSize: 13 }}>{RARITY_EMOJI[r]}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: pct >= 0 ? "#4ade80" : "#f87171" }}>{up ? "▲" : "▼"} {pct > 0 ? "+" : ""}{pct}%</div>
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: 2 }}><MarketSpark rarity={r} now={now} w={48} h={20} /></div>
+                </div>
+              </RainbowWrap>
+            );
+          })}
         </div>
-        <MarketChart now={now} sel={selR} />
-        <div style={{ fontSize: 11, color: "#d1d5db", marginTop: 4, lineHeight: 1.45 }}>
-          <RName r={selR} /> зараз: <b style={{ color: selCol }}>~{selInfo.p}% ціни {selInfo.trend}</b> — {selLabel}.
-        </div>
-        <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>
-          Курс залежить від угод гравців: за останні 30 хв цієї рідкості <b style={{ color: "#f87171" }}>продано {flow.sold}</b>, <b style={{ color: "#4ade80" }}>куплено {flow.bought}</b>.
-        </div>
+        <p style={{ margin: "6px 0 0", fontSize: 11, color: "#9ca3af" }}>💡 Найвигідніше зараз продавати: {RARITY_EMOJI[bestR.r]} <b><RName r={bestR.r} /></b> ({Math.round((bestR.m - 1) * 100) > 0 ? "+" : ""}{Math.round((bestR.m - 1) * 100)}%)</p>
+        <p style={{ margin: "2px 0 0", fontSize: 10, color: "#6b7280" }}>Курс залежить від угод гравців: багато продажів — ціна падає, багато покупок — росте.</p>
       </div>
 
       {/* ---- гарячий попит ---- */}
@@ -5183,251 +5119,6 @@ function useFriendsData(wallet, nick, allCards, intervalMs) {
   }, [wallet.friends, nick]);
   useEffect(() => { loadFriends(); const t = setInterval(loadFriends, intervalMs || 3000); return () => clearInterval(t); }, [loadFriends, intervalMs]);
   return { friendsData, incomingRequests, setIncomingRequests, friendsBusy, loadFriends };
-}
-// ============================== НОВИНИ (вкладка "Рулетка" + редактор в адмін-панелі) ==============================
-// Новини зберігаються одним спільним записом "news": { items: [{ id, title, version, ts, html }] } (найновіші першими).
-// Текст новини — це HTML із візуального редактора (жирний, курсив, підкреслення, таблиці…). Перед показом він
-// очищається білим списком тегів і стилів (sanitizeNewsHtml), тож навіть випадковий "поганий" код нікому не зашкодить.
-const NEWS_TAGS = new Set(["B", "STRONG", "I", "EM", "U", "S", "STRIKE", "DEL", "H1", "H2", "H3", "H4", "P", "BR", "DIV", "SPAN", "UL", "OL", "LI", "TABLE", "THEAD", "TBODY", "TR", "TH", "TD", "BLOCKQUOTE", "HR", "CODE", "PRE", "A", "SUB", "SUP", "FONT"]);
-const NEWS_DROP = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "NOSCRIPT", "TEMPLATE", "TEXTAREA", "SVG", "MATH", "LINK", "META", "FORM", "INPUT", "BUTTON", "SELECT", "AUDIO", "VIDEO", "CANVAS", "IMG"]);
-const NEWS_STYLES = ["color", "background-color", "text-align", "font-weight", "font-style", "text-decoration", "font-size"];
-function sanitizeNewsHtml(html) {
-  const doc = new DOMParser().parseFromString("<div>" + String(html || "") + "</div>", "text/html");
-  const root = doc.body.firstChild;
-  (function walk(node) {
-    Array.from(node.childNodes).forEach((ch) => {
-      if (ch.nodeType === 3) return;
-      if (ch.nodeType !== 1) { ch.remove(); return; }
-      if (NEWS_DROP.has(ch.tagName)) { ch.remove(); return; } // небезпечні теги видаляємо разом із вмістом
-      if (!NEWS_TAGS.has(ch.tagName)) { walk(ch); while (ch.firstChild) node.insertBefore(ch.firstChild, ch); ch.remove(); return; }
-      Array.from(ch.attributes).forEach((a) => {
-        const n = a.name.toLowerCase();
-        if (ch.tagName === "A" && n === "href") { if (!/^https?:\/\//i.test(a.value.trim())) ch.removeAttribute(a.name); }
-        else if (n === "style") {
-          const kept = a.value.split(";").map((s) => s.trim()).filter((s) => {
-            const idx = s.indexOf(":"); if (idx < 1) return false;
-            const prop = s.slice(0, idx).trim().toLowerCase(), val = s.slice(idx + 1).toLowerCase();
-            return NEWS_STYLES.includes(prop) && !/url\(|expression|javascript|@import/.test(val);
-          });
-          if (kept.length) ch.setAttribute("style", kept.join("; ")); else ch.removeAttribute("style");
-        }
-        else if (ch.tagName === "FONT" && (n === "color" || n === "size")) { /* лишаємо */ }
-        else if ((ch.tagName === "TD" || ch.tagName === "TH") && (n === "colspan" || n === "rowspan")) { /* лишаємо */ }
-        else ch.removeAttribute(a.name);
-      });
-      if (ch.tagName === "A") { ch.setAttribute("target", "_blank"); ch.setAttribute("rel", "noopener noreferrer nofollow"); }
-      walk(ch);
-    });
-  })(root);
-  return root.innerHTML;
-}
-function newsPlainText(html) {
-  const d = new DOMParser().parseFromString("<div>" + String(html || "") + "</div>", "text/html");
-  return (d.body.textContent || "").replace(/\s+/g, " ").trim();
-}
-function newsDateLabel(ts) {
-  const d = new Date(ts);
-  return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: "numeric" }) + ", " + d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
-}
-async function loadNews() {
-  const v = await sGet("news", true);
-  return v && Array.isArray(v.items) ? v.items : [];
-}
-function NewsBody({ html }) {
-  return <div className="news-body" dangerouslySetInnerHTML={{ __html: sanitizeNewsHtml(html) }} />;
-}
-function NewsVersionPill({ v }) {
-  if (!v) return null;
-  return <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", padding: "2px 9px", borderRadius: 999, background: "linear-gradient(90deg,#7c3aed,#2563eb,#0891b2,#2563eb,#7c3aed)", backgroundSize: "200% 100%", animation: "flowX 6s linear infinite" }}>v{String(v).replace(/^v/i, "")}</span>;
-}
-// картка новин на екрані "Рулетка": остання новина + кнопка "Усі новини"
-function NewsCard({ nick }) {
-  const [items, setItems] = useState(null);
-  const [seen, setSeen] = useState(null);
-  const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    async function load() { const list = await loadNews(); if (alive) setItems(list); }
-    load();
-    (async () => { const s = await sGet("news_seen_" + nick, false); if (alive) setSeen(s || ""); })();
-    const t = setInterval(load, 120000);
-    return () => { alive = false; clearInterval(t); };
-  }, [nick]);
-  if (!items || items.length === 0) return null;
-  const latest = items[0];
-  const unread = seen !== null && seen !== latest.id;
-  function openAll() {
-    setOpen(true); setExpanded(latest.id);
-    if (seen !== latest.id) { setSeen(latest.id); sSet("news_seen_" + nick, latest.id, false); }
-  }
-  const snippet = newsPlainText(latest.html).slice(0, 110);
-  return (
-    <div style={{ ...sx.tabWrap, paddingBottom: 0, animation: "none" }}>
-      <div onClick={openAll} style={{ cursor: "pointer", borderRadius: 14, padding: "10px 12px", marginBottom: 4, position: "relative", overflow: "hidden", background: "linear-gradient(90deg,#1e1b4b,#312e81,#1e3a8a,#312e81,#1e1b4b)", backgroundSize: "200% 100%", animation: "flowX 12s linear infinite", border: "1px solid " + (unread ? "#fbbf24" : "#4c1d95"), boxShadow: unread ? "0 0 16px #fbbf2455" : "none" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <b style={{ fontSize: 13, color: "#e0e7ff" }}>📰 Новини</b>
-          <NewsVersionPill v={latest.version} />
-          {unread && <span style={{ fontSize: 9, fontWeight: 800, color: "#1a1400", background: "#fbbf24", padding: "1px 7px", borderRadius: 99, animation: "mktPulse 1.4s ease-in-out infinite" }}>НОВЕ</span>}
-          <span style={{ marginLeft: "auto", fontSize: 10, color: "#a5b4fc" }}>📅 {new Date(latest.ts).toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}</span>
-        </div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{latest.title}</div>
-        {snippet && <div style={{ fontSize: 11, color: "#c7d2fe", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{snippet}</div>}
-        <div style={{ fontSize: 10, color: "#818cf8", marginTop: 4 }}>Читати всі новини ({items.length}) →</div>
-      </div>
-      {open && (
-        <div style={sx.modalOverlay} onClick={() => setOpen(false)}>
-          <div style={{ ...sx.modal, maxWidth: 440, maxHeight: "82vh", overflowY: "auto", padding: 14 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
-              <h3 style={{ margin: 0, color: "#c7d2fe" }}>📰 Новини</h3>
-              <button style={{ ...sx.smallBtn, marginLeft: "auto" }} onClick={() => setOpen(false)}>✕</button>
-            </div>
-            {items.map((n) => {
-              const isOpen = expanded === n.id;
-              return (
-                <div key={n.id} style={{ background: "linear-gradient(160deg,#111827,#0b0f1a)", border: "1px solid " + (isOpen ? "#6366f1" : "#1f2937"), borderRadius: 14, padding: 12, marginBottom: 10 }}>
-                  <div onClick={() => setExpanded(isOpen ? null : n.id)} style={{ cursor: "pointer" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <NewsVersionPill v={n.version} />
-                      <span style={{ fontSize: 10, color: "#6b7280" }}>📅 {newsDateLabel(n.ts)}</span>
-                      <span style={{ marginLeft: "auto", fontSize: 11, color: "#818cf8" }}>{isOpen ? "▲" : "▼"}</span>
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>{n.title}</div>
-                  </div>
-                  {isOpen && <div style={{ marginTop: 8, borderTop: "1px solid #1f2937", paddingTop: 8 }}><NewsBody html={n.html} /></div>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-// візуальний редактор (contentEditable + панель кнопок)
-function RichEditor({ initialHtml, editorKey, onChange }) {
-  const ref = useRef(null);
-  useEffect(() => { if (ref.current) ref.current.innerHTML = initialHtml || ""; /* eslint-disable-next-line */ }, [editorKey]);
-  function exec(cmd, val) {
-    if (!ref.current) return;
-    ref.current.focus();
-    document.execCommand(cmd, false, val === undefined ? null : val);
-    onChange(ref.current.innerHTML);
-  }
-  function insertTable() {
-    const rows = Math.max(1, Math.min(20, Number(prompt("Скільки рядків (разом із заголовком)?", "3")) || 0));
-    const cols = Math.max(1, Math.min(8, Number(prompt("Скільки стовпців?", "3")) || 0));
-    if (!rows || !cols) return;
-    let html = "<table><thead><tr>" + Array.from({ length: cols }, (_, i) => "<th>Заголовок " + (i + 1) + "</th>").join("") + "</tr></thead><tbody>";
-    for (let r = 1; r < rows; r++) html += "<tr>" + Array.from({ length: cols }, () => "<td>&nbsp;</td>").join("") + "</tr>";
-    html += "</tbody></table><p><br></p>";
-    exec("insertHTML", html);
-  }
-  function insertLink() {
-    const url = prompt("Посилання (https://…)", "https://");
-    if (url && /^https?:\/\//i.test(url)) exec("createLink", url);
-  }
-  const tb = (label, title, fn, style) => (
-    <button type="button" title={title} onMouseDown={(e) => e.preventDefault()} onClick={fn} style={{ ...sx.smallBtn, padding: "5px 9px", fontSize: 12, minWidth: 30, ...(style || {}) }}>{label}</button>
-  );
-  return (
-    <div style={{ border: "1px solid #374151", borderRadius: 12, overflow: "hidden", marginBottom: 8, background: "#0b0f1a" }}>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", padding: 6, background: "#111827", borderBottom: "1px solid #1f2937", alignItems: "center" }}>
-        {tb(<b>Ж</b>, "Жирний", () => exec("bold"))}
-        {tb(<i>К</i>, "Курсив", () => exec("italic"))}
-        {tb(<u>П</u>, "Підкреслений", () => exec("underline"))}
-        {tb(<s>З</s>, "Закреслений", () => exec("strikeThrough"))}
-        {tb("H2", "Великий заголовок", () => exec("formatBlock", "<h2>"))}
-        {tb("H3", "Менший заголовок", () => exec("formatBlock", "<h3>"))}
-        {tb("¶", "Звичайний абзац", () => exec("formatBlock", "<p>"))}
-        {tb("• ", "Маркований список", () => exec("insertUnorderedList"))}
-        {tb("1.", "Нумерований список", () => exec("insertOrderedList"))}
-        {tb("❝", "Цитата", () => exec("formatBlock", "<blockquote>"))}
-        {tb("▦", "Вставити таблицю", insertTable)}
-        {tb("🔗", "Посилання", insertLink)}
-        {tb("―", "Роздільна лінія", () => exec("insertHorizontalRule"))}
-        {tb("⇤", "По лівому краю", () => exec("justifyLeft"))}
-        {tb("⇔", "По центру", () => exec("justifyCenter"))}
-        <label title="Колір тексту" style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "#9ca3af" }}>
-          🎨<input type="color" defaultValue="#fbbf24" onChange={(e) => exec("foreColor", e.target.value)} style={{ width: 26, height: 24, padding: 0, border: "none", background: "none" }} />
-        </label>
-        {tb("🧹", "Прибрати форматування", () => exec("removeFormat"))}
-      </div>
-      <div ref={ref} className="news-body" contentEditable suppressContentEditableWarning onInput={() => onChange(ref.current.innerHTML)} style={{ minHeight: 140, padding: 10, outline: "none" }} />
-    </div>
-  );
-}
-// адмін-панель: написати, змінити чи видалити новину
-function AdminNews({ showToast }) {
-  const [items, setItems] = useState([]);
-  const [loaded, setLoaded] = useState(false);
-  const [title, setTitle] = useState("");
-  const [version, setVersion] = useState("");
-  const [html, setHtml] = useState("");
-  const [editingId, setEditingId] = useState(null);
-  const [editorKey, setEditorKey] = useState(0);
-  const [initial, setInitial] = useState("");
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { loadNews().then((l) => { setItems(l); setLoaded(true); }); }, []);
-  function resetForm() { setTitle(""); setVersion(""); setHtml(""); setInitial(""); setEditingId(null); setEditorKey((k) => k + 1); }
-  async function persist(list) {
-    const ok = await sSet("news", { items: list }, true);
-    if (!ok) { showToast("Не вдалося зберегти новини — спробуйте ще раз", "err"); return false; }
-    setItems(list); return true;
-  }
-  async function publish() {
-    if (busy) return;
-    const clean = sanitizeNewsHtml(html);
-    if (!title.trim()) { showToast("Додайте заголовок новини", "err"); return; }
-    if (!newsPlainText(clean)) { showToast("Текст новини порожній", "err"); return; }
-    setBusy(true);
-    try {
-      let list;
-      if (editingId) list = items.map((n) => (n.id === editingId ? { ...n, title: title.trim(), version: version.trim(), html: clean, edited: Date.now() } : n));
-      else list = [{ id: "n_" + Date.now(), title: title.trim(), version: version.trim(), ts: Date.now(), html: clean }, ...items].slice(0, 60);
-      if (await persist(list)) { showToast(editingId ? "Новину оновлено ✅" : "Новину опубліковано для всіх гравців ✅", "ok"); resetForm(); }
-    } finally { setBusy(false); }
-  }
-  function startEdit(n) { setEditingId(n.id); setTitle(n.title); setVersion(n.version || ""); setHtml(n.html); setInitial(n.html); setEditorKey((k) => k + 1); }
-  async function remove(n) {
-    if (!window.confirm("Видалити новину «" + n.title + "»?")) return;
-    const list = items.filter((x) => x.id !== n.id);
-    if (await persist(list)) { showToast("Новину видалено", "ok"); if (editingId === n.id) resetForm(); }
-  }
-  return (
-    <div style={{ marginBottom: 18 }}>
-      <h3 style={{ color: "#fbbf24", fontSize: 14 }}>📰 Новини для всіх гравців</h3>
-      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-        <input placeholder="Версія (напр. 1.5)" value={version} onChange={(e) => setVersion(e.target.value)} style={{ ...sx.input, marginBottom: 0, flex: "0 0 34%" }} />
-        <input placeholder="Заголовок новини" value={title} onChange={(e) => setTitle(e.target.value)} style={{ ...sx.input, marginBottom: 0, flex: 1 }} />
-      </div>
-      <RichEditor editorKey={editorKey} initialHtml={initial} onChange={setHtml} />
-      {newsPlainText(html) && (
-        <div style={{ background: "#0f172a", border: "1px dashed #4c1d95", borderRadius: 12, padding: 10, marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>Так побачать гравці:</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><NewsVersionPill v={version} /><span style={{ fontSize: 10, color: "#6b7280" }}>📅 {newsDateLabel(Date.now())}</span></div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>{title || "Заголовок"}</div>
-          <NewsBody html={html} />
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-        <button disabled={busy} style={{ ...sx.primaryBtn, flex: 2, opacity: busy ? 0.6 : 1 }} onClick={publish}>{busy ? "Зберігаю…" : editingId ? "💾 Зберегти зміни" : "📢 Опублікувати"}</button>
-        {(editingId || title || newsPlainText(html)) && <button style={{ ...sx.smallBtn, flex: 1 }} onClick={resetForm}>Очистити</button>}
-      </div>
-      {!loaded && <p style={{ fontSize: 11, color: "#6b7280" }}>Завантажую список…</p>}
-      {items.map((n) => (
-        <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#111827", border: "1px solid #1f2937", borderRadius: 10, padding: "6px 10px", marginBottom: 6 }}>
-          <NewsVersionPill v={n.version} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</div>
-            <div style={{ fontSize: 10, color: "#6b7280" }}>📅 {newsDateLabel(n.ts)}{n.edited ? " · змінено" : ""}</div>
-          </div>
-          <button style={{ ...sx.smallBtn, fontSize: 11 }} onClick={() => startEdit(n)}>✏️</button>
-          <button style={{ ...sx.smallBtn, fontSize: 11 }} onClick={() => remove(n)}>🗑</button>
-        </div>
-      ))}
-    </div>
-  );
 }
 // ============================== ДУЕЛІ (вкладка на екрані "Крутити") ==============================
 function DuelsHub({ wallet, saveWallet, nick, showToast, allCards, onEnterDuel, maintState, onGoProfile }) {
@@ -6880,8 +6571,6 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
         <button style={sx.primaryBtn} onClick={publishTileBanner}>Опублікувати для всіх</button>
         <button style={{ ...sx.smallBtn, background: "#7f1d1d" }} onClick={removeTileBanner}>Зняти банер</button>
       </div>
-
-      <AdminNews showToast={showToast} />
 
       <h3 style={{ color: "#fbbf24", fontSize: 14 }}>Повідомлення всім гравцям</h3>
       <input placeholder="Ваше ім'я/нік для підпису" value={senderName} onChange={(e) => setSenderName(e.target.value)} style={sx.input} />
