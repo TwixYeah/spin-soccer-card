@@ -67,14 +67,14 @@ const { useState, useEffect, useRef, useCallback } = React;
 // підготовлені наперед подієві картки (Кʼєлліні, Дель Пʼєро) — НЕ додаються нікуди самі,
 // чекають, поки адмін натисне "Випустити" / "Роздати всім" у своїй панелі
 const PREPARED_EVENT_CARDS = {
-  "6858": { id: "custom_6858", name: "Кака", rarity: "Ексклюзивна", price: 13500, img: "cards/custom_6858.jpg" },
-  "6859": { id: "custom_6859", name: "Франк Рібері", rarity: "Ексклюзивна", price: 12500, img: "cards/custom_6859.jpg" },
-  "6862": { id: "custom_6862", name: "Тоні Кроос", rarity: "Легендарна", price: 8900, img: "cards/custom_6862.jpg" },
-  "6861": { id: "custom_6861", name: "Павел Недвед", rarity: "Ексклюзивна", price: 12800, img: "cards/custom_6861.jpg" },
-  "6411": { id: "custom_6411", name: "Джорджо К\u2019єлліні", rarity: "Ексклюзивна", price: 14000, img: "cards/custom_6411.jpg" },
-  "6412": { id: "custom_6412", name: "Алессандро Дель П\u2019єро", rarity: "Ексклюзивна", price: 15000, img: "cards/custom_6412.jpg" },
+  "6858": { id: "custom_6858", name: "Кака", rarity: "Ексклюзивна", price: 13500, img: "cards/custom_6858.jpg", pos: "CAM", ovr: 127 },
+  "6859": { id: "custom_6859", name: "Франк Рібері", rarity: "Ексклюзивна", price: 12500, img: "cards/custom_6859.jpg", pos: "LW", ovr: 127 },
+  "6862": { id: "custom_6862", name: "Тоні Кроос", rarity: "Легендарна", price: 8900, img: "cards/custom_6862.jpg", pos: "CM", ovr: 126 },
+  "6861": { id: "custom_6861", name: "Павел Недвед", rarity: "Ексклюзивна", price: 12800, img: "cards/custom_6861.jpg", pos: "LW", ovr: 120 },
+  "6411": { id: "custom_6411", name: "Джорджо К\u2019єлліні", rarity: "Ексклюзивна", price: 14000, img: "cards/custom_6411.jpg", pos: "CB", ovr: 120 },
+  "6412": { id: "custom_6412", name: "Алессандро Дель П\u2019єро", rarity: "Ексклюзивна", price: 15000, img: "cards/custom_6412.jpg", pos: "CAM", ovr: 120 },
 };
-const BASE_CARDS = [{id:"6860",name:"Людовик Жулі",rarity:"Легендарна",price:8200,img:"cards/6860.jpg",tempEvent:true,dropChance:0,season:"Back to School",origin:"SOCCER PASS \ud83c\udfab"},{id:"6410",name:"Роналдіньйо",rarity:"Ексклюзивна",price:13000,img:"cards/6410.jpg"},{id:"6413",name:"Франческо Тотті",rarity:"Легендарна",price:7500,img:"cards/6413.jpg"},{id:"6414",name:"Павел Недвед",rarity:"Легендарна",price:6800,img:"cards/6414.jpg"},{id:"6415",name:"Крістіан Ромеро",rarity:"Легендарна",price:7000,img:"cards/6415.jpg"},{id:"6418",name:"Джо Коул",rarity:"Міфічна",price:3800,img:"cards/6418.jpg"},{id:"6419",name:"Рауль Хіменес",rarity:"Міфічна",price:3600,img:"cards/6419.jpg"},{id:"6420",name:"Бредлі Баркола",rarity:"Міфічна",price:4600,img:"cards/6420.jpg"},{id:"6421",name:"Букайо Сака",rarity:"Міфічна",price:5400,img:"cards/6421.jpg"},{id:"6422",name:"Сідні Кабрал",rarity:"Міфічна",price:3400,img:"cards/6422.jpg"},{id:"6423",name:"Девід Бекхем",rarity:"Епічна",price:2900,img:"cards/6423.jpg"},{id:"6424",name:"Петер Шмейхель",rarity:"Епічна",price:2100,img:"cards/6424.jpg"},{id:"6425",name:"Федеріко Вальверде",rarity:"Епічна",price:2500,img:"cards/6425.jpg"},{id:"6426",name:"Марсель Десаї",rarity:"Епічна",price:1900,img:"cards/6426.jpg"},{id:"6427",name:"Матеус Кунья",rarity:"Епічна",price:2300,img:"cards/6427.jpg"},{id:"6428",name:"Маріо Вушкович",rarity:"Епічна",price:1700,img:"cards/6428.jpg"},{id:"6429",name:"Вінченцо Гріфо",rarity:"Епічна",price:2000,img:"cards/6429.jpg"},{id:"0525",name:"Леонель Мессі",rarity:"Легендарна",price:7690,img:"cards/0525.jpg"},{id:"0523",name:"Кіліан Мбаппе",rarity:"Легендарна",price:7230,img:"cards/0523.jpg"},{id:"0539",name:"Лука Модрич",rarity:"Легендарна",price:5840,img:"cards/0539.jpg"},{id:"0529",name:"Ерлінг Голанн",rarity:"Легендарна",price:6300,img:"cards/0529.jpg"},{id:"0530",name:"Кріштіану Роналду",rarity:"Легендарна",price:7690,img:"cards/0530.jpg"},{id:"0519",name:"Марк Кукурелья",rarity:"Легендарна",price:5090,img:"cards/0519.jpg"},{id:"0540",name:"Возінья",rarity:"Легендарна",price:5090,img:"cards/0540.jpg"},{id:"0579",name:"Майкл Олізе",rarity:"Легендарна",price:5370,img:"cards/0579.jpg"},{id:"0575",name:"Андрес Іньєста",rarity:"Ексклюзивна",price:11180,img:"cards/0575.jpg"},{id:"0578",name:"Дієго Форлан",rarity:"Ексклюзивна",price:10000,img:"cards/0578.jpg"},{id:"0576",name:"Зінедін Зідан",rarity:"Ексклюзивна",price:17090,img:"cards/0576.jpg"},{id:"0577",name:"Рауль Гонсалес",rarity:"Ексклюзивна",price:10590,img:"cards/0577.jpg"},{id:"0574",name:"Маріо Кемпес",rarity:"Ексклюзивна",price:10000,img:"cards/0574.jpg"},{id:"0551",name:"Зіку",rarity:"Епічна",price:1660,img:"cards/0551.jpg"},{id:"0550",name:"Неманья Відіч",rarity:"Епічна",price:1390,img:"cards/0550.jpg"},{id:"0549",name:"Скотт Мактоміней",rarity:"Епічна",price:1120,img:"cards/0549.jpg"},{id:"0545",name:"Кафу",rarity:"Епічна",price:2070,img:"cards/0545.jpg"},{id:"0544",name:"Димитар Бербатов",rarity:"Епічна",price:1390,img:"cards/0544.jpg"},{id:"0542",name:"Веслі Снейдер",rarity:"Епічна",price:1800,img:"cards/0542.jpg"},{id:"0541",name:"Вітінья",rarity:"Епічна",price:1260,img:"cards/0541.jpg"},{id:"0531",name:"Ян Облак",rarity:"Епічна",price:1530,img:"cards/0531.jpg"},{id:"0547",name:"Філ Фоден",rarity:"Епічна",price:1930,img:"cards/0547.jpg"},{id:"0543",name:"Гарет Бейл",rarity:"Епічна",price:2200,img:"cards/0543.jpg"},{id:"0548",name:"Рууд Гулліт",rarity:"Епічна",price:2070,img:"cards/0548.jpg"},{id:"0573",name:"Габріел Жезус",rarity:"Рідкісна",price:370,img:"cards/0573.jpg"},{id:"0571",name:"Вінісіус Жуніор",rarity:"Рідкісна",price:760,img:"cards/0571.jpg"},{id:"0572",name:"Тібо Куртуа",rarity:"Рідкісна",price:500,img:"cards/0572.jpg"},{id:"0570",name:"Федеріко Вальверде",rarity:"Рідкісна",price:630,img:"cards/0570.jpg"},{id:"0565",name:"Джанлуїджі Доннарумма",rarity:"Рідкісна",price:430,img:"cards/0565.jpg"},{id:"0564",name:"Вітінья",rarity:"Рідкісна",price:560,img:"cards/0564.jpg"},{id:"0569",name:"Гаррі Кейн",rarity:"Рідкісна",price:760,img:"cards/0569.jpg"},{id:"0561",name:"Рафінья",rarity:"Рідкісна",price:240,img:"cards/0561.jpg"},{id:"0560",name:"Ерлінг Голанн (2)",rarity:"Рідкісна",price:690,img:"cards/0560.jpg"},{id:"0559",name:"Джуд Беллінгем",rarity:"Рідкісна",price:820,img:"cards/0559.jpg"},{id:"0558",name:"Вірджил ван Дейк",rarity:"Рідкісна",price:630,img:"cards/0558.jpg"},{id:"0557",name:"Родрі",rarity:"Рідкісна",price:500,img:"cards/0557.jpg"},{id:"0556",name:"Усман Дембеле",rarity:"Рідкісна",price:560,img:"cards/0556.jpg"},{id:"0555",name:"Кіліан Мбаппе (2)",rarity:"Рідкісна",price:760,img:"cards/0555.jpg"},{id:"0553",name:"Мохаммед Салах",rarity:"Рідкісна",price:760,img:"cards/0553.jpg"},{id:"0566",name:"Педрі",rarity:"Рідкісна",price:430,img:"cards/0566.jpg"},{id:"0567",name:"Йозуа Кімміх",rarity:"Рідкісна",price:630,img:"cards/0567.jpg"},{id:"0568",name:"Алісон Рамзес Бекер",rarity:"Рідкісна",price:370,img:"cards/0568.jpg"},{id:"0563",name:"Ламін Ямаль",rarity:"Рідкісна",price:820,img:"cards/0563.jpg"},{id:"0562",name:"Ашраф Хакімі",rarity:"Рідкісна",price:500,img:"cards/0562.jpg"},{id:"0669",name:"Грегор Кобель",rarity:"Легендарна",price:7270,img:"cards/0669.jpg"},{id:"0534",name:"Марсело",rarity:"Легендарна",price:6780,img:"cards/0534.jpg"},{id:"0589",name:"Неймар Жуніор",rarity:"Легендарна",price:7550,img:"cards/0589.jpg"},{id:"0603",name:"Морган Гіббс-Вайт",rarity:"Епічна",price:1390,img:"cards/0603.jpg"},{id:"0588",name:"Джуд Беллінгем",rarity:"Легендарна",price:7580,img:"cards/0588.jpg"},{id:"0667",name:"Уго Санчес",rarity:"Ексклюзивна",price:11960,img:"cards/0667.jpg"},{id:"0665",name:"Томаш Росицький",rarity:"Епічна",price:2650,img:"cards/0665.jpg"},{id:"0664",name:"Роберто Карлос",rarity:"Епічна",price:2760,img:"cards/0664.jpg"},{id:"0661",name:"Родріго Саласар",rarity:"Епічна",price:1410,img:"cards/0661.jpg"},{id:"0662",name:"Крістіан Ромеро",rarity:"Епічна",price:1920,img:"cards/0662.jpg"},{id:"0658",name:"Каземіро",rarity:"Епічна",price:2820,img:"cards/0658.jpg"},{id:"0666",name:"Луїш Фігу",rarity:"Ексклюзивна",price:14640,img:"cards/0666.jpg"},{id:"0657",name:"Джанлуїджі Буффон",rarity:"Епічна",price:2950,img:"cards/0657.jpg"},{id:"0654",name:"Джанлука Дзамбротта",rarity:"Епічна",price:1190,img:"cards/0654.jpg"},{id:"0653",name:"Сантьяго Моуриньо",rarity:"Епічна",price:2230,img:"cards/0653.jpg"},{id:"0660",name:"Мауро Жуніор",rarity:"Епічна",price:2640,img:"cards/0660.jpg"},{id:"0651",name:"Кіліан Мбаппе",rarity:"Епічна",price:2930,img:"cards/0651.jpg"},{id:"0650",name:"Кріштіану Роналду",rarity:"Епічна",price:2770,img:"cards/0650.jpg"},{id:"0649",name:"Тьєррі Анрі",rarity:"Епічна",price:1220,img:"cards/0649.jpg"},{id:"0648",name:"Фернандо Торрес",rarity:"Ексклюзивна",price:15100,img:"cards/0648.jpg"},{id:"0643",name:"Еусебіу",rarity:"Легендарна",price:5890,img:"cards/0643.jpg"},{id:"0646",name:"Олівер Кан",rarity:"Ексклюзивна",price:15960,img:"cards/0646.jpg"},{id:"0645",name:"Вінісіус Жуніор",rarity:"Легендарна",price:5000,img:"cards/0645.jpg"},{id:"0668",name:"Дієго Марадона",rarity:"Легендарна",price:7900,img:"cards/0668.jpg"},{id:"0663",name:"Фернандо Єрро",rarity:"Епічна",price:800,img:"cards/0663.jpg"},{id:"0640",name:"Алессандро Бастоні",rarity:"Рідкісна",price:560,img:"cards/0640.jpg"},{id:"0639",name:"Пауло Дибала",rarity:"Рідкісна",price:400,img:"cards/0639.jpg"},{id:"0652",name:"Лоран Блан",rarity:"Епічна",price:3000,img:"cards/0652.jpg"},{id:"0637",name:"Трент Александер-Арнольд",rarity:"Рідкісна",price:740,img:"cards/0637.jpg"},{id:"0642",name:"Вільян Пачо",rarity:"Рідкісна",price:720,img:"cards/0642.jpg"},{id:"0659",name:"Родрі",rarity:"Епічна",price:2230,img:"cards/0659.jpg"},{id:"0633",name:"Віктор Осімхен",rarity:"Рідкісна",price:320,img:"cards/0633.jpg"},{id:"0636",name:"Флоріан Вірц",rarity:"Рідкісна",price:600,img:"cards/0636.jpg"},{id:"0631",name:"Серу Гірассі",rarity:"Рідкісна",price:990,img:"cards/0631.jpg"},{id:"0632",name:"Кевін де Брюйне",rarity:"Рідкісна",price:810,img:"cards/0632.jpg"},{id:"0629",name:"Феліпе Кайседо",rarity:"Рідкісна",price:740,img:"cards/0629.jpg"},{id:"0628",name:"Ліонель Мессі",rarity:"Рідкісна",price:910,img:"cards/0628.jpg"},{id:"0627",name:"Сандро Тоналі",rarity:"Рідкісна",price:190,img:"cards/0627.jpg"},{id:"0626",name:"Тіджані Рейндерс",rarity:"Рідкісна",price:290,img:"cards/0626.jpg"},{id:"0624",name:"Карім Адеємі",rarity:"Рідкісна",price:760,img:"cards/0624.jpg"},{id:"0623",name:"Йонатан Та",rarity:"Рідкісна",price:560,img:"cards/0623.jpg"},{id:"0622",name:"Хвіча Кварацхелія",rarity:"Рідкісна",price:510,img:"cards/0622.jpg"},{id:"0621",name:"Майк Меньян",rarity:"Рідкісна",price:210,img:"cards/0621.jpg"},{id:"0635",name:"Майкл Олізе",rarity:"Рідкісна",price:920,img:"cards/0635.jpg"},{id:"0638",name:"Рубен Діаш",rarity:"Рідкісна",price:790,img:"cards/0638.jpg"},{id:"0618",name:"Алексіс Мак Аллістер",rarity:"Рідкісна",price:160,img:"cards/0618.jpg"},{id:"0641",name:"Бруно Гімараес",rarity:"Рідкісна",price:360,img:"cards/0641.jpg"},{id:"0616",name:"Хакан Чалханоглу",rarity:"Рідкісна",price:820,img:"cards/0616.jpg"},{id:"0620",name:"Ніко Вільямс",rarity:"Рідкісна",price:920,img:"cards/0620.jpg"},{id:"0614",name:"Букайо Сака",rarity:"Рідкісна",price:280,img:"cards/0614.jpg"},{id:"0634",name:"Френкі де Йонг",rarity:"Рідкісна",price:740,img:"cards/0634.jpg"},{id:"0630",name:"Янн Зоммер",rarity:"Рідкісна",price:950,img:"cards/0630.jpg"},{id:"0611",name:"Ібраїма Конате",rarity:"Рідкісна",price:880,img:"cards/0611.jpg"},{id:"0619",name:"Нуну Мендеш",rarity:"Рідкісна",price:1000,img:"cards/0619.jpg"},{id:"0617",name:"Давід Рая",rarity:"Рідкісна",price:610,img:"cards/0617.jpg"},{id:"0615",name:"Жуль Кунде",rarity:"Рідкісна",price:150,img:"cards/0615.jpg"},{id:"0610",name:"Бруну Фернандеш",rarity:"Рідкісна",price:290,img:"cards/0610.jpg"},{id:"0606",name:"Еміліано Мартінес",rarity:"Рідкісна",price:160,img:"cards/0606.jpg"},{id:"0605",name:"Роберт Левандовський",rarity:"Рідкісна",price:1000,img:"cards/0605.jpg"},{id:"0612",name:"Хуліан Альварес",rarity:"Рідкісна",price:550,img:"cards/0612.jpg"},{id:"0607",name:"Александер Ісак",rarity:"Рідкісна",price:550,img:"cards/0607.jpg"},{id:"0608",name:"Мартін Едегор",rarity:"Рідкісна",price:300,img:"cards/0608.jpg"},{id:"0613",name:"Віктор Дьокереш",rarity:"Рідкісна",price:780,img:"cards/0613.jpg"},{id:"0609",name:"Маркіньйос",rarity:"Рідкісна",price:290,img:"cards/0609.jpg"},{id:"0602",name:"Антоніо Нуса",rarity:"Епічна",price:1950,img:"cards/0602.jpg"},{id:"0601",name:"Марко Асенсіо",rarity:"Епічна",price:1970,img:"cards/0601.jpg"},{id:"0599",name:"Йонатан Та",rarity:"Епічна",price:1680,img:"cards/0599.jpg"},{id:"0598",name:"Жуль Кунде",rarity:"Епічна",price:1330,img:"cards/0598.jpg"},{id:"0597",name:"Ендрю Робертсон",rarity:"Епічна",price:1190,img:"cards/0597.jpg"},{id:"0596",name:"П'єро Інкап'є",rarity:"Епічна",price:1770,img:"cards/0596.jpg"},{id:"0595",name:"Едсон Альварес",rarity:"Епічна",price:1240,img:"cards/0595.jpg"},{id:"0594",name:"Жеремі Доку",rarity:"Епічна",price:1560,img:"cards/0594.jpg"},{id:"0604",name:"Роберто Карлос",rarity:"Ексклюзивна",price:14110,img:"cards/0604.jpg"},{id:"0592",name:"Френкі де Йонг",rarity:"Епічна",price:2660,img:"cards/0592.jpg"},{id:"0591",name:"Єжи Дудек",rarity:"Епічна",price:2280,img:"cards/0591.jpg"},{id:"0590",name:"Фернандо Муслера",rarity:"Епічна",price:1220,img:"cards/0590.jpg"},{id:"0587",name:"Еміліано Мартінес",rarity:"Легендарна",price:7150,img:"cards/0587.jpg"},{id:"0586",name:"Гаррі Кейн",rarity:"Легендарна",price:7250,img:"cards/0586.jpg"},{id:"0582",name:"Філіпп Лам",rarity:"Ексклюзивна",price:10100,img:"cards/0582.jpg"},{id:"0581",name:"Стівен Джеррард",rarity:"Ексклюзивна",price:13620,img:"cards/0581.jpg"},{id:"0585",name:"Родрі",rarity:"Легендарна",price:6530,img:"cards/0585.jpg"},{id:"0593",name:"Владімір Цоуфал",rarity:"Епічна",price:2910,img:"cards/0593.jpg"},{id:"6015",name:"Неманя Видич",rarity:"Епічна",price:2220,img:"cards/6015.jpg"},{id:"6016",name:"Рамірес Сантуш ду Насіменту",rarity:"Епічна",price:2040,img:"cards/6016.jpg"},{id:"0671",name:"Френк Лемпард",rarity:"Ексклюзивна",price:16710,img:"cards/0671.jpg"},{id:"0670",name:"Яп Стам",rarity:"Ексклюзивна",price:10520,img:"cards/0670.jpg"},{id:"0675",name:"Девід Бекхем",rarity:"Легендарна",price:8730,img:"cards/0675.jpg"},{id:"0672",name:"Ешлі Коул",rarity:"Ексклюзивна",price:10530,img:"cards/0672.jpg"},{id:"0673",name:"Лендон Донован",rarity:"Ексклюзивна",price:18000,img:"cards/0673.jpg"},{id:"0719",name:"Емра Джана",rarity:"Епічна",price:810,img:"cards/0719.jpg"},{id:"0717",name:"Рубен Діаш",rarity:"Епічна",price:1950,img:"cards/0717.jpg"},{id:"0718",name:"Тіагу Сілва",rarity:"Епічна",price:1080,img:"cards/0718.jpg"},{id:"0710",name:"Алехандро Гримальдо",rarity:"Епічна",price:2620,img:"cards/0710.jpg"},{id:"0716",name:"Лукас Бералдо",rarity:"Епічна",price:1120,img:"cards/0716.jpg"},{id:"0708",name:"Рікарду Куарежма",rarity:"Епічна",price:2850,img:"cards/0708.jpg"},{id:"0712",name:"Мануель Ноєр",rarity:"Епічна",price:1070,img:"cards/0712.jpg"},{id:"0707",name:"Джанлуїджі Доннарумма",rarity:"Міфічна",price:4440,img:"cards/0707.jpg"},{id:"0705",name:"Мало Гюсто",rarity:"Епічна",price:1920,img:"cards/0705.jpg"},{id:"0704",name:"Данієль Карвахаль",rarity:"Епічна",price:2230,img:"cards/0704.jpg"},{id:"0703",name:"Мічель Сальгадо",rarity:"Епічна",price:990,img:"cards/0703.jpg"},{id:"0702",name:"Дієго Марадона",rarity:"Епічна",price:2920,img:"cards/0702.jpg"},{id:"0701",name:"Вітінья",rarity:"Епічна",price:2840,img:"cards/0701.jpg"},{id:"0700",name:"Педрі",rarity:"Епічна",price:1970,img:"cards/0700.jpg"},{id:"0699",name:"Лука Модрич",rarity:"Епічна",price:2910,img:"cards/0699.jpg"},{id:"0698",name:"Бернарду Сілва",rarity:"Епічна",price:2760,img:"cards/0698.jpg"},{id:"0706",name:"Джанлука Дзамбротта",rarity:"Епічна",price:1480,img:"cards/0706.jpg"},{id:"0696",name:"Дієго Форлан",rarity:"Епічна",price:2910,img:"cards/0696.jpg"},{id:"0695",name:"Вінісіус Жуніор",rarity:"Епічна",price:1190,img:"cards/0695.jpg"},{id:"0694",name:"Родріго де Пауль",rarity:"Епічна",price:2470,img:"cards/0694.jpg"},{id:"0693",name:"Майкл Каррік",rarity:"Епічна",price:920,img:"cards/0693.jpg"},{id:"0715",name:"Франк Райкард",rarity:"Легендарна",price:9000,img:"cards/0715.jpg"},{id:"0711",name:"Джанлуїджі Доннарумма",rarity:"Епічна",price:940,img:"cards/0711.jpg"},{id:"0690",name:"Бенджамін Менді",rarity:"Епічна",price:2350,img:"cards/0690.jpg"},{id:"0689",name:"Жоан Капдевіла",rarity:"Епічна",price:2030,img:"cards/0689.jpg"},{id:"0688",name:"Нуну Мендеш",rarity:"Міфічна",price:5330,img:"cards/0688.jpg"},{id:"0687",name:"Алехандро Гримальдо",rarity:"Епічна",price:1260,img:"cards/0687.jpg"},{id:"0686",name:"Фелікс Баумгартнер",rarity:"Епічна",price:2680,img:"cards/0686.jpg"},{id:"0685",name:"Марко Асенсіо",rarity:"Епічна",price:2260,img:"cards/0685.jpg"},{id:"0680",name:"Жоан Капдевіла",rarity:"Легендарна",price:8140,img:"cards/0680.jpg"},{id:"0679",name:"Рууд Гулліт",rarity:"Легендарна",price:8280,img:"cards/0679.jpg"},{id:"0678",name:"Кафу",rarity:"Легендарна",price:8850,img:"cards/0678.jpg"},{id:"0677",name:"Хабі Алонсо",rarity:"Легендарна",price:9000,img:"cards/0677.jpg"},{id:"0676",name:"Тьєррі Анрі",rarity:"Легендарна",price:8780,img:"cards/0676.jpg"},{id:"0697",name:"Дезіре Дуе",rarity:"Міфічна",price:5940,img:"cards/0697.jpg"},{id:"0713",name:"Джанлуїджі Буффон",rarity:"Епічна",price:2850,img:"cards/0713.jpg"},{id:"0691",name:"Ібрагім Сангаре",rarity:"Епічна",price:2810,img:"cards/0691.jpg"},{id:"0709",name:"Рікарду Карвалью",rarity:"Епічна",price:1680,img:"cards/0709.jpg"},{id:"0692",name:"Бруно Гімараес",rarity:"Епічна",price:2410,img:"cards/0692.jpg"},{id:"0720",name:"Усман Дембеле",rarity:"Міфічна",price:6000,img:"cards/0720.jpg"},{id:"0722",name:"Ріс Джеймс",rarity:"Міфічна",price:2110,img:"cards/0722.jpg"},{id:"0723",name:"Педру Нету",rarity:"Міфічна",price:2040,img:"cards/0723.jpg"},{id:"0726",name:"Лерой Зане",rarity:"Міфічна",price:4080,img:"cards/0726.jpg"},{id:"0721",name:"Рікарду Карвалью",rarity:"Ексклюзивна",price:13970,img:"cards/0721.jpg"},{id:"0724",name:"Педрі",rarity:"Міфічна",price:2000,img:"cards/0724.jpg"},{id:"0725",name:"Ілкай Гюндоган",rarity:"Міфічна",price:4000,img:"cards/0725.jpg"},{id:"0727",name:"Біксант Лізаразю",rarity:"Міфічна",price:4650,img:"cards/0727.jpg"},{id:"0728",name:"Мойсес Кайседо",rarity:"Міфічна",price:3540,img:"cards/0728.jpg"},{id:"0729",name:"Ніко Вільямс",rarity:"Міфічна",price:5620,img:"cards/0729.jpg"}];
+const BASE_CARDS = [{id:"6860",name:"Людовик Жулі",rarity:"Легендарна",price:8200,img:"cards/6860.jpg",tempEvent:true,dropChance:0,season:"Back to School",origin:"SOCCER PASS \ud83c\udfab"},{id:"6410",name:"Роналдіньйо",rarity:"Ексклюзивна",price:13000,img:"cards/6410.jpg"},{id:"6413",name:"Франческо Тотті",rarity:"Легендарна",price:7500,img:"cards/6413.jpg"},{id:"6414",name:"Павел Недвед",rarity:"Легендарна",price:6800,img:"cards/6414.jpg"},{id:"6415",name:"Крістіан Ромеро",rarity:"Легендарна",price:7000,img:"cards/6415.jpg"},{id:"6418",name:"Джо Коул",rarity:"Міфічна",price:3800,img:"cards/6418.jpg"},{id:"6419",name:"Рауль Хіменес",rarity:"Міфічна",price:3600,img:"cards/6419.jpg"},{id:"6420",name:"Бредлі Баркола",rarity:"Міфічна",price:4600,img:"cards/6420.jpg"},{id:"6421",name:"Букайо Сака",rarity:"Міфічна",price:5400,img:"cards/6421.jpg"},{id:"6422",name:"Сідні Кабрал",rarity:"Міфічна",price:3400,img:"cards/6422.jpg"},{id:"6423",name:"Девід Бекхем",rarity:"Епічна",price:2900,img:"cards/6423.jpg"},{id:"6424",name:"Петер Шмейхель",rarity:"Епічна",price:2100,img:"cards/6424.jpg"},{id:"6425",name:"Федеріко Вальверде",rarity:"Епічна",price:2500,img:"cards/6425.jpg"},{id:"6426",name:"Марсель Десаї",rarity:"Епічна",price:1900,img:"cards/6426.jpg"},{id:"6427",name:"Матеус Кунья",rarity:"Епічна",price:2300,img:"cards/6427.jpg"},{id:"6428",name:"Маріо Вушкович",rarity:"Епічна",price:1700,img:"cards/6428.jpg"},{id:"6429",name:"Вінченцо Гріфо",rarity:"Епічна",price:2000,img:"cards/6429.jpg"},{id:"0525",name:"Леонель Мессі",rarity:"Легендарна",price:7690,img:"cards/0525.jpg"},{id:"0523",name:"Кіліан Мбаппе",rarity:"Легендарна",price:7230,img:"cards/0523.jpg"},{id:"0539",name:"Лука Модрич",rarity:"Легендарна",price:5840,img:"cards/0539.jpg"},{id:"0529",name:"Ерлінг Голанн",rarity:"Легендарна",price:6300,img:"cards/0529.jpg"},{id:"0530",name:"Кріштіану Роналду",rarity:"Легендарна",price:7690,img:"cards/0530.jpg"},{id:"0519",name:"Марк Кукурелья",rarity:"Легендарна",price:5090,img:"cards/0519.jpg"},{id:"0540",name:"Возінья",rarity:"Легендарна",price:5090,img:"cards/0540.jpg"},{id:"0579",name:"Майкл Олізе",rarity:"Легендарна",price:5370,img:"cards/0579.jpg"},{id:"0575",name:"Андрес Іньєста",rarity:"Ексклюзивна",price:11180,img:"cards/0575.jpg"},{id:"0578",name:"Дієго Форлан",rarity:"Ексклюзивна",price:10000,img:"cards/0578.jpg"},{id:"0576",name:"Зінедін Зідан",rarity:"Ексклюзивна",price:17090,img:"cards/0576.jpg"},{id:"0577",name:"Рауль Гонсалес",rarity:"Ексклюзивна",price:10590,img:"cards/0577.jpg"},{id:"0574",name:"Маріо Кемпес",rarity:"Ексклюзивна",price:10000,img:"cards/0574.jpg"},{id:"0551",name:"Зіку",rarity:"Епічна",price:1660,img:"cards/0551.jpg"},{id:"0550",name:"Неманья Відіч",rarity:"Епічна",price:1390,img:"cards/0550.jpg"},{id:"0549",name:"Скотт Мактоміней",rarity:"Епічна",price:1120,img:"cards/0549.jpg"},{id:"0545",name:"Кафу",rarity:"Епічна",price:2070,img:"cards/0545.jpg"},{id:"0544",name:"Димитар Бербатов",rarity:"Епічна",price:1390,img:"cards/0544.jpg"},{id:"0542",name:"Веслі Снейдер",rarity:"Епічна",price:1800,img:"cards/0542.jpg"},{id:"0541",name:"Вітінья",rarity:"Епічна",price:1260,img:"cards/0541.jpg"},{id:"0531",name:"Ян Облак",rarity:"Епічна",price:1530,img:"cards/0531.jpg"},{id:"0547",name:"Філ Фоден",rarity:"Епічна",price:1930,img:"cards/0547.jpg"},{id:"0543",name:"Гарет Бейл",rarity:"Епічна",price:2200,img:"cards/0543.jpg"},{id:"0548",name:"Рууд Гулліт",rarity:"Епічна",price:2070,img:"cards/0548.jpg"},{id:"0573",name:"Габріел Жезус",rarity:"Рідкісна",price:370,img:"cards/0573.jpg"},{id:"0571",name:"Вінісіус Жуніор",rarity:"Рідкісна",price:760,img:"cards/0571.jpg"},{id:"0572",name:"Тібо Куртуа",rarity:"Рідкісна",price:500,img:"cards/0572.jpg"},{id:"0570",name:"Федеріко Вальверде",rarity:"Рідкісна",price:630,img:"cards/0570.jpg"},{id:"0565",name:"Джанлуїджі Доннарумма",rarity:"Рідкісна",price:430,img:"cards/0565.jpg"},{id:"0564",name:"Вітінья",rarity:"Рідкісна",price:560,img:"cards/0564.jpg"},{id:"0569",name:"Гаррі Кейн",rarity:"Рідкісна",price:760,img:"cards/0569.jpg"},{id:"0561",name:"Рафінья",rarity:"Рідкісна",price:240,img:"cards/0561.jpg"},{id:"0560",name:"Ерлінг Голанн (2)",rarity:"Рідкісна",price:690,img:"cards/0560.jpg"},{id:"0559",name:"Джуд Беллінгем",rarity:"Рідкісна",price:820,img:"cards/0559.jpg"},{id:"0558",name:"Вірджил ван Дейк",rarity:"Рідкісна",price:630,img:"cards/0558.jpg"},{id:"0557",name:"Родрі",rarity:"Рідкісна",price:500,img:"cards/0557.jpg"},{id:"0556",name:"Усман Дембеле",rarity:"Рідкісна",price:560,img:"cards/0556.jpg"},{id:"0555",name:"Кіліан Мбаппе (2)",rarity:"Рідкісна",price:760,img:"cards/0555.jpg"},{id:"0553",name:"Мохаммед Салах",rarity:"Рідкісна",price:760,img:"cards/0553.jpg"},{id:"0566",name:"Педрі",rarity:"Рідкісна",price:430,img:"cards/0566.jpg"},{id:"0567",name:"Йозуа Кімміх",rarity:"Рідкісна",price:630,img:"cards/0567.jpg"},{id:"0568",name:"Алісон Рамзес Бекер",rarity:"Рідкісна",price:370,img:"cards/0568.jpg"},{id:"0563",name:"Ламін Ямаль",rarity:"Рідкісна",price:820,img:"cards/0563.jpg"},{id:"0562",name:"Ашраф Хакімі",rarity:"Рідкісна",price:500,img:"cards/0562.jpg"},{id:"0669",name:"Грегор Кобель",rarity:"Легендарна",price:7270,img:"cards/0669.jpg"},{id:"0534",name:"Марсело",rarity:"Легендарна",price:6780,img:"cards/0534.jpg"},{id:"0589",name:"Неймар Жуніор",rarity:"Легендарна",price:7550,img:"cards/0589.jpg"},{id:"0603",name:"Морган Гіббс-Вайт",rarity:"Епічна",price:1390,img:"cards/0603.jpg"},{id:"0588",name:"Джуд Беллінгем",rarity:"Легендарна",price:7580,img:"cards/0588.jpg"},{id:"0667",name:"Уго Санчес",rarity:"Ексклюзивна",price:11960,img:"cards/0667.jpg"},{id:"0665",name:"Томаш Росицький",rarity:"Епічна",price:2650,img:"cards/0665.jpg"},{id:"0664",name:"Роберто Карлос",rarity:"Епічна",price:2760,img:"cards/0664.jpg"},{id:"0661",name:"Родріго Саласар",rarity:"Епічна",price:1410,img:"cards/0661.jpg"},{id:"0662",name:"Крістіан Ромеро",rarity:"Епічна",price:1920,img:"cards/0662.jpg"},{id:"0658",name:"Каземіро",rarity:"Епічна",price:2820,img:"cards/0658.jpg"},{id:"0666",name:"Луїш Фігу",rarity:"Ексклюзивна",price:14640,img:"cards/0666.jpg"},{id:"0657",name:"Джанлуїджі Буффон",rarity:"Епічна",price:2950,img:"cards/0657.jpg"},{id:"0654",name:"Джанлука Дзамбротта",rarity:"Епічна",price:1190,img:"cards/0654.jpg"},{id:"0653",name:"Сантьяго Моуриньо",rarity:"Епічна",price:2230,img:"cards/0653.jpg"},{id:"0660",name:"Мауро Жуніор",rarity:"Епічна",price:2640,img:"cards/0660.jpg"},{id:"0651",name:"Кіліан Мбаппе",rarity:"Епічна",price:2930,img:"cards/0651.jpg"},{id:"0650",name:"Кріштіану Роналду",rarity:"Епічна",price:2770,img:"cards/0650.jpg"},{id:"0649",name:"Тьєррі Анрі",rarity:"Епічна",price:1220,img:"cards/0649.jpg"},{id:"0648",name:"Фернандо Торрес",rarity:"Ексклюзивна",price:15100,img:"cards/0648.jpg"},{id:"0643",name:"Еусебіу",rarity:"Легендарна",price:5890,img:"cards/0643.jpg"},{id:"0646",name:"Олівер Кан",rarity:"Ексклюзивна",price:15960,img:"cards/0646.jpg"},{id:"0645",name:"Вінісіус Жуніор",rarity:"Легендарна",price:5000,img:"cards/0645.jpg"},{id:"0668",name:"Дієго Марадона",rarity:"Легендарна",price:7900,img:"cards/0668.jpg"},{id:"0663",name:"Фернандо Єрро",rarity:"Епічна",price:800,img:"cards/0663.jpg"},{id:"0640",name:"Алессандро Бастоні",rarity:"Рідкісна",price:560,img:"cards/0640.jpg"},{id:"0639",name:"Пауло Дибала",rarity:"Рідкісна",price:400,img:"cards/0639.jpg"},{id:"0652",name:"Лоран Блан",rarity:"Епічна",price:3000,img:"cards/0652.jpg"},{id:"0637",name:"Трент Александер-Арнольд",rarity:"Рідкісна",price:740,img:"cards/0637.jpg"},{id:"0642",name:"Вільян Пачо",rarity:"Рідкісна",price:720,img:"cards/0642.jpg"},{id:"0659",name:"Родрі",rarity:"Епічна",price:2230,img:"cards/0659.jpg"},{id:"0633",name:"Віктор Осімхен",rarity:"Рідкісна",price:320,img:"cards/0633.jpg"},{id:"0636",name:"Флоріан Вірц",rarity:"Рідкісна",price:600,img:"cards/0636.jpg"},{id:"0631",name:"Серу Гірассі",rarity:"Рідкісна",price:990,img:"cards/0631.jpg"},{id:"0632",name:"Кевін де Брюйне",rarity:"Рідкісна",price:810,img:"cards/0632.jpg"},{id:"0629",name:"Феліпе Кайседо",rarity:"Рідкісна",price:740,img:"cards/0629.jpg"},{id:"0628",name:"Ліонель Мессі",rarity:"Рідкісна",price:910,img:"cards/0628.jpg"},{id:"0627",name:"Сандро Тоналі",rarity:"Рідкісна",price:190,img:"cards/0627.jpg"},{id:"0626",name:"Тіджані Рейндерс",rarity:"Рідкісна",price:290,img:"cards/0626.jpg"},{id:"0624",name:"Карім Адеємі",rarity:"Рідкісна",price:760,img:"cards/0624.jpg"},{id:"0623",name:"Йонатан Та",rarity:"Рідкісна",price:560,img:"cards/0623.jpg"},{id:"0622",name:"Хвіча Кварацхелія",rarity:"Рідкісна",price:510,img:"cards/0622.jpg"},{id:"0621",name:"Майк Меньян",rarity:"Рідкісна",price:210,img:"cards/0621.jpg"},{id:"0635",name:"Майкл Олізе",rarity:"Рідкісна",price:920,img:"cards/0635.jpg"},{id:"0638",name:"Рубен Діаш",rarity:"Рідкісна",price:790,img:"cards/0638.jpg"},{id:"0618",name:"Алексіс Мак Аллістер",rarity:"Рідкісна",price:160,img:"cards/0618.jpg"},{id:"0641",name:"Бруно Гімараес",rarity:"Рідкісна",price:360,img:"cards/0641.jpg"},{id:"0616",name:"Хакан Чалханоглу",rarity:"Рідкісна",price:820,img:"cards/0616.jpg"},{id:"0620",name:"Ніко Вільямс",rarity:"Рідкісна",price:920,img:"cards/0620.jpg"},{id:"0614",name:"Букайо Сака",rarity:"Рідкісна",price:280,img:"cards/0614.jpg"},{id:"0634",name:"Френкі де Йонг",rarity:"Рідкісна",price:740,img:"cards/0634.jpg"},{id:"0630",name:"Янн Зоммер",rarity:"Рідкісна",price:950,img:"cards/0630.jpg"},{id:"0611",name:"Ібраїма Конате",rarity:"Рідкісна",price:880,img:"cards/0611.jpg"},{id:"0619",name:"Нуну Мендеш",rarity:"Рідкісна",price:1000,img:"cards/0619.jpg"},{id:"0617",name:"Давід Рая",rarity:"Рідкісна",price:610,img:"cards/0617.jpg"},{id:"0615",name:"Жуль Кунде",rarity:"Рідкісна",price:150,img:"cards/0615.jpg"},{id:"0610",name:"Бруну Фернандеш",rarity:"Рідкісна",price:290,img:"cards/0610.jpg"},{id:"0606",name:"Еміліано Мартінес",rarity:"Рідкісна",price:160,img:"cards/0606.jpg"},{id:"0605",name:"Роберт Левандовський",rarity:"Рідкісна",price:1000,img:"cards/0605.jpg"},{id:"0612",name:"Хуліан Альварес",rarity:"Рідкісна",price:550,img:"cards/0612.jpg"},{id:"0607",name:"Александер Ісак",rarity:"Рідкісна",price:550,img:"cards/0607.jpg"},{id:"0608",name:"Мартін Едегор",rarity:"Рідкісна",price:300,img:"cards/0608.jpg"},{id:"0613",name:"Віктор Дьокереш",rarity:"Рідкісна",price:780,img:"cards/0613.jpg"},{id:"0609",name:"Маркіньйос",rarity:"Рідкісна",price:290,img:"cards/0609.jpg"},{id:"0602",name:"Антоніо Нуса",rarity:"Епічна",price:1950,img:"cards/0602.jpg"},{id:"0601",name:"Марко Асенсіо",rarity:"Епічна",price:1970,img:"cards/0601.jpg"},{id:"0599",name:"Йонатан Та",rarity:"Епічна",price:1680,img:"cards/0599.jpg"},{id:"0598",name:"Жуль Кунде",rarity:"Епічна",price:1330,img:"cards/0598.jpg"},{id:"0597",name:"Ендрю Робертсон",rarity:"Епічна",price:1190,img:"cards/0597.jpg"},{id:"0596",name:"П'єро Інкап'є",rarity:"Епічна",price:1770,img:"cards/0596.jpg"},{id:"0595",name:"Едсон Альварес",rarity:"Епічна",price:1240,img:"cards/0595.jpg"},{id:"0594",name:"Жеремі Доку",rarity:"Епічна",price:1560,img:"cards/0594.jpg"},{id:"0604",name:"Роберто Карлос",rarity:"Ексклюзивна",price:14110,img:"cards/0604.jpg"},{id:"0592",name:"Френкі де Йонг",rarity:"Епічна",price:2660,img:"cards/0592.jpg"},{id:"0591",name:"Єжи Дудек",rarity:"Епічна",price:2280,img:"cards/0591.jpg"},{id:"0590",name:"Фернандо Муслера",rarity:"Епічна",price:1220,img:"cards/0590.jpg"},{id:"0587",name:"Еміліано Мартінес",rarity:"Легендарна",price:7150,img:"cards/0587.jpg"},{id:"0586",name:"Гаррі Кейн",rarity:"Легендарна",price:7250,img:"cards/0586.jpg"},{id:"0582",name:"Філіпп Лам",rarity:"Ексклюзивна",price:10100,img:"cards/0582.jpg"},{id:"0581",name:"Стівен Джеррард",rarity:"Ексклюзивна",price:13620,img:"cards/0581.jpg"},{id:"0585",name:"Родрі",rarity:"Легендарна",price:6530,img:"cards/0585.jpg"},{id:"0593",name:"Владімір Цоуфал",rarity:"Епічна",price:2910,img:"cards/0593.jpg"},{id:"6015",name:"Неманя Видич",rarity:"Епічна",price:2220,img:"cards/6015.jpg"},{id:"6016",name:"Рамірес Сантуш ду Насіменту",rarity:"Епічна",price:2040,img:"cards/6016.jpg"},{id:"0671",name:"Френк Лемпард",rarity:"Ексклюзивна",price:16710,img:"cards/0671.jpg"},{id:"0670",name:"Яп Стам",rarity:"Ексклюзивна",price:10520,img:"cards/0670.jpg"},{id:"0675",name:"Девід Бекхем",rarity:"Легендарна",price:8730,img:"cards/0675.jpg"},{id:"0672",name:"Ешлі Коул",rarity:"Ексклюзивна",price:10530,img:"cards/0672.jpg"},{id:"0673",name:"Лендон Донован",rarity:"Ексклюзивна",price:18000,img:"cards/0673.jpg"},{id:"0719",name:"Емра Джана",rarity:"Епічна",price:810,img:"cards/0719.jpg"},{id:"0717",name:"Рубен Діаш",rarity:"Епічна",price:1950,img:"cards/0717.jpg"},{id:"0718",name:"Тіагу Сілва",rarity:"Епічна",price:1080,img:"cards/0718.jpg"},{id:"0710",name:"Алехандро Гримальдо",rarity:"Епічна",price:2620,img:"cards/0710.jpg"},{id:"0716",name:"Лукас Бералдо",rarity:"Епічна",price:1120,img:"cards/0716.jpg"},{id:"0708",name:"Рікарду Куарежма",rarity:"Епічна",price:2850,img:"cards/0708.jpg"},{id:"0712",name:"Мануель Ноєр",rarity:"Епічна",price:1070,img:"cards/0712.jpg"},{id:"0707",name:"Джанлуїджі Доннарумма",rarity:"Міфічна",price:4440,img:"cards/0707.jpg"},{id:"0705",name:"Мало Гюсто",rarity:"Епічна",price:1920,img:"cards/0705.jpg"},{id:"0704",name:"Данієль Карвахаль",rarity:"Епічна",price:2230,img:"cards/0704.jpg"},{id:"0703",name:"Мічель Сальгадо",rarity:"Епічна",price:990,img:"cards/0703.jpg"},{id:"0702",name:"Дієго Марадона",rarity:"Епічна",price:2920,img:"cards/0702.jpg"},{id:"0701",name:"Вітінья",rarity:"Епічна",price:2840,img:"cards/0701.jpg"},{id:"0700",name:"Педрі",rarity:"Епічна",price:1970,img:"cards/0700.jpg"},{id:"0699",name:"Лука Модрич",rarity:"Епічна",price:2910,img:"cards/0699.jpg"},{id:"0698",name:"Бернарду Сілва",rarity:"Епічна",price:2760,img:"cards/0698.jpg"},{id:"0706",name:"Джанлука Дзамбротта",rarity:"Епічна",price:1480,img:"cards/0706.jpg"},{id:"0696",name:"Дієго Форлан",rarity:"Епічна",price:2910,img:"cards/0696.jpg"},{id:"0695",name:"Вінісіус Жуніор",rarity:"Епічна",price:1190,img:"cards/0695.jpg"},{id:"0694",name:"Родріго де Пауль",rarity:"Епічна",price:2470,img:"cards/0694.jpg"},{id:"0693",name:"Майкл Каррік",rarity:"Епічна",price:920,img:"cards/0693.jpg"},{id:"0715",name:"Франк Райкард",rarity:"Легендарна",price:9000,img:"cards/0715.jpg"},{id:"0711",name:"Джанлуїджі Доннарумма",rarity:"Епічна",price:940,img:"cards/0711.jpg"},{id:"0690",name:"Бенджамін Менді",rarity:"Епічна",price:2350,img:"cards/0690.jpg"},{id:"0689",name:"Жоан Капдевіла",rarity:"Епічна",price:2030,img:"cards/0689.jpg"},{id:"0688",name:"Нуну Мендеш",rarity:"Міфічна",price:5330,img:"cards/0688.jpg"},{id:"0687",name:"Алехандро Гримальдо",rarity:"Епічна",price:1260,img:"cards/0687.jpg"},{id:"0686",name:"Фелікс Баумгартнер",rarity:"Епічна",price:2680,img:"cards/0686.jpg"},{id:"0685",name:"Марко Асенсіо",rarity:"Епічна",price:2260,img:"cards/0685.jpg"},{id:"0680",name:"Жоан Капдевіла",rarity:"Легендарна",price:8140,img:"cards/0680.jpg"},{id:"0679",name:"Рууд Гулліт",rarity:"Легендарна",price:8280,img:"cards/0679.jpg"},{id:"0678",name:"Кафу",rarity:"Легендарна",price:8850,img:"cards/0678.jpg"},{id:"0677",name:"Хабі Алонсо",rarity:"Легендарна",price:9000,img:"cards/0677.jpg"},{id:"0676",name:"Тьєррі Анрі",rarity:"Легендарна",price:8780,img:"cards/0676.jpg"},{id:"0697",name:"Дезіре Дуе",rarity:"Міфічна",price:5940,img:"cards/0697.jpg"},{id:"0713",name:"Джанлуїджі Буффон",rarity:"Епічна",price:2850,img:"cards/0713.jpg"},{id:"0691",name:"Ібрагім Сангаре",rarity:"Епічна",price:2810,img:"cards/0691.jpg"},{id:"0709",name:"Рікарду Карвалью",rarity:"Епічна",price:1680,img:"cards/0709.jpg"},{id:"0692",name:"Бруно Гімараес",rarity:"Епічна",price:2410,img:"cards/0692.jpg"},{id:"0720",name:"Усман Дембеле",rarity:"Міфічна",price:6000,img:"cards/0720.jpg"},{id:"0722",name:"Ріс Джеймс",rarity:"Міфічна",price:2110,img:"cards/0722.jpg"},{id:"0723",name:"Педру Нету",rarity:"Міфічна",price:2040,img:"cards/0723.jpg"},{id:"0726",name:"Лерой Зане",rarity:"Міфічна",price:4080,img:"cards/0726.jpg"},{id:"0721",name:"Рікарду Карвалью",rarity:"Ексклюзивна",price:13970,img:"cards/0721.jpg"},{id:"0724",name:"Педрі",rarity:"Міфічна",price:2000,img:"cards/0724.jpg"},{id:"0725",name:"Ілкай Гюндоган",rarity:"Міфічна",price:4000,img:"cards/0725.jpg"},{id:"0727",name:"Біксант Лізаразю",rarity:"Міфічна",price:4650,img:"cards/0727.jpg"},{id:"0728",name:"Мойсес Кайседо",rarity:"Міфічна",price:3540,img:"cards/0728.jpg"},{id:"0729",name:"Ніко Вільямс",rarity:"Міфічна",price:5620,img:"cards/0729.jpg"},{ id: "0812", name: "Кіліан Мбаппе", rarity: "Рідкісна", price: 430, img: "cards/0812.jpg", pos: "ST", ovr: 91 },{ id: "0813", name: "Ерлінг Голанд", rarity: "Рідкісна", price: 360, img: "cards/0813.jpg", pos: "ST", ovr: 91 },{ id: "0814", name: "Джанлуїджі Доннарумма", rarity: "Рідкісна", price: 430, img: "cards/0814.jpg", pos: "GK", ovr: 89 },{ id: "0815", name: "Ламін Ямаль", rarity: "Рідкісна", price: 390, img: "cards/0815.jpg", pos: "RW", ovr: 90 },{ id: "0816", name: "Гаррі Кейн", rarity: "Рідкісна", price: 920, img: "cards/0816.jpg", pos: "ST", ovr: 129 },{ id: "0817", name: "Усман Дембеле", rarity: "Рідкісна", price: 390, img: "cards/0817.jpg", pos: "ST", ovr: 90 },{ id: "0818", name: "Родрі", rarity: "Рідкісна", price: 370, img: "cards/0818.jpg", pos: "CDM", ovr: 90 },{ id: "0819", name: "Майкл Олісе", rarity: "Рідкісна", price: 380, img: "cards/0819.jpg", pos: "RM", ovr: 90 },{ id: "0820", name: "Тібо Куртуа", rarity: "Рідкісна", price: 420, img: "cards/0820.jpg", pos: "GK", ovr: 90 },{ id: "0821", name: "Педрі", rarity: "Рідкісна", price: 800, img: "cards/0821.jpg", pos: "CM", ovr: 120 },{ id: "0822", name: "Вітінья", rarity: "Рідкісна", price: 430, img: "cards/0822.jpg", pos: "CM", ovr: 90 },{ id: "0823", name: "Джуд Беллінгем", rarity: "Рідкісна", price: 380, img: "cards/0823.jpg", pos: "CAM", ovr: 90 },{ id: "0824", name: "Хвіча Кварацхелія", rarity: "Рідкісна", price: 390, img: "cards/0824.jpg", pos: "LW", ovr: 89 },{ id: "0825", name: "Нуну Мендеш", rarity: "Рідкісна", price: 390, img: "cards/0825.jpg", pos: "LB", ovr: 89 },{ id: "0826", name: "Вінісіус Жуніор", rarity: "Рідкісна", price: 320, img: "cards/0826.jpg", pos: "LW", ovr: 89 },{ id: "0827", name: "Ліонель Мессі", rarity: "Рідкісна", price: 330, img: "cards/0827.jpg", pos: "CAM", ovr: 89 },{ id: "0828", name: "Бруну Фернандеш", rarity: "Рідкісна", price: 320, img: "cards/0828.jpg", pos: "CAM", ovr: 89 },{ id: "0829", name: "Габріел Магальяйнс", rarity: "Рідкісна", price: 370, img: "cards/0829.jpg", pos: "CB", ovr: 89 },{ id: "0830", name: "Віліан Пачо", rarity: "Рідкісна", price: 430, img: "cards/0830.jpg", pos: "CB", ovr: 89 },{ id: "0831", name: "Вільям Саліба", rarity: "Рідкісна", price: 310, img: "cards/0831.jpg", pos: "CB", ovr: 88 },{ id: "0832", name: "Рафінья Діас", rarity: "Рідкісна", price: 320, img: "cards/0832.jpg", pos: "LW", ovr: 84 },{ id: "0834", name: "Ашраф Хакімі", rarity: "Рідкісна", price: 380, img: "cards/0834.jpg", pos: "RB", ovr: 88 },{ id: "0835", name: "Луїс Діас", rarity: "Рідкісна", price: 400, img: "cards/0835.jpg", pos: "LM", ovr: 88 },{ id: "0836", name: "Вірджил ван Дейк", rarity: "Рідкісна", price: 330, img: "cards/0836.jpg", pos: "CB", ovr: 88 },{ id: "0837", name: "Марк Кукурелья", rarity: "Рідкісна", price: 380, img: "cards/0837.jpg", pos: "LB", ovr: 86 },{ id: "0838", name: "Ніко Шлоттербек", rarity: "Рідкісна", price: 340, img: "cards/0838.jpg", pos: "CB", ovr: 87 },{ id: "0839", name: "Грегор Кобель", rarity: "Рідкісна", price: 150, img: "cards/0839.jpg", pos: "GK", ovr: 74 },{ id: "0840", name: "Флоріан Вірц", rarity: "Рідкісна", price: 270, img: "cards/0840.jpg", pos: "CAM", ovr: 84 },{ id: "0841", name: "Раян Шеркі", rarity: "Рідкісна", price: 270, img: "cards/0841.jpg", pos: "RW", ovr: 86 },{ id: "0842", name: "Енцо Фернандес", rarity: "Рідкісна", price: 260, img: "cards/0842.jpg", pos: "CM", ovr: 86 },{ id: "0843", name: "Аліссон Бекер", rarity: "Рідкісна", price: 410, img: "cards/0843.jpg", pos: "GK", ovr: 87 },{ id: "0844", name: "Букайо Сака", rarity: "Рідкісна", price: 310, img: "cards/0844.jpg", pos: "RW", ovr: 87 },{ id: "0845", name: "Мохамед Салах", rarity: "Рідкісна", price: 380, img: "cards/0845.jpg", pos: "RM", ovr: 87 },{ id: "0846", name: "Бруну Гімарайнс", rarity: "Рідкісна", price: 280, img: "cards/0846.jpg", pos: "CM", ovr: 86 },{ id: "0847", name: "Дезіре Дуе", rarity: "Рідкісна", price: 350, img: "cards/0847.jpg", pos: "RW", ovr: 86 },{ id: "0848", name: "Ян Облак", rarity: "Рідкісна", price: 340, img: "cards/0848.jpg", pos: "GK", ovr: 88 },{ id: "0849", name: "Яя Туре", rarity: "Ексклюзивна", price: 13480, img: "cards/0849.jpg", pos: "CM", ovr: 127 },{ id: "0850", name: "Дірк Кейт", rarity: "Ексклюзивна", price: 13490, img: "cards/0850.jpg", pos: "CM", ovr: 127 },{ id: "0851", name: "Сократес", rarity: "Легендарна", price: 9000, img: "cards/0851.jpg", pos: "CM", ovr: 127 },{ id: "0852", name: "Карлос Альберто", rarity: "Легендарна", price: 8660, img: "cards/0852.jpg", pos: "RB", ovr: 127 },{ id: "0853", name: "Джордж Бест", rarity: "Легендарна", price: 8670, img: "cards/0853.jpg", pos: "RW", ovr: 127 },{ id: "0854", name: "Усман Дембеле", rarity: "Легендарна", price: 8950, img: "cards/0854.jpg", pos: "ST", ovr: 127 },{ id: "0855", name: "Венсан Компані", rarity: "Легендарна", price: 9000, img: "cards/0855.jpg", pos: "CB", ovr: 127 },{ id: "0856", name: "Ерік Кантона", rarity: "Легендарна", price: 9000, img: "cards/0856.jpg", pos: "ST", ovr: 127 },{ id: "0857", name: "Матеус Кунья", rarity: "Міфічна", price: 5700, img: "cards/0857.jpg", pos: "ST", ovr: 125 },{ id: "0858", name: "Ніко Шлоттербек", rarity: "Міфічна", price: 6000, img: "cards/0858.jpg", pos: "CB", ovr: 125 },{ id: "0859", name: "Антуан Грізманн", rarity: "Міфічна", price: 6000, img: "cards/0859.jpg", pos: "ST", ovr: 125 },{ id: "0860", name: "Хефрен Тюрам", rarity: "Міфічна", price: 6000, img: "cards/0860.jpg", pos: "CDM", ovr: 125 },{ id: "0861", name: "Матео Ковачич", rarity: "Міфічна", price: 5750, img: "cards/0861.jpg", pos: "CM", ovr: 125 },{ id: "0862", name: "Нванкво Кану", rarity: "Міфічна", price: 2000, img: "cards/0862.jpg", pos: "ST", ovr: 74 },{ id: "0863", name: "Бруну Фернандеш", rarity: "Легендарна", price: 8710, img: "cards/0863.jpg", pos: "CAM", ovr: 127 },{ id: "0864", name: "Фелікс Нмеча", rarity: "Міфічна", price: 6000, img: "cards/0864.jpg", pos: "CM", ovr: 125 },{ id: "0865", name: "Джамал Мусіала", rarity: "Міфічна", price: 5700, img: "cards/0865.jpg", pos: "CAM", ovr: 125 },{ id: "0866", name: "Йошко Гвардіол", rarity: "Міфічна", price: 6000, img: "cards/0866.jpg", pos: "LB", ovr: 125 },{ id: "0867", name: "Домінік Собослаї", rarity: "Епічна", price: 2820, img: "cards/0867.jpg", pos: "CM", ovr: 124 },{ id: "0868", name: "Оян Сансет", rarity: "Епічна", price: 880, img: "cards/0868.jpg", pos: "CAM", ovr: 123 },{ id: "0869", name: "Морган Гіббс-Вайт", rarity: "Епічна", price: 3000, img: "cards/0869.jpg", pos: "CAM", ovr: 124 },{ id: "0870", name: "Алексіс Мак Аллістер", rarity: "Епічна", price: 820, img: "cards/0870.jpg", pos: "CM", ovr: 123 },{ id: "0871", name: "Тіджані Рейндерс", rarity: "Епічна", price: 2900, img: "cards/0871.jpg", pos: "CM", ovr: 124 },{ id: "0872", name: "Рональд Араухо", rarity: "Міфічна", price: 6000, img: "cards/0872.jpg", pos: "CB", ovr: 125 },{ id: "0873", name: "Яннік Карраско", rarity: "Епічна", price: 3000, img: "cards/0873.jpg", pos: "LW", ovr: 124 },{ id: "0874", name: "Абеді Пеле", rarity: "Епічна", price: 2960, img: "cards/0874.jpg", pos: "LW", ovr: 124 },{ id: "0875", name: "Пьотр Зелінський", rarity: "Епічна", price: 2860, img: "cards/0875.jpg", pos: "CM", ovr: 124 },{ id: "0876", name: "Маттейс де Лігт", rarity: "Епічна", price: 800, img: "cards/0876.jpg", pos: "CB", ovr: 123 },{ id: "0877", name: "Ферран Торрес", rarity: "Епічна", price: 2930, img: "cards/0877.jpg", pos: "LW", ovr: 124 },{ id: "0878", name: "Лоренцо Пеллегріні", rarity: "Епічна", price: 3000, img: "cards/0878.jpg", pos: "CAM", ovr: 124 },{ id: "0879", name: "Джеймі Каррагер", rarity: "Епічна", price: 800, img: "cards/0879.jpg", pos: "CB", ovr: 123 },{ id: "0880", name: "Амад Діалло", rarity: "Епічна", price: 2880, img: "cards/0880.jpg", pos: "CAM", ovr: 124 },{ id: "0881", name: "Патрік Вієйра", rarity: "Епічна", price: 2830, img: "cards/0881.jpg", pos: "CM", ovr: 124 },{ id: "0883", name: "Зінедін Зідан", rarity: "Легендарна", price: 9000, img: "cards/0883.jpg", pos: "CM", ovr: 127 },{ id: "0884", name: "Фернандо Єрро", rarity: "Легендарна", price: 5210, img: "cards/0884.jpg", pos: "CB", ovr: 121 }];
 
 /* ============================== CONSTANTS ============================== */
 const RARITY_ORDER = ["Рідкісна", "Епічна", "Міфічна", "Легендарна", "Ексклюзивна"];
@@ -330,7 +330,6 @@ const SUPERQUEST_POOL = [
   { id: "sq_legendary", icon: "⭐", label: "Отримай 20 Легендарних карток", target: 20, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Легендарна"]) || 0, rewardXP: 2500, rewardBucks: 1200, boostHours: 12 },
   { id: "sq_exclusive", icon: "👑", label: "Отримай 3 Ексклюзивні картки", target: 3, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Ексклюзивна"]) || 0, rewardXP: 3500, rewardBucks: 2000, boostHours: 24, premiumOnly: true },
   { id: "sq_mythic", icon: "💠", label: "Отримай 40 Міфічних карток", target: 40, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Міфічна"]) || 0, rewardXP: 2800, rewardBucks: 1000, boostHours: 12, premiumOnly: true },
-  { id: "sq_market", icon: "🏷", label: "Продай 40 карток на ринку", target: 40, getStat: (w) => (w.lotStats && w.lotStats.sold) || 0, rewardXP: 2500, rewardBucks: 1200, boostHours: 12 },
 ];
 function eligibleSuperquests(w) { return SUPERQUEST_POOL.filter((q) => PASS_OVER || !q.premiumOnly || w.passPremium); }
 function currentSuperquest(w) {
@@ -358,15 +357,6 @@ const ACHIEVEMENTS = [
   { id: "duel_win_25", icon: "⚔️", name: "Майстер дуелей", desc: "Виграйте 25 дуелей", bonus: 1800, check: (w) => (w.duelStats && w.duelStats.wins || 0) >= 25 },
   { id: "gifter", icon: "🎁", name: "Щедра душа", desc: "Подаруйте картку другу", bonus: 150, check: (w) => (w.giftsSent || 0) >= 1 },
   { id: "pass_complete", icon: "🎓", name: "Пройти пасс", desc: "Досягніть максимального рівня SOCCER PASS за сезон", bonus: 1000, check: (w) => (w.passLevel || 0) >= PASS_MAX_LEVEL },
-  { id: "market_first", icon: "🏷", name: "Перший продаж", desc: "Продайте свою першу картку на ринку", bonus: 150, check: (w) => ((w.lotStats && w.lotStats.sold) || 0) >= 1 },
-  { id: "market_25", icon: "🛍️", name: "Торговець", desc: "Продайте 25 карток на ринку", bonus: 700, check: (w) => ((w.lotStats && w.lotStats.sold) || 0) >= 25 },
-  { id: "market_tycoon", icon: "💹", name: "Магнат біржі", desc: "Заробіть 50 000 💵 на ринку", bonus: 2000, check: (w) => ((w.lotStats && w.lotStats.earned) || 0) >= 50000 },
-  { id: "market_buy_1", icon: "🛒", name: "Перша покупка", desc: "Купіть лот на ринку", bonus: 100, check: (w) => ((w.lotStats && w.lotStats.bought) || 0) >= 1 },
-  { id: "market_buy_25", icon: "🧺", name: "Постійний клієнт", desc: "Купіть 25 лотів на ринку", bonus: 1000, check: (w) => ((w.lotStats && w.lotStats.bought) || 0) >= 25 },
-  { id: "market_hot", icon: "🔥", name: "Нюх на попит", desc: "Продайте картку під час гарячого попиту", bonus: 400, check: (w) => ((w.lotStats && w.lotStats.hot) || 0) >= 1 },
-  { id: "market_hot_10", icon: "🔮", name: "Ринковий провидець", desc: "Продайте 10 карток під час гарячого попиту", bonus: 1500, check: (w) => ((w.lotStats && w.lotStats.hot) || 0) >= 10 },
-  { id: "market_100", icon: "🐺", name: "Біржовий вовк", desc: "Продайте 100 карток на ринку", bonus: 3000, check: (w) => ((w.lotStats && w.lotStats.sold) || 0) >= 100 },
-  { id: "market_earn_250k", icon: "💹", name: "Мільйонер біржі", desc: "Заробіть 250 000 💵 на ринку", bonus: 5000, check: (w) => ((w.lotStats && w.lotStats.earned) || 0) >= 250000 },
   { id: "mythic_10", icon: "💜", name: "Мисливець на міфіків", desc: "Майте 10 різних Міфічних карток", bonus: 1200, check: (w, cards) => cards.filter((c) => c.rarity === "Міфічна" && (w.collection[c.id] || 0) > 0).length >= 10 },
   { id: "legendary_10", icon: "🥇", name: "Легендарний колекціонер", desc: "Майте 10 різних Легендарних карток", bonus: 2500, check: (w, cards) => cards.filter((c) => c.rarity === "Легендарна" && (w.collection[c.id] || 0) > 0).length >= 10 },
   { id: "exclusive_10", icon: "👑", name: "Імператор ексклюзивів", desc: "Майте 10 різних Ексклюзивних карток", bonus: 5000, check: (w, cards) => cards.filter((c) => c.rarity === "Ексклюзивна" && (w.collection[c.id] || 0) > 0).length >= 10 },
@@ -469,8 +459,6 @@ const PASS_DAILY_QUEST_POOL = [
   { id: "duel_win", label: (n) => `Виграй ${n} дуел${n === 1 ? "ь" : "і"}`, min: 1, max: 2 },
   { id: "duel_play", label: (n) => `Зіграй ${n} дуел${n === 1 ? "ь" : "і"}`, min: 1, max: 3 },
   { id: "card_mythic", label: () => `Отримай Міфічну картку`, min: 1, max: 1 },
-  { id: "market_sell", label: (n) => `Продай ${n} ${n === 1 ? "картку" : "картки"} на ринку`, min: 1, max: 3 },
-  { id: "market_buy", label: (n) => `Купи ${n} ${n === 1 ? "лот" : "лоти"} на ринку`, min: 1, max: 2 },
 ];
 function generateDailyQuests(nick) {
   const rng = seededRandom(parseInt(simpleHash(nick + "_passday_" + todayStr()), 16) % 2147483646);
@@ -493,9 +481,6 @@ const DEFAULT_SEASON_QUESTS = [
   { id: "sq6", label: "Виграй 15 дуелей", type: "duel_win", target: 15, xp: 1000, premiumOnly: true },
   { id: "sq7", label: "Отримай Легендарну картку", type: "card_legendary", target: 1, xp: 900, premiumOnly: true },
   { id: "sq8", label: "Зроби 300 прокрутів у казино", type: "spins", target: 300, xp: 1000, premiumOnly: true },
-  { id: "sq9", label: "Продай 10 карток на ринку", type: "market_sell", target: 10, xp: 800, premiumOnly: false },
-  { id: "sq10", label: "Купи 5 лотів гравців на ринку", type: "market_buy", target: 5, xp: 700, premiumOnly: false },
-  { id: "sq11", label: "Заробити 20 000 💵 на ринку", type: "market_earn", target: 20000, xp: 1000, premiumOnly: true },
 ];
 const DAILY_ROULETTE_TABLE = [
   { type: "bucks", amount: 200, weight: 26, label: "200 💵" },
@@ -745,6 +730,7 @@ function newWallet() {
     spinLevel: 0, lastPaidSpinAt: 0, pityLegendary: 0, pityExclusive: 0,
     pityCountMythic: 0, pityCountLegendary: 0, pityCountExclusive: 0,
     passXP: 0, passLevel: 0, passPremium: false, passSeasonId: "", passSettledFor: "", pendingPassCeremony: null, premiumKept: false, passAvatarEmoji: "",
+    myTeam: null,
     passClaimedFree: [], passClaimedPremium: [], passDailyQuests: null,
     passSeasonQuestProgress: {}, passSeasonClaimedQuests: [], passFirstPurchaseUsed: false,
     nickColor: null,
@@ -754,8 +740,7 @@ function newWallet() {
     keys: 0, boosts: {}, passSeasonAvatarUnlocked: false, starsClaimed: {}, partyQuestsProgress: {}, partyQuestsClaimed: [], favoriteCards: [], maintCompClaimed: [], onboardingSeen: false, dismissedBanners: [],
     spinsLifetime: 0, rarityLifetime: {}, superQuestIndex: 0, superQuestBaseline: 0, superQuestClaims: 0,
     abuseQuestProgress: 0, abuseQuestId: "", abuseQuestClaimed: [],
-    lots: [], lotHistory: [], mktBought: {}, lotStats: { sold: 0, earned: 0 }, lotUnseen: 0, lotRankClaimed: [], mktWish: [], cheapCopies: {}, cheapCost: {},
-  };
+      };
 }
 // доповнює старі гаманці (створені до v10) новими полями, щоб нічого не падало
 function withDefaults(w) {
@@ -763,6 +748,10 @@ function withDefaults(w) {
   return { ...base, ...w, cardOrigin: { ...(w && w.cardOrigin) } };
 }
 
+function RainbowWrap({ on, radius, pad, block, children }) {
+  if (!on) return children;
+  return <div className="rainbow-ring" style={{ borderRadius: radius || 12, padding: pad || 2, display: block ? "block" : "flex", width: block ? "100%" : undefined }}>{children}</div>;
+}
 /* ============================== BADGE ============================== */
 // Назва рідкості: "Ексклюзивна" завжди переливається райдужним градієнтом (як її рамка)
 function RName({ r, children, style }) {
@@ -1416,23 +1405,6 @@ function App() {
         } catch (e) { console.error("poll: grants processing failed", e); }
 
         try {
-          refreshMarketFlow(false);
-          // ринок ботів: закриваємо лоти, у яких вийшов час (працює навіть коли вкладка "Колекція" закрита)
-          const lw = walletRef.current;
-          if (lw && (lw.lots || []).some((l) => l.sellAt <= Date.now())) {
-            const res = settleLots(lw, Date.now(), allCards());
-            if (res) {
-              setWallet({ ...res.wallet }); walletRef.current = res.wallet;
-              await sSet("wallet_" + curNick, res.wallet, true);
-              recordMarketFlow(res.sold.map((s) => ({ r: s.rarity, type: "sell" })));
-              if (res.sold.length === 1) showToast(`🏷 ${res.sold[0].buyer} купив «${res.sold[0].name}» за ${res.sold[0].price} 💵`, "ok");
-              else if (res.sold.length > 1) showToast(`🏷 Продано ${res.sold.length} лотів на ${res.sold.reduce((a, x) => a + x.price, 0)} 💵`, "ok");
-              if (res.returned.length) showToast("Частину карток повернуто в колекцію: їх більше немає в грі", "info");
-            }
-          }
-        } catch (e) { console.error("poll: market lots failed", e); }
-
-        try {
           // події друзів (прийняли/видалили) — застосовуємо лише до власного гаманця, без крос-запису
           const friendEvents = (await sGet("friend_events_" + curNick, true)) || [];
           if (friendEvents.length > 0 && walletRef.current) {
@@ -2078,7 +2050,7 @@ function App() {
         )}
         {tab === "casino" && <CasinoSubTabs sub={casinoSub} setSub={setCasinoSub} wallet={wallet} />}
         {tab === "casino" && casinoSub === "duels" && <DuelsHub wallet={wallet} saveWallet={saveWallet} nick={nick} showToast={showToast} allCards={allCards} onEnterDuel={setDuelRoom} maintState={maintState} onGoProfile={() => setTab("profile")} />}
-        {tab === "casino" && casinoSub === "market" && <div style={sx.tabWrap}><MarketSection wallet={wallet} saveWallet={saveWallet} showToast={showToast} cards={allCards()} busyRef={busyRef} /></div>}
+        {tab === "casino" && casinoSub === "team" && <TeamBuilder wallet={wallet} saveWallet={saveWallet} showToast={showToast} cards={allCards()} busyRef={busyRef} />}
         {tab === "casino" && casinoSub === "spin" && <CasinoTab wallet={wallet} saveWallet={saveWallet} profile={profile} nick={nick}
           abuseEvent={abuseEvent} rarityOverride={rarityOverride} allCards={allCards} showToast={showToast} busyRef={busyRef} tileBanner={tileBanner} />}
         {tab === "casino" && casinoSub === "spin" && !passEndedNow && <PassWidget wallet={wallet} nick={nick} allCards={allCards} showToast={showToast} saveWallet={saveWallet}
@@ -2196,7 +2168,6 @@ const NAV_GLOW = { casino: "#22d3ee", shop: "#22d3ee", quests: "#a78bfa", achiev
 function computeNavBadges(w, passEnded, cards) {
   if (!w) return {};
   const out = {};
-  if ((w.lotUnseen || 0) > 0) out.casino = true; // ринок живе на екрані "Крутити"
   {
     const dq = (w.passDailyQuests && w.passDailyQuests.quests) || [];
     const sc = w.passSeasonClaimedQuests || [], sp = w.passSeasonQuestProgress || {};
@@ -2469,11 +2440,11 @@ function passRewardLabel(r) {
 }
 const ONBOARDING_STEPS = [
   { navId: "casino", goTab: "casino", icon: "🎰", title: "Крутити", color: "#fbbf24",
-    desc: "Головний екран: крутіть рулетку й отримуйте футбольні картки п'яти рідкостей — від Рідкісної до Ексклюзивної.\nЄ гарант рідкості, а щодня за вхід ви отримуєте бакси: що довша серія, то більша нагорода.\nУгорі — три вкладки: Рулетка, Дуелі та Ринок." },
-  { sel: '[data-tour="casino-market"]', goTab: "casino", icon: "🏷", title: "Ринок", color: "#22d3ee",
-    desc: "Вкладка «Ринок» на екрані Крутити. Виставляйте свої дублікати: покупець з'явиться за 1–5 хвилин, а сума залежить від курсу рідкості (🔥 гарячий попит платить найбільше).\nТут же можна купувати лоти інших гравців, стежити за курсом, підвищувати ранг торговця й забирати нагороди." },
+    desc: "Головний екран: крутіть рулетку й отримуйте футбольні картки п'яти рідкостей — від Рідкісної до Ексклюзивної.\nЄ гарант рідкості, а щодня за вхід ви отримуєте бакси: що довша серія, то більша нагорода.\nУгорі — три вкладки: Рулетка, Дуелі та Моя команда." },
   { sel: '[data-tour="casino-duels"]', goTab: "casino", icon: "⚔️", title: "Дуелі", color: "#a855f7",
     desc: "Вкладка «Дуелі» на екрані Крутити. Дуель 1 на 1: створіть кімнату й запросіть друга (або зіграйте проти бота). За відведений час обидва крутять рулетку: Міфічна дає +1, Легендарна +3, Ексклюзивна +8 очок.\nГрати можна без ставки або на бакси — переможець забирає банк." },
+  { sel: '[data-tour="casino-team"]', goTab: "casino", icon: "⚽", title: "Моя команда", color: "#22c55e",
+    desc: "Вкладка «Моя команда» на екрані Крутити. Розставте своїх гравців на полі за обраною схемою (4-3-3, 4-2-3-1, 3-4-3 або 5-2-2-1) і додайте 7 запасних.\nКнопка «Вибрати найкращих» сама підбере склад із найвищим рейтингом. Позиції гравцям призначаються автоматично." },
   { navId: "shop", goTab: "shop", icon: "🛒", title: "Магазин", color: "#22d3ee",
     desc: "Тут купуєте картки за бакси. Щохвилини з'являються 10 випадкових знижок, а в каталозі можна купити будь-яку картку за її ціну.\nТам же — картки сезону за ключі зі знижкою." },
   { navId: "quests", goTab: "quests", icon: "📋", title: "Квести", color: "#a78bfa",
@@ -2876,7 +2847,7 @@ function CasinoTab({ wallet, saveWallet, profile, nick, abuseEvent, rarityOverri
             const card = enriched.find((c) => c.id === id);
             const per = Math.round(card.price * 0.4 * bucksMult(abuseEvent, wallet));
             const removeCount = Math.min(cnt, Math.max(0, (w.collection[id] || 0) - 1));
-            gained += salePayout(w, id, removeCount, per, w.collection[id] || 0);
+            gained += per * removeCount;
             w.collection[id] = (w.collection[id] || 0) - removeCount;
           });
           if (!w.bucksInfinite) w.bucks += gained;
@@ -3736,13 +3707,6 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
       if (!w.obtainedAt[slot.card.id]) w.obtainedAt[slot.card.id] = Date.now();
       w.maxCount[slot.card.id] = Math.max(w.maxCount[slot.card.id] || 0, w.collection[slot.card.id]);
       w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[slot.card.id] = isCatalog ? "Куплено в каталозі 🛒" : "Куплено в магазині акцій 🛒";
-      // копії зі знижкою від 50% позначаємо: вони не приймаються на ринок (інакше — безкінечний фарм баксів)
-      if (!isCatalog && slot.price < slot.card.price * 0.5) {
-        w.cheapCopies = w.cheapCopies || {};
-        w.cheapCopies[slot.card.id] = (w.cheapCopies[slot.card.id] || 0) + 1;
-        w.cheapCost = w.cheapCost || {};
-        w.cheapCost[slot.card.id] = (w.cheapCost[slot.card.id] || 0) + slot.price;
-      }
       if (slot.free) { w.freeShopClaimed = true; w.freeSlotBucket = bucket; }
       if (!isCatalog) {
         const cur = (w.dealsBought && w.dealsBought.bucket === bucket) ? w.dealsBought.indices : [];
@@ -3876,836 +3840,250 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
   );
 }
 
-/* ============================== AUCTION (ринок ботів) ============================== */
-// Гравець обирає ЩО і КОЛИ продати, але не ЗА СКІЛЬКИ. Ціну визначає бот:
-// базова ціна картки × коефіцієнт 0.5–0.9 (у лоті фіксується "характер" покупця 0.6–0.8) × ринковий множник рідкості.
-// Ринковий множник — детермінована функція часу (без запису у Firestore), тому однаковий для всіх гравців.
-const LOT_MIN_MS = 60000, LOT_MAX_MS = 300000; // бот приходить через 1–5 хвилин
-const LOT_MIN_F = 0.5, LOT_MAX_F = 0.9;        // жорстка стеля/підлога від базової ціни
-// скільки копій картки можна виставити: копії, куплені в акціях зі знижкою від 50%, на ринок не приймаються (захист від фарму знижок)
-function sellableCopies(w, id) {
-  const have = (w.collection && w.collection[id]) || 0;
-  const cheap = Math.min((w.cheapCopies && w.cheapCopies[id]) || 0, have);
-  return have - cheap;
+/* ============================== МОЯ КОМАНДА (конструктор складу) ============================== */
+// Позиція та "рейтинг" (OVR) картки: якщо задані на самій картці (нові картки мають ці поля) — беремо їх,
+// інакше рахуємо чесний, стабільний замінник за рідкістю/ціною — щоб фіча працювала і для старих 199 карток,
+// у яких позицій ніколи не було збережено.
+const POS_LABEL = { GK: "ВРТ", CB: "ЦЗ", LB: "ЛЗ", RB: "ПЗ", LWB: "ЛФЗ", RWB: "ПФЗ", CDM: "ЦОП", CM: "ЦП", CAM: "ЦАП", LM: "ЛП", RM: "ПП", LW: "ЛВ", RW: "ПВ", ST: "ФРВ" };
+const POS_WEIGHTS = { GK: 7, CB: 18, LB: 8, RB: 8, LWB: 1, RWB: 1, CDM: 10, CM: 15, CAM: 8, LM: 4, RM: 4, LW: 6, RW: 6, ST: 12 };
+const POS_COMPAT = { // з ким позиція частково "сумісна" (для авто-підбору й зіграності)
+  GK: [], CB: ["LB", "RB"], LB: ["LWB", "CB"], RB: ["RWB", "CB"], LWB: ["LB", "LM"], RWB: ["RB", "RM"],
+  CDM: ["CM"], CM: ["CDM", "CAM"], CAM: ["CM", "LM", "RM"], LM: ["LW", "CAM"], RM: ["RW", "CAM"],
+  LW: ["LM", "ST"], RW: ["RM", "ST"], ST: ["LW", "RW", "CAM"],
+};
+const OVR_BAND = { "Рідкісна": [74, 83], "Епічна": [83, 90], "Міфічна": [90, 97], "Легендарна": [97, 105], "Ексклюзивна": [105, 115] };
+const PRICE_BAND = { "Рідкісна": [150, 1000], "Епічна": [800, 3000], "Міфічна": [2000, 6000], "Легендарна": [5000, 9000], "Ексклюзивна": [10000, 18000] };
+function cardPosition(card) {
+  if (!card) return null;
+  if (card.pos && POS_LABEL[card.pos]) return card.pos;
+  const rng = seededRandom((parseInt(simpleHash("pos_" + card.id), 16) % 2147483000) + 3);
+  return weightedPick(rng, POS_WEIGHTS);
 }
-// виплата за миттєвий продаж: "дешеві" копії (куплені зі знижкою від 50%) продаються не дорожче, ніж за них заплатили,
-// і йдуть першими — так знижки не можна перетворити на баксі
-function salePayout(w, id, count, per, haveBefore) {
-  let total = 0, have = haveBefore;
-  let cheap = Math.min((w.cheapCopies && w.cheapCopies[id]) || 0, have);
-  let cost = (w.cheapCost && w.cheapCost[id]) || 0;
-  for (let k = 0; k < count; k++) {
-    if (cheap > 0) { const avg = cost / cheap; total += Math.min(per, Math.round(avg)); cost -= avg; cheap--; }
-    else total += per;
-    have--;
-  }
-  w.cheapCopies = { ...(w.cheapCopies || {}), [id]: cheap };
-  w.cheapCost = { ...(w.cheapCost || {}), [id]: Math.max(0, Math.round(cost)) };
-  return total;
+function cardOVR(card) {
+  if (!card) return 0;
+  if (card.ovr) return Number(card.ovr);
+  const band = OVR_BAND[card.rarity] || [75, 90];
+  const pb = PRICE_BAND[card.rarity] || [100, 20000];
+  const t = Math.min(1, Math.max(0, (card.price - pb[0]) / Math.max(1, pb[1] - pb[0])));
+  return Math.round(band[0] + t * (band[1] - band[0]));
 }
-const LOT_SLOTS = 5; // однакова кількість слотів ринку для всіх гравців
-function lotSlots() { return LOT_SLOTS; }
-// Курс рідкостей — схожий на справжній графік: "шум" кількох масштабів + постійна перевага дорогих рідкостей
-// + "лідер" (75-хвилинні вікна з плавним переходом): найчастіше вигідніше Міфічні / Легендарні / Ексклюзивні, іноді Епічні, дуже рідко Рідкісні.
-const RARITY_BIAS = { "Рідкісна": -0.035, "Епічна": -0.005, "Міфічна": 0.012, "Легендарна": 0.012, "Ексклюзивна": 0.012 };
-const LEADER_WINDOW_MS = 75 * 60000;
-const LEADER_WEIGHTS = { "Рідкісна": 3, "Епічна": 15, "Міфічна": 30, "Легендарна": 27, "Ексклюзивна": 25 };
-function hash01(s) { // FNV-1a + фіналізатор: рівномірне число [0,1)
-  s = String(s);
-  let x = 2166136261;
-  for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); }
-  x ^= x >>> 16; x = Math.imul(x, 2246822507); x ^= x >>> 13; x = Math.imul(x, 3266489909); x ^= x >>> 16;
-  return (x >>> 0) / 4294967296;
+function posMatchLevel(need, have) {
+  if (!need) return 1; // лава запасних — вимог немає
+  if (need === have) return 2;
+  if ((POS_COMPAT[need] || []).includes(have)) return 1;
+  return 0;
 }
-function mktRng(str) { // якісне зерно: сусідні рядки дають незалежні послідовності
-  const r = seededRandom(Math.floor(hash01(str) * 2147483000) + 7);
-  r(); r();
-  return r;
-}
-function vnoise(seed, t, period) {
-  const x = t / period, i = Math.floor(x), f = x - i, sm = f * f * (3 - 2 * f);
-  const a = hash01(seed + "_" + i), b = hash01(seed + "_" + (i + 1));
-  return (a + (b - a) * sm) * 2 - 1; // [-1, 1]
-}
-function leaderOf(win) {
-  const rng = mktRng("lead" + win);
-  return weightedPick(rng, LEADER_WEIGHTS);
-}
-function leaderStrength(rarity, ts) {
-  const x = ts / LEADER_WINDOW_MS, i = Math.floor(x), f = x - i, sm = f * f * (3 - 2 * f);
-  const a = leaderOf(i) === rarity ? 1 : 0, b = leaderOf(i + 1) === rarity ? 1 : 0;
-  return a + (b - a) * sm;
-}
-// ---- спільний стан ринку: обсяги угод УСІХ гравців (продажі/покупки за 5-хвилинками) ----
-// Багато продажів рідкості → її ціна падає (пропозиція перевищує попит), багато покупок → росте.
-// Один спільний запис "market_flow" у Firestore; невеликі втрати при одночасних записах допустимі (це наближений показник).
-const FLOW_BUCKET_MS = 5 * 60000;
-const FLOW_WEIGHTS = [1, 0.85, 0.7, 0.55, 0.4, 0.25]; // вплив угод за останні 30 хв (свіжіші важать більше)
-let MARKET_FLOW = { b: {} };
-let __flowLoadedAt = 0;
-function flowEffect(rarity, ts) {
-  const bi = Math.floor(ts / FLOW_BUCKET_MS);
-  let net = 0;
-  for (let k = 0; k < FLOW_WEIGHTS.length; k++) {
-    const bk = MARKET_FLOW.b && MARKET_FLOW.b[bi - k];
-    const v = bk && bk[rarity];
-    if (v) net += FLOW_WEIGHTS[k] * ((v[1] || 0) - (v[0] || 0)); // куплено − продано
-  }
-  return Math.max(-0.12, Math.min(0.12, net * 0.03));
-}
-async function refreshMarketFlow(force) {
-  if (!force && Date.now() - __flowLoadedAt < 45000) return;
-  __flowLoadedAt = Date.now();
-  const v = await sGet("market_flow", true);
-  if (v && v.b) MARKET_FLOW = v;
-}
-async function recordMarketFlow(events) {
-  try {
-    const cur = (await sGet("market_flow", true)) || { b: {} };
-    const b = cur.b || {};
-    const bi = Math.floor(Date.now() / FLOW_BUCKET_MS);
-    events.forEach((e) => {
-      const bk = b[bi] || (b[bi] = {});
-      const t = bk[e.r] || (bk[e.r] = [0, 0]);
-      t[e.type === "sell" ? 0 : 1] += e.n || 1;
-    });
-    Object.keys(b).forEach((k) => { if (Number(k) < bi - 40) delete b[k]; }); // зберігаємо ~3 години
-    cur.b = b;
-    MARKET_FLOW = cur;
-    __flowLoadedAt = Date.now();
-    await sSet("market_flow", cur, true);
-  } catch (e) { console.error("market flow failed", e); }
-}
-function marketMult(rarity, ts) {
-  // "фонове" хитання стало спокійнішим (×0.6): головний вплив на курс — реальні угоди гравців
-  const drift = 0.05 * vnoise(rarity + "a", ts, 22 * 60000)
-    + 0.028 * vnoise(rarity + "b", ts, 7 * 60000)
-    + 0.012 * vnoise(rarity + "c", ts, 2.3 * 60000)
-    + 0.06 * leaderStrength(rarity, ts);
-  const m = 1 + (RARITY_BIAS[rarity] || 0) + 0.6 * drift + flowEffect(rarity, ts);
-  return Math.min(1.15, Math.max(0.85, m));
-}
-function lotFactor(card, lot, cards) {
-  let f = Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, lot.base * marketMult(card.rarity, lot.sellAt)));
-  // "гарячий попит" у момент угоди піднімає ціну, але ніколи вище стелі 0.9
-  if (cards && hotCardIds(lot.sellAt, cards).includes(card.id)) f = Math.min(LOT_MAX_F, f + 0.15);
-  return f;
-}
-function lotPrice(card, lot, cards) {
-  return Math.max(1, Math.round(card.price * lotFactor(card, lot, cards)));
-}
-function lotBuyerName(lot) {
-  return BOT_NAMES[parseInt(simpleHash(String(lot.id)), 16) % BOT_NAMES.length];
-}
-function createLot(w, card, now) {
-  if (!w || !card || card.tempEvent) return null;
-  if ((w.lots || []).length >= lotSlots(w)) return null;
-  if (sellableCopies(w, card.id) < 1) return null;
-  const n = JSON.parse(JSON.stringify(w));
-  n.collection[card.id] -= 1;
-  const delay = LOT_MIN_MS + Math.random() * (LOT_MAX_MS - LOT_MIN_MS);
-  n.lots = [...(n.lots || []), {
-    id: "lot_" + now + "_" + Math.floor(Math.random() * 1e6),
-    cardId: card.id, listedAt: now, sellAt: Math.round(now + delay), base: 0.6 + Math.random() * 0.2,
-  }];
-  return n;
-}
-function cancelLot(w, lotId) {
-  const lot = (w.lots || []).find((l) => l.id === lotId);
-  if (!lot) return null;
-  const n = JSON.parse(JSON.stringify(w));
-  n.lots = n.lots.filter((l) => l.id !== lotId);
-  n.collection[lot.cardId] = (n.collection[lot.cardId] || 0) + 1;
-  return n;
-}
-// закриває всі лоти, час яких вийшов; повертає null, якщо закривати нічого
-function settleLots(w, now, cards) {
-  const lots = w.lots || [];
-  const due = lots.filter((l) => l.sellAt <= now);
-  if (due.length === 0) return null;
-  const n = { ...w, collection: { ...w.collection }, lots: lots.filter((l) => l.sellAt > now) };
-  const sold = [], returned = [];
-  due.forEach((l) => {
-    const card = cards.find((c) => c.id === l.cardId);
-    if (!card) { n.collection[l.cardId] = (n.collection[l.cardId] || 0) + 1; returned.push(l.cardId); return; }
-    const price = lotPrice(card, l, cards);
-    if (!n.bucksInfinite) n.bucks += price;
-    sold.push({ cardId: card.id, name: card.name, rarity: card.rarity, price, ts: l.sellAt, buyer: lotBuyerName(l), hot: hotCardIds(l.sellAt, cards).includes(card.id) });
-  });
-  n.lotHistory = [...sold.slice().reverse(), ...(w.lotHistory || [])].slice(0, 15);
-  const st = w.lotStats || { sold: 0, earned: 0 };
-  const earnedNow = sold.reduce((a, x) => a + x.price, 0);
-  n.lotStats = { ...st, sold: (st.sold || 0) + sold.length, earned: (st.earned || 0) + earnedNow, hot: (st.hot || 0) + sold.filter((x) => x.hot).length };
-  if (sold.length > 0) {
-    n.lotUnseen = (w.lotUnseen || 0) + sold.length; // підсвітка "Магазин" у нижньому меню
-    // квести: копіюємо вкладені об'єкти, щоб не мутувати старий гаманець
-    if (w.passDailyQuests) n.passDailyQuests = JSON.parse(JSON.stringify(w.passDailyQuests));
-    n.passSeasonQuestProgress = { ...(w.passSeasonQuestProgress || {}) };
-    bumpPassQuest(n, "market_sell", sold.length);
-    bumpPassQuest(n, "market_earn", earnedNow);
-  }
-  return { wallet: n, sold, returned };
-}
-function fmtMMSS(ms) {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
-}
-// ---- живий ринок: лоти гравців (детерміновані від часу, однакові для всіх гравців) ----
-// Ціна лота 0.92–1.10 від базової: навіть найдешевший лот дорожчий за максимальну ціну, яку бот платить гравцеві (0.9),
-// тому "купити на ринку → продати боту" ніколи не приносить прибутку.
-// 60 "полиць": кожна має свою рідкість (стабільний асортимент усіх рідкостей), свій цикл життя лота і власну "історію" замін.
-const LOT_RARITY_PLAN = [].concat(
-  Array(15).fill("Рідкісна"), Array(15).fill("Епічна"), Array(12).fill("Міфічна"), Array(10).fill("Легендарна"), Array(8).fill("Ексклюзивна")
-);
-const BOT_LOT_PERIODS = LOT_RARITY_PLAN.map((_, i) => 6 + ((i * 7 + Math.floor(i / 15) * 4) % 15)); // хвилини життя лота
-const HOT_WINDOW_MS = 20 * 60000; // "гарячий попит" міняється кожні 20 хвилин
-const RAINBOW_STOPS = "#f87171,#fbbf24,#4ade80,#22d3ee,#a855f7,#f87171";
-// градієнти рангів: перший і останній колір однакові, тому анімація зациклюється без стрибка
-const TRADER_RANKS = [
-  { min: 0, name: "Новачок", icon: "🌱", reward: 0, grad: "#14532d,#166534,#22c55e,#166534,#14532d" },
-  { min: 5, name: "Торговець", icon: "🛍️", reward: 500, grad: "#0c4a6e,#0369a1,#22d3ee,#0369a1,#0c4a6e" },
-  { min: 10, name: "Комерсант", icon: "📦", reward: 800, grad: "#134e4a,#0f766e,#2dd4bf,#0f766e,#134e4a" },
-  { min: 20, name: "Ділок", icon: "💼", reward: 1500, grad: "#581c87,#86198f,#ec4899,#86198f,#581c87" },
-  { min: 35, name: "Бізнесмен", icon: "🏢", reward: 2500, grad: "#1e3a8a,#3730a3,#818cf8,#3730a3,#1e3a8a" },
-  { min: 50, name: "Магнат", icon: "🏦", reward: 4000, grad: "#78350f,#b45309,#fbbf24,#b45309,#78350f" },
-  { min: 80, name: "Олігарх", icon: "💎", reward: 6500, grad: "#164e63,#0e7490,#a5f3fc,#0e7490,#164e63" },
-  { min: 120, name: "Легенда біржі", icon: "👑", reward: 10000, grad: "#b91c1c,#b45309,#15803d,#0e7490,#7e22ce,#b91c1c" },
-  { min: 200, name: "Титан ринку", icon: "🏛️", reward: 16000, grad: "#450a0a,#991b1b,#f97316,#991b1b,#450a0a" },
-  { min: 350, name: "Імператор біржі", icon: "🌌", reward: 30000, grad: "#1e1b4b,#581c87,#db2777,#f59e0b,#581c87,#1e1b4b" },
+// формації: координати у % відносно поля (x: 0=лівий край, y: 0=верхній/атака, 100=низ/воротар)
+const FORMATIONS = [
+  { id: "433", name: "4-3-3", slots: [
+    { key: "GK", pos: "GK", x: 50, y: 92 },
+    { key: "LB", pos: "LB", x: 12, y: 74 }, { key: "CB1", pos: "CB", x: 36, y: 80 }, { key: "CB2", pos: "CB", x: 64, y: 80 }, { key: "RB", pos: "RB", x: 88, y: 74 },
+    { key: "CM1", pos: "CM", x: 28, y: 54 }, { key: "CDM", pos: "CDM", x: 50, y: 60 }, { key: "CM2", pos: "CM", x: 72, y: 54 },
+    { key: "LW", pos: "LW", x: 14, y: 26 }, { key: "ST", pos: "ST", x: 50, y: 18 }, { key: "RW", pos: "RW", x: 86, y: 26 },
+  ] },
+  { id: "4231", name: "4-2-3-1", slots: [
+    { key: "GK", pos: "GK", x: 50, y: 92 },
+    { key: "LB", pos: "LB", x: 12, y: 74 }, { key: "CB1", pos: "CB", x: 36, y: 80 }, { key: "CB2", pos: "CB", x: 64, y: 80 }, { key: "RB", pos: "RB", x: 88, y: 74 },
+    { key: "CDM1", pos: "CDM", x: 34, y: 60 }, { key: "CDM2", pos: "CDM", x: 66, y: 60 },
+    { key: "LM", pos: "LM", x: 16, y: 40 }, { key: "CAM", pos: "CAM", x: 50, y: 36 }, { key: "RM", pos: "RM", x: 84, y: 40 },
+    { key: "ST", pos: "ST", x: 50, y: 16 },
+  ] },
+  { id: "343", name: "3-4-3", slots: [
+    { key: "GK", pos: "GK", x: 50, y: 92 },
+    { key: "CB1", pos: "CB", x: 26, y: 78 }, { key: "CB2", pos: "CB", x: 50, y: 82 }, { key: "CB3", pos: "CB", x: 74, y: 78 },
+    { key: "LM", pos: "LM", x: 12, y: 52 }, { key: "CM1", pos: "CM", x: 38, y: 56 }, { key: "CM2", pos: "CM", x: 62, y: 56 }, { key: "RM", pos: "RM", x: 88, y: 52 },
+    { key: "LW", pos: "LW", x: 18, y: 22 }, { key: "ST", pos: "ST", x: 50, y: 16 }, { key: "RW", pos: "RW", x: 82, y: 22 },
+  ] },
+  { id: "52212", name: "5-2-2-1", slots: [
+    { key: "GK", pos: "GK", x: 50, y: 92 },
+    { key: "LWB", pos: "LWB", x: 8, y: 72 }, { key: "CB1", pos: "CB", x: 30, y: 80 }, { key: "CB2", pos: "CB", x: 50, y: 84 }, { key: "CB3", pos: "CB", x: 70, y: 80 }, { key: "RWB", pos: "RWB", x: 92, y: 72 },
+    { key: "CM1", pos: "CM", x: 36, y: 54 }, { key: "CM2", pos: "CM", x: 64, y: 54 },
+    { key: "LW", pos: "LW", x: 26, y: 26 }, { key: "RW", pos: "RW", x: 74, y: 26 },
+    { key: "ST", pos: "ST", x: 50, y: 14 },
+  ] },
 ];
-function RankBadge({ sold, size }) {
-  const { cur } = traderRank(sold || 0);
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: size || 11, fontWeight: 800, color: "#fff", padding: "3px 11px", borderRadius: 999, background: "linear-gradient(90deg," + cur.grad + ")", backgroundSize: "200% 100%", animation: "flowX 8s linear infinite", border: "1px solid #ffffff33", textShadow: "0 1px 3px #0008" }}>{cur.icon} {cur.name}</span>
+function formationOf(id) { return FORMATIONS.find((f) => f.id === id) || FORMATIONS[0]; }
+function emptyTeam() { return { name: "Моя команда", formationId: "433", starters: {}, bench: [] }; }
+function teamOf(w) { const t = w.myTeam; return t && t.formationId ? t : emptyTeam(); }
+
+// картка на слоті поля/лави: маленька, з підписом позиції та попередженням про невідповідність
+function TeamSlot({ need, cardId, cards, onClick, onRemove, bench }) {
+  const card = cardId ? cards.find((c) => c.id === cardId) : null;
+  const level = card ? posMatchLevel(need, cardPosition(card)) : 1;
+  const mismatch = card && level === 0;
+  const ex = card && card.rarity === "Ексклюзивна";
+  const body = card ? (
+    <div style={{ position: "relative" }}>
+      <RainbowWrap on={ex} radius={10} pad={1.5} block>
+        <div style={{ width: bench ? 52 : 58, borderRadius: 8, overflow: "hidden", border: ex ? "none" : (mismatch ? "2px solid #f97316" : "1px solid " + (RARITY_COLOR[card.rarity] || "#374151")) }}>
+          <img src={card.img} alt={card.name} style={{ width: "100%", display: "block", aspectRatio: "3/4", objectFit: "cover" }} />
+        </div>
+      </RainbowWrap>
+      <span style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", fontSize: 9, fontWeight: 800, color: "#0b0f1a", background: "#fbbf24", borderRadius: 5, padding: "0 4px", whiteSpace: "nowrap" }}>{cardOVR(card)}</span>
+      {mismatch && <span style={{ position: "absolute", top: -6, right: -6, fontSize: 12 }} title="Гравець не на своїй позиції">⚠️</span>}
+      {onRemove && <button onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ position: "absolute", top: -6, left: -6, background: "#7f1d1d", color: "#fff", border: "none", borderRadius: 99, width: 16, height: 16, fontSize: 9, lineHeight: "16px", padding: 0, cursor: "pointer" }}>✕</button>}
+    </div>
+  ) : (
+    <div style={{ width: bench ? 52 : 58, aspectRatio: "3/4", borderRadius: 8, border: "2px dashed #ffffff55", background: "#00000033", display: "flex", alignItems: "center", justifyContent: "center", color: "#e5e7eb", fontSize: 20 }}>＋</div>
   );
-}
-function traderRank(sold) {
-  let idx = 0;
-  TRADER_RANKS.forEach((r, i) => { if (sold >= r.min) idx = i; });
-  const cur = TRADER_RANKS[idx], next = TRADER_RANKS[idx + 1] || null;
-  const pct = next ? Math.min(100, Math.round(((sold - cur.min) / (next.min - cur.min)) * 100)) : 100;
-  return { idx, cur, next, pct };
-}
-function botLotWindow(i, now) {
-  const P = BOT_LOT_PERIODS[i] * 60000, off = i * 97000;
-  const inst = Math.floor((now + off) / P);
-  return { inst, start: inst * P - off, end: (inst + 1) * P - off };
-}
-function botLotPool(cards) {
-  return cards.filter((c) => !c.tempEvent).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-}
-function lotVariantKey(i, inst, v) { return i + "_" + inst + (v ? "_r" + v : ""); }
-// v — номер "заміни": після покупки лота на його місці через ~0.5–1 хв з'являється новий (v+1)
-function botLot(i, inst, pool, v) {
-  if (!pool || pool.length === 0) return null;
-  const key = lotVariantKey(i, inst, v || 0);
-  const rng = mktRng("mkt" + key);
-  const rarity = LOT_RARITY_PLAN[i];
-  const sub = pool.filter((c) => c.rarity === rarity);
-  const src = sub.length ? sub : pool;
-  const card = src[Math.floor(rng() * src.length)];
-  const f = 0.92 + rng() * 0.18;
-  const seller = BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
-  let buyer = BOT_NAMES[Math.floor(rng() * BOT_NAMES.length)];
-  if (buyer === seller) buyer = BOT_NAMES[(BOT_NAMES.indexOf(seller) + 1) % BOT_NAMES.length];
-  return { key, card, price: Math.max(1, Math.round(card.price * f)), factor: f, seller, buyer };
-}
-// що зараз лежить на полиці i для цього гравця (куплені лоти зникають і поповнюються)
-function currentSlotLot(i, now, pool, bought) {
-  const wnd = botLotWindow(i, now);
-  for (let v = 0; v < 4; v++) {
-    const key = lotVariantKey(i, wnd.inst, v);
-    const b = bought[key];
-    if (!b) return { wnd, lot: botLot(i, wnd.inst, pool, v), waiting: 0 };
-    const t = typeof b === "number" ? 0 : (b.t || 0);
-    const wait = t + 25000 + hash01(key + "w") * 45000 - now;
-    if (wait > 0) return { wnd, lot: null, waiting: wait };
-  }
-  return { wnd, lot: null, waiting: 0 };
-}
-// "гарячий попит": по одній картці з двох рідкостей, які зараз найбільше в ціні (за курсом ринку); ціна +15 п.п., але не вище 0.9
-function hotCardIds(ts, cards) {
-  const pool = botLotPool(cards);
-  if (pool.length === 0) return [];
-  const win = Math.floor(ts / HOT_WINDOW_MS);
-  const mid = win * HOT_WINDOW_MS + HOT_WINDOW_MS / 2;
-  const rng = mktRng("hot" + win);
-  const ranked = RARITY_ORDER.map((r) => ({ r, m: marketMult(r, mid) })).sort((x, y) => y.m - x.m);
-  const ids = [];
-  for (const { r } of ranked) {
-    if (ids.length >= 2) break;
-    const sub = pool.filter((c) => c.rarity === r);
-    if (sub.length === 0) continue;
-    ids.push(sub[Math.floor(rng() * sub.length)].id);
-  }
-  return ids;
-}
-function lotEstimate(c, ts, hot) {
-  const m = marketMult(c.rarity, ts), bonus = hot ? 0.15 : 0;
-  const cl = (x) => Math.min(LOT_MAX_F, Math.max(LOT_MIN_F, x));
-  return [Math.round(c.price * cl(0.6 * m + bonus)), Math.round(c.price * cl(0.8 * m + bonus))];
-}
-// ---- маленькі візуальні компоненти ----
-// Ексклюзивна рідкість скрізь має однакове оформлення: райдужна рамка (не золота) і райдужний текст
-function RainbowWrap({ on, radius, pad, block, children }) {
-  if (!on) return children;
-  return <div className="rainbow-ring" style={{ borderRadius: radius || 12, padding: pad || 2, display: block ? "block" : "flex", width: block ? "100%" : undefined }}>{children}</div>;
-}
-function MarketChip({ r, col, active, dim, onClick, compact, children }) {
-  const ex = r === "Ексклюзивна";
-  const color = col || RARITY_COLOR[r];
-  const chip = (
-    <span onClick={onClick} style={{
-      fontSize: compact ? 10 : 11, fontWeight: 700, cursor: "pointer", padding: compact ? "3px 6px" : "4px 9px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 2, whiteSpace: "nowrap",
-      background: active ? (ex ? "linear-gradient(90deg," + RAINBOW_STOPS + ")" : color) : "#111827", color: active ? "#1a1400" : (ex ? "#e5e7eb" : color),
-      border: ex ? "none" : "1px solid " + color, opacity: dim ? 0.45 : 1, userSelect: "none",
-    }}>{children}</span>
-  );
-  return ex ? <span className="rainbow-ring" style={{ borderRadius: 999, padding: 1.5, display: "inline-flex", opacity: dim ? 0.55 : 1 }}>{chip}</span> : chip;
-}
-function MarketPicker({ wallet, cards, onPick, chosen, onClose, hotIds }) {
-  const [snap, setSnap] = useState(Date.now());
-  const [rFilter, setRFilter] = useState(null);
-  const [sortBy, setSortBy] = useState("dups");
-  useEffect(() => { const t = setInterval(() => setSnap(Date.now()), 20000); return () => clearInterval(t); }, []);
-  const favSet = new Set(wallet.favoriteCards || []);
-  const hotSet = new Set(hotIds || []);
-  const owned = cards.filter((c) => !c.tempEvent && sellableCopies(wallet, c.id) > 0);
-  const locked = cards.filter((c) => !c.tempEvent && (wallet.collection[c.id] || 0) > 0 && sellableCopies(wallet, c.id) === 0).length;
-  const rankIdx = { "Рідкісна": 0, "Епічна": 1, "Міфічна": 2, "Легендарна": 3, "Ексклюзивна": 4 };
-  const list = owned.filter((c) => !rFilter || c.rarity === rFilter).sort((a, b) => {
-    if (hotSet.has(a.id) !== hotSet.has(b.id)) return hotSet.has(a.id) ? -1 : 1;
-    if (sortBy === "priceDesc") return b.price - a.price;
-    if (sortBy === "priceAsc") return a.price - b.price;
-    if (sortBy === "rarity") return (rankIdx[b.rarity] - rankIdx[a.rarity]) || (b.price - a.price);
-    if (sortBy === "name") return a.name.localeCompare(b.name, "uk");
-    const da = (wallet.collection[a.id] || 0) - 1, db = (wallet.collection[b.id] || 0) - 1;
-    return (db - da) || (b.price - a.price);
-  });
-  const dupTotal = owned.reduce((s, c) => s + Math.max(0, (wallet.collection[c.id] || 0) - 1), 0);
-  const est = (c) => lotEstimate(c, snap, hotSet.has(c.id));
   return (
-    <div style={{ background: "linear-gradient(180deg,#0f172a,#0b0f1a)", border: "1px solid #374151", borderRadius: 16, padding: 12, marginTop: 12, animation: "fadeSlideUp 0.25s ease" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <b style={{ fontSize: 14, color: "#fbbf24" }}>🃏 Що виставляємо?</b>
-        <button style={sx.smallBtn} onClick={onClose}>✕ Закрити</button>
-      </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-        <MarketChip col="#e5e7eb" active={!rFilter} onClick={() => setRFilter(null)}>Усі {owned.length}</MarketChip>
-        {RARITY_ORDER.map((r) => {
-          const n = owned.filter((c) => c.rarity === r).length;
-          if (n === 0) return null;
-          return <MarketChip key={r} r={r} active={rFilter === r} onClick={() => setRFilter(rFilter === r ? null : r)}>{RARITY_EMOJI[r]} {n}</MarketChip>;
-        })}
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 6 }}>
-        <span style={{ fontSize: 11, color: "#9ca3af" }}>Дублікатів: <b style={{ color: "#4ade80" }}>{dupTotal}</b></span>
-        <SortDropdown value={sortBy} onChange={setSortBy} options={[
-          { value: "dups", label: "Спочатку дублікати" },
-          { value: "priceDesc", label: "Ціна: спочатку дорогі" },
-          { value: "priceAsc", label: "Ціна: спочатку дешеві" },
-          { value: "rarity", label: "За рідкістю" },
-          { value: "name", label: "За назвою (А-Я)" },
-        ]} />
-      </div>
-      <div style={{ maxHeight: 330, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(92px, 1fr))", gap: 8, padding: "6px 4px 4px" }}>
-        {list.length === 0 && <p style={{ gridColumn: "1 / -1", fontSize: 12, color: "#6b7280", textAlign: "center" }}>Немає карток, які можна продати</p>}
-        {list.map((c) => {
-          const cnt = wallet.collection[c.id] || 0;
-          const sel = chosen === c.id, hot = hotSet.has(c.id), ex = c.rarity === "Ексклюзивна";
-          const [lo, hi] = est(c);
-          return (
-            <div key={c.id} onClick={() => onPick(sel ? null : c.id)} style={{ position: "relative", cursor: "pointer", transition: "transform 0.15s", transform: sel ? "translateY(-2px)" : "none" }}>
-              <RainbowWrap on={ex} radius={14} pad={2} block>
-                <div style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 5, borderRadius: 12,
-                  background: sel ? "#1f2937" : "#111827", border: ex ? "none" : (sel ? "2px solid #fbbf24" : (hot ? "2px solid #f97316" : "2px solid transparent")),
-                  boxShadow: sel ? "0 0 14px #fbbf2466" : (hot ? "0 0 12px #f9731655" : "none"),
-                }}>
-                  <CardFace card={c} count={cnt} small />
-                  <span style={{ fontSize: 9, color: hot ? "#fdba74" : "#9ca3af", whiteSpace: "nowrap", fontWeight: hot ? 800 : 400 }}>≈ {Math.round((lo + hi) / 2)} 💵</span>
-                </div>
-              </RainbowWrap>
-              {favSet.has(c.id) && <span style={{ position: "absolute", top: -4, left: -4, fontSize: 12, zIndex: 3 }}>⭐</span>}
-              {hot && <span style={{ position: "absolute", bottom: 14, left: -4, fontSize: 12, zIndex: 3 }}>🔥</span>}
-              {cnt > 1 && <span style={{ position: "absolute", top: -4, right: -4, background: "#16a34a", color: "#fff", fontSize: 8, fontWeight: 800, padding: "1px 4px", borderRadius: 4, zIndex: 3 }}>+{cnt - 1}</span>}
-            </div>
-          );
-        })}
-      </div>
-      {locked > 0 && <p style={{ margin: "8px 0 0", fontSize: 10, color: "#6b7280" }}>🔒 {locked} карт. не показано: куплені в акціях зі знижкою від 50% на ринок не приймаються.</p>}
+    <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" }}>
+      {body}
+      {!bench && <span style={{ fontSize: 9, color: "#e5e7eb", background: "#00000066", padding: "0 5px", borderRadius: 4 }}>{POS_LABEL[need]}</span>}
+      {card && <span style={{ fontSize: 8, color: "#d1d5db", maxWidth: bench ? 56 : 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</span>}
     </div>
   );
 }
-function ListConfirmModal({ card, wallet, hot, now, maxQty, onCancel, onConfirm }) {
-  const [qty, setQty] = useState(1);
-  const [lo, hi] = lotEstimate(card, now, hot);
-  const isFav = (wallet.favoriteCards || []).includes(card.id);
-  const have = wallet.collection[card.id] || 0;
-  const takesLast = qty >= have;
+// вибір картки для слота: спершу ті, що підходять за позицією, потім усі решта
+function TeamCardPicker({ wallet, cards, need, usedIds, onPick, onClose }) {
+  const [showAll, setShowAll] = useState(false);
+  const owned = cards.filter((c) => (wallet.collection[c.id] || 0) > 0);
+  const scored = owned.map((c) => ({ c, level: posMatchLevel(need, cardPosition(c)) })).sort((a, b) => b.level - a.level || cardOVR(b.c) - cardOVR(a.c));
+  const fit = scored.filter((x) => x.level > 0 || !need);
+  const rest = scored.filter((x) => x.level === 0 && need);
+  const list = showAll ? scored : (need ? fit : scored);
   return (
-    <div style={sx.modalOverlay} onClick={onCancel}>
-      <div style={{ ...sx.modal, textAlign: "center", border: "1px solid " + RARITY_COLOR[card.rarity] + "88" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "center", animation: "popIn 0.4s ease" }}><CardFace card={card} /></div>
-        <h3 style={{ margin: "10px 0 2px", color: RARITY_COLOR[card.rarity] }}>{RARITY_EMOJI[card.rarity]} {card.name}</h3>
-        <p style={{ margin: "0 0 6px", fontSize: 11, color: "#9ca3af" }}>Ціна картки {fmtBucks(card.price)} · зараз бот платить ~{Math.round((lo + hi) / 2 / card.price * 100)}%</p>
-        {maxQty > 1 && (
-          <div style={{ margin: "8px 0", padding: 8, background: "#111827", borderRadius: 12 }}>
-            <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>Скільки штук виставити (у вас {have}, вільних слотів достатньо для {maxQty})</div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-              <button style={{ ...sx.smallBtn, width: 36, height: 36, fontSize: 18, padding: 0 }} disabled={qty <= 1} onClick={() => setQty(Math.max(1, qty - 1))}>−</button>
-              <b style={{ fontSize: 22, color: "#fbbf24", minWidth: 36 }}>{qty}</b>
-              <button style={{ ...sx.smallBtn, width: 36, height: 36, fontSize: 18, padding: 0 }} disabled={qty >= maxQty} onClick={() => setQty(Math.min(maxQty, qty + 1))}>+</button>
-              <button style={{ ...sx.smallBtn, fontSize: 11 }} onClick={() => setQty(maxQty)}>Макс.</button>
-            </div>
-          </div>
-        )}
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#fbbf24", marginBottom: 4 }}>≈ {Math.round((lo + hi) / 2) * qty} 💵{qty > 1 ? " (усього)" : ""}</div>
-        {hot && <div style={{ fontSize: 12, color: "#fdba74", marginBottom: 4 }}>🔥 Гарячий попит — максимальна ціна!</div>}
-        {(isFav || takesLast) && (
-          <div style={{ fontSize: 11, color: "#fde68a", margin: "6px 0" }}>⚠️ {isFav ? "Це улюблена картка" : ""}{isFav && takesLast ? " і " : ""}{takesLast ? (isFav ? "буде виставлено всі копії" : (have <= 1 ? "Це остання копія" : "Буде виставлено всі копії")) : ""} — у колекції {have <= qty ? "її не буде" : "залишиться менше"}, доки лоти не скасовано.</div>
-        )}
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button style={{ ...sx.smallBtn, flex: 1, padding: "10px 0", fontSize: 12 }} onClick={onCancel}>Скасувати</button>
-          <button style={{ ...sx.primaryBtn, flex: 2 }} onClick={() => onConfirm(qty)}>🏷 Виставити{qty > 1 ? " ×" + qty : ""}</button>
+    <div style={sx.modalOverlay} onClick={onClose}>
+      <div style={{ ...sx.modal, maxHeight: "78vh" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+          <h3 style={{ margin: 0, fontSize: 15, color: "#fbbf24" }}>{need ? "Оберіть на позицію " + POS_LABEL[need] : "Оберіть запасного"}</h3>
+          <button style={{ ...sx.smallBtn, marginLeft: "auto" }} onClick={onClose}>✕</button>
         </div>
-      </div>
-    </div>
-  );
-}
-// міні-графік курсу рідкості за останню годину (24 точки)
-function MarketSpark({ rarity, now, w, h }) {
-  const pts = [];
-  for (let k = 23; k >= 0; k--) pts.push(marketMult(rarity, now - k * 150000));
-  const y = (v) => h - 2 - ((v - 0.85) / 0.3) * (h - 4);
-  const d = pts.map((v, i) => (i / 23 * w).toFixed(1) + "," + y(v).toFixed(1)).join(" ");
-  const area = "0," + h + " " + d + " " + w + "," + h;
-  const ex = rarity === "Ексклюзивна";
-  const col = ex ? "#22d3ee" : RARITY_COLOR[rarity];
-  return (
-    <svg width={w} height={h} viewBox={"0 0 " + w + " " + h} style={{ display: "block" }}>
-      {ex && <defs><linearGradient id="exSpark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#f87171" /><stop offset="0.25" stopColor="#fbbf24" /><stop offset="0.5" stopColor="#4ade80" /><stop offset="0.75" stopColor="#22d3ee" /><stop offset="1" stopColor="#a855f7" /></linearGradient></defs>}
-      <polygon points={area} fill={col} opacity="0.14" />
-      <polyline points={d} fill="none" stroke={ex ? "url(#exSpark)" : col} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={w} cy={y(pts[23])} r="2.8" fill={col} style={{ animation: "mktPulse 1.6s ease-in-out infinite" }} />
-    </svg>
-  );
-}
-function MarketSection({ wallet, saveWallet, showToast, cards, busyRef: sharedBusy }) {
-  const busyRef = useRef(false); // власний прапорець: спільний з іншими вкладками міг "залипнути" і мовчки блокувати дії
-  const [now, setNow] = useState(Date.now());
-  const [picking, setPicking] = useState(false);
-  const [chosen, setChosen] = useState(null);
-  const [showInfo, setShowInfo] = useState(false);
-  const [quickPlan, setQuickPlan] = useState(null);
-  const [feedOpen, setFeedOpen] = useState(false);
-  const pickerRef = useRef(null);
-  const [lotRarity, setLotRarity] = useState(null);
-  const [lotOnly, setLotOnly] = useState(null); // null | "wish"
-  const [lotSort, setLotSort] = useState("rarity");
-  const [lotShown, setLotShown] = useState(9);
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
-  useEffect(() => { refreshMarketFlow(true); const t = setInterval(() => refreshMarketFlow(false), 30000); return () => clearInterval(t); }, []);
-  useEffect(() => { if (picking && pickerRef.current) pickerRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [picking]);
-  // гравець зайшов на ринок — гасимо підсвітку "щось продано" в нижньому меню
-  useEffect(() => { if ((wallet.lotUnseen || 0) > 0) saveWallet({ ...wallet, lotUnseen: 0 }); /* eslint-disable-next-line */ }, [wallet.lotUnseen]);
-
-  const lots = wallet.lots || [];
-  const slots = lotSlots(wallet);
-  const pool = botLotPool(cards);
-  const bought = wallet.mktBought || {};
-  const wish = wallet.mktWish || [];
-  const hotIds = hotCardIds(now, cards);
-  const hotEnd = (Math.floor(now / HOT_WINDOW_MS) + 1) * HOT_WINDOW_MS;
-  const stats = wallet.lotStats || { sold: 0, earned: 0 };
-  const rank = traderRank(stats.sold || 0);
-  const claimed = wallet.lotRankClaimed || [];
-  const claimable = TRADER_RANKS.filter((r, i) => i <= rank.idx && r.reward > 0 && !claimed.includes(r.name));
-
-  async function doList(cardId, qty) {
-    if (busyRef.current) return; busyRef.current = true;
-    try {
-      const card = cards.find((c) => c.id === cardId);
-      let w = wallet, done = 0;
-      for (let k = 0; k < (qty || 1); k++) {
-        const n = createLot(w, card, Date.now());
-        if (!n) break;
-        w = n; done++;
-      }
-      if (done === 0) { setChosen(null); showToast("Не вдалося виставити: немає вільного слота або картку не можна продати", "err"); return; }
-      await saveWallet(w);
-      setChosen(null); setPicking(false);
-      showToast("🏷 «" + card.name + "»" + (done > 1 ? " ×" + done : "") + " на ринку — покупець з'явиться за 1–5 хв", "ok");
-    } finally { busyRef.current = false; }
-  }
-  async function doCancel(lotId) {
-    if (busyRef.current) return; busyRef.current = true;
-    try {
-      const n = cancelLot(wallet, lotId);
-      if (!n) return;
-      await saveWallet(n);
-      showToast("Лот скасовано — картку повернуто в колекцію", "ok");
-    } finally { busyRef.current = false; }
-  }
-  // ⚡ швидко: план — лише ЗАЙВІ копії (по одній копії кожної картки завжди лишається), спершу "гарячі", потім найдорожчі
-  function buildQuickPlan() {
-    const freeN = slots - lots.length;
-    if (freeN <= 0) { showToast("Усі слоти зайняті", "err"); return; }
-    const favSet = new Set(wallet.favoriteCards || []);
-    const extraOf = (c) => Math.min((wallet.collection[c.id] || 0) - 1, sellableCopies(wallet, c.id));
-    const cand = cards.filter((c) => !c.tempEvent && !favSet.has(c.id) && extraOf(c) > 0)
-      .sort((a, b) => ((hotIds.includes(b.id) ? 1 : 0) - (hotIds.includes(a.id) ? 1 : 0)) || (b.price - a.price));
-    const plan = [];
-    let left = freeN;
-    for (const c of cand) {
-      if (left <= 0) break;
-      const n = Math.min(extraOf(c), left);
-      if (n > 0) { plan.push({ id: c.id, n }); left -= n; }
-    }
-    if (plan.length === 0) { showToast("Дублікатів немає — останні копії й улюблені картки не чіпаємо", "err"); return; }
-    setQuickPlan(plan);
-  }
-  async function runQuickPlan() {
-    if (busyRef.current || !quickPlan) return; busyRef.current = true;
-    try {
-      let w = wallet, added = 0;
-      for (const step of quickPlan) {
-        const c = cards.find((x) => x.id === step.id);
-        if (!c) continue;
-        for (let k = 0; k < step.n; k++) {
-          if ((w.collection[step.id] || 0) <= 1) break; // ніколи не забираємо останню копію
-          const n = createLot(w, c, Date.now());
-          if (!n) break;
-          w = n; added++;
-        }
-      }
-      setQuickPlan(null);
-      if (added === 0) { showToast("Нічого виставляти", "err"); return; }
-      await saveWallet(w);
-      showToast("⚡ Виставлено дублікатів: " + added, "ok");
-    } finally { busyRef.current = false; }
-  }
-  async function buyBot(lot, end) {
-    if (busyRef.current) return; busyRef.current = true;
-    try {
-      if (Date.now() >= end) { showToast("Цей лот уже зник з ринку", "err"); return; }
-      if (bought[lot.key]) return;
-      if (!wallet.bucksInfinite && wallet.bucks < lot.price) { showToast("Недостатньо баксів", "err"); return; }
-      const w = JSON.parse(JSON.stringify(wallet));
-      if (!w.bucksInfinite) w.bucks -= lot.price;
-      w.collection[lot.card.id] = (w.collection[lot.card.id] || 0) + 1;
-      if (!w.obtainedAt[lot.card.id]) w.obtainedAt[lot.card.id] = Date.now();
-      w.maxCount[lot.card.id] = Math.max(w.maxCount[lot.card.id] || 0, w.collection[lot.card.id]);
-      const mb = {};
-      Object.keys(w.mktBought || {}).forEach((k) => { const v = w.mktBought[k]; const e = typeof v === "number" ? v : (v && v.e) || 0; if (e > Date.now()) mb[k] = v; });
-      mb[lot.key] = { e: end, t: Date.now() }; w.mktBought = mb;
-      bumpPassQuest(w, "market_buy");
-      recordMarketFlow([{ r: lot.card.rarity, type: "buy" }]);
-      w.lotStats = { ...(w.lotStats || { sold: 0, earned: 0 }), bought: ((w.lotStats && w.lotStats.bought) || 0) + 1 };
-      await saveWallet(w);
-      showToast("Куплено у " + lot.seller + ": " + lot.card.name + "!", "ok");
-    } finally { busyRef.current = false; }
-  }
-  async function toggleWish(cardId) {
-    if (busyRef.current) return; busyRef.current = true;
-    try {
-      const w = JSON.parse(JSON.stringify(wallet));
-      const list = w.mktWish || [];
-      w.mktWish = list.includes(cardId) ? list.filter((x) => x !== cardId) : [...list, cardId].slice(-40);
-      await saveWallet(w);
-    } finally { busyRef.current = false; }
-  }
-  async function claimRank(r) {
-    if (busyRef.current) return; busyRef.current = true;
-    try {
-      const w = JSON.parse(JSON.stringify(wallet));
-      if ((w.lotRankClaimed || []).includes(r.name)) return;
-      w.lotRankClaimed = [...(w.lotRankClaimed || []), r.name];
-      if (!w.bucksInfinite) w.bucks += r.reward;
-      await saveWallet(w);
-      showToast("🎁 Ранг «" + r.name + "»: +" + r.reward + " 💵", "ok");
-    } finally { busyRef.current = false; }
-  }
-
-  // стрічка угод: мої продажі + угоди інших гравців (лоти, що вже зникли з ринку)
-  const feed = [];
-  (wallet.lotHistory || []).slice(0, 4).forEach((h) => feed.push({ ts: h.ts, mine: true, text: "Ви продали «" + h.name + "» гравцеві " + h.buyer, price: h.price, rarity: h.rarity }));
-  for (let i = 0; i < BOT_LOT_PERIODS.length; i += 2) {
-    for (let k = 1; k <= 2; k++) {
-      const wnd = botLotWindow(i, now - k * BOT_LOT_PERIODS[i] * 60000);
-      const l = botLot(i, wnd.inst, pool, 0);
-      if (l && wnd.end <= now && now - wnd.end < 45 * 60000) feed.push({ ts: wnd.end, mine: false, text: l.buyer + " купив «" + l.card.name + "» у " + l.seller, price: l.price, rarity: l.card.rarity });
-    }
-  }
-  feed.sort((a, b) => b.ts - a.ts);
-  const feedShown = feed.slice(0, 5);
-  const lastSale = (wallet.lotHistory || [])[0];
-  const freshSale = lastSale && now - lastSale.ts < 25000 && now - lastSale.ts >= 0 ? lastSale : null;
-
-  // курс
-  const bestR = RARITY_ORDER.map((r) => ({ r, m: marketMult(r, now) })).sort((a, b) => b.m - a.m)[0];
-  const hotLeft = hotEnd - now;
-
-  // лоти гравців
-  const rankIdx2 = { "Рідкісна": 0, "Епічна": 1, "Міфічна": 2, "Легендарна": 3, "Ексклюзивна": 4 };
-  const slotStates = BOT_LOT_PERIODS.map((_, i) => currentSlotLot(i, now, pool, bought));
-  const allLots = slotStates.map((st, i) => (st.lot ? { i, wnd: st.wnd, lot: st.lot } : null)).filter(Boolean);
-  const restocking = slotStates.filter((st) => !st.lot && st.waiting > 0).length;
-  const isNewCard = (id) => !((wallet.collection[id] || 0) > 0) && !(wallet.obtainedAt && wallet.obtainedAt[id]);
-  const lotCounts = {};
-  allLots.forEach((x) => { lotCounts[x.lot.card.rarity] = (lotCounts[x.lot.card.rarity] || 0) + 1; });
-  const wishCount = allLots.filter((x) => wish.includes(x.lot.card.id)).length;
-  const visibleLots = allLots
-    .filter((x) => !lotRarity || x.lot.card.rarity === lotRarity)
-    .filter((x) => lotOnly === "wish" ? wish.includes(x.lot.card.id) : true)
-    .sort((a, b) => {
-      if (lotSort === "priceAsc") return a.lot.price - b.lot.price;
-      if (lotSort === "priceDesc") return b.lot.price - a.lot.price;
-      if (lotSort === "ending") return a.wnd.end - b.wnd.end;
-      if (lotSort === "deal") return a.lot.factor - b.lot.factor;
-      return (rankIdx2[b.lot.card.rarity] - rankIdx2[a.lot.card.rarity]) || (b.lot.price - a.lot.price);
-    });
-
-  const title = { margin: "14px 0 6px", fontSize: 13, color: "#fbbf24", display: "flex", alignItems: "center", gap: 6 };
-  const card = { background: "linear-gradient(160deg,#111827,#0b0f1a)", border: "1px solid #1f2937", borderRadius: 14, padding: 10 };
-  const softChip = (act, col) => ({ fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "4px 9px", borderRadius: 999, background: act ? col : "#111827", color: act ? "#1a1400" : col, border: "1px solid " + col, userSelect: "none", whiteSpace: "nowrap" });
-  return (
-    <>
-      {/* ---- шапка: ранг ---- */}
-      <div style={{ borderRadius: 14, padding: "9px 12px", marginBottom: 8, position: "relative", overflow: "hidden", background: "linear-gradient(90deg," + rank.cur.grad + ")", backgroundSize: "200% 100%", animation: "flowX 9s linear infinite", border: "1px solid #ffffff33" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 24, filter: "drop-shadow(0 2px 6px #0008)" }}>{rank.cur.icon}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <b style={{ fontSize: 14, color: "#fff" }}>{rank.cur.name}</b>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 8, fontWeight: 800, color: "#fecaca", background: "#7f1d1d99", padding: "1px 6px", borderRadius: 99 }}><span style={{ width: 5, height: 5, borderRadius: 99, background: "#ef4444", animation: "mktPulse 1.2s ease-in-out infinite" }} />LIVE</span>
-              <span style={{ fontSize: 10, color: "#e2e8f0" }}>{stats.sold || 0} угод · {fmtBucks(stats.earned || 0)}</span>
-            </div>
-            <div style={{ height: 5, background: "#00000066", borderRadius: 99, margin: "4px 0 2px", overflow: "hidden" }}>
-              <div style={{ width: rank.pct + "%", height: "100%", background: "linear-gradient(90deg,#fde68a,#f59e0b)", borderRadius: 99, transition: "width 0.6s ease" }} />
-            </div>
-            <div style={{ fontSize: 9, color: "#e2e8f0" }}>{rank.next ? "До «" + rank.next.name + "» " + rank.next.icon + ": ще " + (rank.next.min - (stats.sold || 0)) + " угод · нагорода " + rank.next.reward + " 💵" : "Максимальний ранг!"}</div>
-          </div>
-          <button onClick={() => setShowInfo(!showInfo)} style={{ position: "relative", zIndex: 2, background: "#00000066", border: "1px solid #ffffff44", color: "#e5e7eb", borderRadius: 99, width: 26, height: 26, cursor: "pointer", fontSize: 13, padding: 0 }}>ℹ️</button>
-        </div>
-        {claimable.length > 0 && (
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
-            {claimable.map((r) => (
-              <button key={r.name} onClick={() => claimRank(r)} style={{ ...sx.smallBtn, padding: "4px 9px", background: "linear-gradient(90deg,#fbbf24,#f59e0b)", color: "#1a1400", fontWeight: 800, fontSize: 10, animation: "mktPulseBox 1.4s ease-in-out infinite", border: "none" }}>🎁 {r.icon} {r.name}: +{r.reward} 💵</button>
-            ))}
-          </div>
+        {need && rest.length > 0 && (
+          <button onClick={() => setShowAll(!showAll)} style={{ ...sx.smallBtn, fontSize: 10, marginBottom: 8 }}>{showAll ? "Тільки ті, хто підходить" : "Показати всіх (" + owned.length + ")"}</button>
         )}
-        {showInfo && (
-          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#e5e7eb", lineHeight: 1.5, background: "#00000066", borderRadius: 10, padding: 8 }}>
-            1) Виставте картку — її купить бот за 1–5 хвилин. 2) Він платить частину ціни картки (зазвичай 60–80%). 3) Ця частка залежить від угод усіх гравців: хто більше продає рідкість — тим вона дешевша, хто більше купує — тим дорожча. 4) Картки з 🔥 гарячого попиту купують найдорожче (до 90%). 5) За кожен ранг торговця — нагорода. Картки, куплені в акціях зі знижкою від 50%, на ринок не приймаються.
-          </p>
-        )}
-      </div>
-
-      {freshSale && (
-        <div style={{ background: "linear-gradient(90deg,#14532d,#166534)", border: "1px solid #4ade80", borderRadius: 12, padding: "8px 12px", marginBottom: 8, animation: "popIn 0.5s ease", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 20 }}>🤝</span>
-          <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#dcfce7" }}><b>Угода!</b> {freshSale.buyer} купив «{freshSale.name}»</div>
-          <b style={{ color: "#fbbf24", fontSize: 13, whiteSpace: "nowrap" }}>+{freshSale.price} 💵</b>
-        </div>
-      )}
-
-      {/* ---- курс ---- */}
-      <div style={{ background: "linear-gradient(160deg,#111827,#0b0f1a)", border: "1px solid #374151", borderRadius: 14, padding: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 6 }}>
-          <b style={{ fontSize: 13, color: "#67e8f9" }}>📈 Курс ринку</b>
-          <span style={{ fontSize: 10, color: "#6b7280" }}>остання година</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6 }}>
-          {RARITY_ORDER.map((r) => {
-            const m = marketMult(r, now), up = marketMult(r, now + 120000) >= m, pct = Math.round((m - 1) * 100);
-            const best = bestR.r === r, ex = r === "Ексклюзивна";
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(78px, 1fr))", gap: 8 }}>
+          {list.length === 0 && <p style={{ gridColumn: "1 / -1", fontSize: 12, color: "#6b7280", textAlign: "center" }}>Немає карток</p>}
+          {list.map(({ c, level }) => {
+            const inTeam = usedIds.includes(c.id);
+            const cnt = wallet.collection[c.id] || 0;
             return (
-              <RainbowWrap key={r} on={ex} radius={12} pad={2} block>
-                <div style={{ background: "#0b0f1a", borderRadius: 10, padding: "6px 4px", textAlign: "center", border: ex ? "none" : "1px solid " + RARITY_COLOR[r] + (best ? "" : "44"), boxShadow: best ? "0 0 12px " + (ex ? "#a855f7" : RARITY_COLOR[r]) + "66" : "none" }}>
-                  <div style={{ fontSize: 13 }}>{RARITY_EMOJI[r]}</div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: pct >= 0 ? "#4ade80" : "#f87171" }}>{up ? "▲" : "▼"} {pct > 0 ? "+" : ""}{pct}%</div>
-                  <div style={{ display: "flex", justifyContent: "center", marginTop: 2 }}><MarketSpark rarity={r} now={now} w={48} h={20} /></div>
-                </div>
-              </RainbowWrap>
+              <div key={c.id} onClick={() => !inTeam && onPick(c.id)} style={{ position: "relative", opacity: inTeam ? 0.35 : 1, cursor: inTeam ? "not-allowed" : "pointer", textAlign: "center" }}>
+                <CardFace card={c} count={cnt} small />
+                <div style={{ fontSize: 9, color: level === 2 ? "#4ade80" : level === 1 ? "#fbbf24" : "#9ca3af" }}>{cardOVR(c)} · {POS_LABEL[cardPosition(c)]}</div>
+                {inTeam && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#e5e7eb", background: "#00000055", borderRadius: 8 }}>вже в складі</div>}
+              </div>
             );
           })}
         </div>
-        <p style={{ margin: "6px 0 0", fontSize: 11, color: "#9ca3af" }}>💡 Найвигідніше зараз продавати: {RARITY_EMOJI[bestR.r]} <b><RName r={bestR.r} /></b> ({Math.round((bestR.m - 1) * 100) > 0 ? "+" : ""}{Math.round((bestR.m - 1) * 100)}%)</p>
-        <p style={{ margin: "2px 0 0", fontSize: 10, color: "#6b7280" }}>Курс залежить від угод гравців: багато продажів — ціна падає, багато покупок — росте.</p>
       </div>
+    </div>
+  );
+}
+function TeamBuilder({ wallet, saveWallet, cards, showToast, busyRef }) {
+  const team = teamOf(wallet);
+  const form = formationOf(team.formationId);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(team.name);
+  const [picking, setPicking] = useState(null); // { kind: "start"|"bench", key or index, need }
+  const usedIds = [...Object.values(team.starters || {}), ...(team.bench || [])].filter(Boolean);
+  const starterCards = form.slots.map((s) => cards.find((c) => c.id === team.starters[s.key])).filter(Boolean);
+  const benchCards = (team.bench || []).map((id) => cards.find((c) => c.id === id)).filter(Boolean);
+  const allInTeam = [...starterCards, ...benchCards];
+  const teamOVR = allInTeam.length ? Math.round(allInTeam.reduce((s, c) => s + cardOVR(c), 0) / allInTeam.length) : 0;
+  const chemPoints = form.slots.reduce((s, sl) => { const c = cards.find((x) => x.id === team.starters[sl.key]); return s + (c ? posMatchLevel(sl.pos, cardPosition(c)) : 0); }, 0);
+  const chemistry = Math.round((chemPoints / (form.slots.length * 2)) * 100);
 
-      {/* ---- гарячий попит ---- */}
-      <h3 style={title}>🔥 Гарячий попит <span style={{ fontWeight: 400, color: hotLeft < 120000 ? "#f87171" : "#9ca3af", fontSize: 10 }}>· ще {fmtMMSS(hotLeft)} · платять до 90%</span></h3>
-      <div style={{ display: "flex", gap: 8 }}>
-        {hotIds.map((id) => {
-          const c = cards.find((x) => x.id === id);
-          if (!c) return null;
-          const have = sellableCopies(wallet, id);
-          const ex = c.rarity === "Ексклюзивна";
-          return (
-            <div key={id} style={{ flex: 1, minWidth: 0, display: "flex" }}>
-              <RainbowWrap on={ex} radius={14} pad={2} block>
-                <div style={{ borderRadius: 12, padding: 8, background: "linear-gradient(160deg,#431407,#1c1917)", border: ex ? "none" : "1px solid #f97316", display: "flex", gap: 7, alignItems: "center" }}>
-                  <CardFace card={c} small />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: RARITY_COLOR[c.rarity], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
-                    <div style={{ fontSize: 10, margin: "1px 0 3px" }}><RName r={c.rarity} /></div>
-                    {have > 0 && lots.length < slots
-                      ? <button style={{ ...sx.smallBtn, fontSize: 10, padding: "4px 9px", background: "#c2410c", color: "#fff" }} onClick={() => setChosen(id)}>Продати ({have})</button>
-                      : <span style={{ fontSize: 9, color: have > 0 ? "#f87171" : "#9ca3af" }}>{have > 0 ? "Слоти зайняті" : "У вас немає"}</span>}
-                  </div>
-                </div>
-              </RainbowWrap>
-            </div>
-          );
-        })}
-      </div>
+  async function persist(next) { if (busyRef.current) return; busyRef.current = true; try { await saveWallet({ ...wallet, myTeam: next }); } finally { busyRef.current = false; } }
+  function assign(cardId) {
+    const t = { ...team, starters: { ...team.starters }, bench: [...(team.bench || [])] };
+    if (picking.kind === "start") t.starters[picking.key] = cardId;
+    else { const b = [...t.bench]; b[picking.index] = cardId; t.bench = b; }
+    setPicking(null); persist(t);
+  }
+  function clearSlot(kind, keyOrIndex) {
+    const t = { ...team, starters: { ...team.starters }, bench: [...(team.bench || [])] };
+    if (kind === "start") delete t.starters[keyOrIndex]; else t.bench[keyOrIndex] = null;
+    persist(t);
+  }
+  function changeFormation(id) {
+    if (id === team.formationId) return;
+    if (Object.keys(team.starters || {}).length > 0 && !window.confirm("Зміна схеми звільнить розстановку на полі (лава запасних збережеться). Продовжити?")) return;
+    persist({ ...team, formationId: id, starters: {} });
+  }
+  function saveName() { persist({ ...team, name: (nameDraft || "Моя команда").slice(0, 24) }); setEditingName(false); }
+  function autoBuild() {
+    const owned = cards.filter((c) => (wallet.collection[c.id] || 0) > 0).sort((a, b) => cardOVR(b) - cardOVR(a));
+    const used = new Set();
+    const starters = {};
+    form.slots.forEach((s) => {
+      let pick = owned.find((c) => !used.has(c.id) && cardPosition(c) === s.pos)
+        || owned.find((c) => !used.has(c.id) && (POS_COMPAT[s.pos] || []).includes(cardPosition(c)))
+        || owned.find((c) => !used.has(c.id));
+      if (pick) { starters[s.key] = pick.id; used.add(pick.id); }
+    });
+    const bench = [];
+    for (const c of owned) { if (bench.length >= 7) break; if (!used.has(c.id)) { bench.push(c.id); used.add(c.id); } }
+    persist({ ...team, starters, bench });
+    showToast("⚡ Склад підібрано автоматично!", "ok");
+  }
 
-      {/* ---- мої лоти ---- */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "14px 0 6px", gap: 6 }}>
-        <h3 style={{ margin: 0, fontSize: 13, color: "#fbbf24" }}>🎯 Мої лоти <span style={{ color: "#9ca3af", fontWeight: 400 }}>{lots.length}/{slots}</span></h3>
-        <button disabled={lots.length >= slots} onClick={buildQuickPlan} style={{ ...sx.smallBtn, fontSize: 10, padding: "5px 9px", background: lots.length >= slots ? "#1f2937" : "linear-gradient(90deg,#0891b2,#0e7490)", color: "#fff", opacity: lots.length >= slots ? 0.5 : 1 }}>⚡ Дублікати в слоти</button>
-      </div>
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-        {[0, 1, 2, 3, 4].map((s) => {
-          const tileW = 88;
-          const lot = lots[s];
-          if (!lot) {
-            const full = lots.length >= slots;
-            return (
-              <div key={"empty" + s} onClick={() => { if (!full) { setPicking(true); setChosen(null); } }} style={{ flex: "0 0 " + tileW + "px", minHeight: 128, borderRadius: 12, border: "2px dashed #22c55e88", background: "radial-gradient(circle at 50% 40%,#052e1655,#0f1420)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
-                <span style={{ fontSize: 24, color: "#22c55e", animation: "mktPulse 2s ease-in-out infinite" }}>＋</span><span style={{ fontSize: 9, color: "#9ca3af" }}>Вільний слот</span>
-              </div>
-            );
-          }
-          const c = cards.find((x) => x.id === lot.cardId);
-          if (!c) return null;
-          const total = Math.max(1, lot.sellAt - lot.listedAt);
-          const pct = Math.min(100, Math.max(0, ((now - lot.listedAt) / total) * 100));
-          const left = lot.sellAt - now;
-          const hot = hotCardIds(lot.sellAt, cards).includes(c.id);
-          const ex = c.rarity === "Ексклюзивна";
-          return (
-            <div key={lot.id} style={{ flex: "0 0 " + tileW + "px" }}>
-              <RainbowWrap on={ex} radius={14} pad={2} block>
-                <div style={{ borderRadius: 12, padding: "6px 4px", background: "linear-gradient(160deg,#1a2035,#0f1420)", border: ex ? "none" : "1px solid " + RARITY_COLOR[c.rarity] + "88", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative" }}>
-                  {hot && <span style={{ position: "absolute", top: -6, right: -3, fontSize: 13, zIndex: 2 }}>🔥</span>}
-                  <CardFace card={c} small />
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#fbbf24" }}>≈ {lotPrice(c, lot, cards)} 💵</div>
-                  <div style={{ width: "100%", height: 5, background: "#0b0f1a", borderRadius: 99, overflow: "hidden" }}>
-                    <div style={{ width: pct + "%", height: "100%", borderRadius: 99, background: "linear-gradient(90deg," + RARITY_COLOR[c.rarity] + ",#ffffffaa," + RARITY_COLOR[c.rarity] + ")", backgroundSize: "200% 100%", animation: "flowX 2s linear infinite", transition: "width 1s linear" }} />
-                  </div>
-                  <div style={{ fontSize: 9, color: left > 0 ? "#9ca3af" : "#4ade80" }}>{left > 0 ? "⏳ " + fmtMMSS(left) : "🤝 угода…"}</div>
-                  <button style={{ ...sx.smallBtn, fontSize: 9, padding: "2px 6px" }} onClick={() => doCancel(lot.id)}>✕</button>
-                </div>
-              </RainbowWrap>
-            </div>
-          );
-        })}
-      </div>
-
-      {picking && <div ref={pickerRef} style={{ scrollMarginTop: 70 }}><MarketPicker wallet={wallet} cards={cards} chosen={chosen} hotIds={hotIds} onPick={(id) => setChosen(id)} onClose={() => { setPicking(false); setChosen(null); }} /></div>}
-      {chosen && cards.find((c) => c.id === chosen) && (
-        <ListConfirmModal key={chosen} card={cards.find((c) => c.id === chosen)} wallet={wallet} hot={hotIds.includes(chosen)} now={now} maxQty={Math.max(1, Math.min(sellableCopies(wallet, chosen), slots - lots.length))} onCancel={() => setChosen(null)} onConfirm={(q) => doList(chosen, q)} />
-      )}
-      {quickPlan && (
-        <div style={sx.modalOverlay} onClick={() => setQuickPlan(null)}>
-          <div style={{ ...sx.modal, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 4px", color: "#67e8f9" }}>⚡ Швидкий продаж дублікатів</h3>
-            <p style={{ margin: "0 0 10px", fontSize: 11, color: "#9ca3af" }}>Виставляємо лише зайві копії: по одній копії кожної картки залишиться в колекції.</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto", marginBottom: 12 }}>
-              {quickPlan.map((st) => {
-                const c = cards.find((x) => x.id === st.id);
-                if (!c) return null;
-                const [lo, hi] = lotEstimate(c, now, hotIds.includes(c.id));
-                return (
-                  <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#111827", borderRadius: 10, padding: "6px 10px", textAlign: "left" }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: RARITY_COLOR[c.rarity], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hotIds.includes(c.id) ? "🔥 " : ""}{RARITY_EMOJI[c.rarity]} {c.name}</span>
-                    <b style={{ color: "#e5e7eb", fontSize: 12 }}>×{st.n}</b>
-                    <span style={{ fontSize: 10, color: "#fbbf24", whiteSpace: "nowrap" }}>≈ {Math.round((lo + hi) / 2) * st.n} 💵</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...sx.smallBtn, flex: 1, padding: "10px 0", fontSize: 12 }} onClick={() => setQuickPlan(null)}>Скасувати</button>
-              <button style={{ ...sx.primaryBtn, flex: 2 }} onClick={runQuickPlan}>⚡ Виставити</button>
-            </div>
+  return (
+    <div style={sx.tabWrap}>
+      <div style={{ borderRadius: 16, padding: 14, marginBottom: 12, position: "relative", overflow: "hidden", background: "linear-gradient(90deg,var(--primary-a,#22c55e),var(--primary-b,#16a34a),var(--primary-a,#22c55e))", backgroundSize: "200% 100%", animation: "flowX 9s linear infinite", border: "1px solid #ffffff33" }}>
+        <span style={{ position: "absolute", right: -6, top: -12, fontSize: 60, opacity: 0.16, pointerEvents: "none" }}>⚽</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          {editingName ? (
+            <>
+              <input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} maxLength={24} style={{ ...sx.input, margin: 0, padding: "6px 10px", fontSize: 14, flex: 1 }} />
+              <button style={{ ...sx.smallBtn, background: "#052e16", color: "#fff" }} onClick={saveName}>✓</button>
+            </>
+          ) : (
+            <>
+              <b style={{ fontSize: 16, color: "#fff", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{team.name || "Моя команда"}</b>
+              <button onClick={() => { setNameDraft(team.name); setEditingName(true); }} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 14 }}>✏️</button>
+            </>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+          {FORMATIONS.map((f) => (
+            <span key={f.id} onClick={() => changeFormation(f.id)} style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 999, cursor: "pointer", background: team.formationId === f.id ? "#fff" : "#00000044", color: team.formationId === f.id ? "#111827" : "#fff" }}>{f.name}</span>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ flex: 1, background: "#00000044", borderRadius: 10, padding: "6px 10px", textAlign: "center" }}>
+            <div style={{ fontSize: 9, color: "#e5e7eb" }}>ЗАГ (OVR)</div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{teamOVR || "—"}</div>
+          </div>
+          <div style={{ flex: 1, background: "#00000044", borderRadius: 10, padding: "6px 10px", textAlign: "center" }}>
+            <div style={{ fontSize: 9, color: "#e5e7eb" }}>Зіграність</div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{chemistry}</div>
           </div>
         </div>
-      )}
+        <button onClick={autoBuild} style={{ ...sx.smallBtn, width: "100%", marginTop: 8, background: "#fff", color: "#111827", fontWeight: 800 }}>⚡ Вибрати найкращих</button>
+      </div>
+      <p style={{ margin: "0 0 10px", fontSize: 10, color: "#6b7280", lineHeight: 1.4 }}>
+        Зіграність тут — це відповідність позиціям на полі (без клубів/ліг/країн, бо в грі це поки не зберігається). ⚠️ означає, що гравець не на своїй позиції.
+      </p>
 
-      {/* ---- лоти гравців ---- */}
-      <h3 style={{ ...title, marginBottom: 2 }}>🛒 Лоти гравців <span style={{ fontWeight: 400, color: "#9ca3af", fontSize: 10 }}>· {visibleLots.length} із {allLots.length}{restocking > 0 ? " · поповнюється: " + restocking : ""}</span></h3>
-      <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 4, marginBottom: 4 }}>
-        <MarketChip col="#e5e7eb" active={!lotRarity} onClick={() => { setLotRarity(null); setLotShown(9); }}>Усі {allLots.length}</MarketChip>
-        {RARITY_ORDER.map((r) => (
-          <MarketChip key={r} r={r} active={lotRarity === r} dim={!lotCounts[r]} onClick={() => { setLotRarity(lotRarity === r ? null : r); setLotShown(9); }}>{RARITY_EMOJI[r]} {lotCounts[r] || 0}</MarketChip>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "0.72", borderRadius: 16, overflow: "hidden", background: "radial-gradient(ellipse at 50% 0%, #14532d, #052e16 70%)", border: "1px solid #16653499", marginBottom: 14 }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 11%, #ffffff0a 11%, #ffffff0a 22%)" }} />
+        <div style={{ position: "absolute", left: "50%", top: "50%", width: "34%", aspectRatio: "1", border: "1px solid #ffffff33", borderRadius: "50%", transform: "translate(-50%,-50%)" }} />
+        <div style={{ position: "absolute", left: "50%", top: 0, width: 0, height: "100%", borderLeft: "1px solid #ffffff33", transform: "translateX(-50%)" }} />
+        {form.slots.map((s) => (
+          <div key={s.key} style={{ position: "absolute", left: s.x + "%", top: s.y + "%", transform: "translate(-50%,-50%)" }}>
+            <TeamSlot need={s.pos} cardId={team.starters[s.key]} cards={cards} onClick={() => setPicking({ kind: "start", key: s.key, need: s.pos })} onRemove={team.starters[s.key] ? () => clearSlot("start", s.key) : null} />
+          </div>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center", justifyContent: "space-between" }}>
-        <span onClick={() => { setLotOnly(lotOnly === "wish" ? null : "wish"); setLotShown(9); }} style={softChip(lotOnly === "wish", "#fbbf24")}>⭐ Бажані {wishCount}</span>
-        <SortDropdown value={lotSort} onChange={setLotSort} options={[
-          { value: "rarity", label: "За рідкістю" },
-          { value: "priceAsc", label: "Ціна: спочатку дешеві" },
-          { value: "priceDesc", label: "Ціна: спочатку дорогі" },
-          { value: "ending", label: "Скоро зникнуть" },
-          { value: "deal", label: "Найвигідніші" },
-        ]} />
+
+      <h3 style={{ margin: "0 0 8px", fontSize: 13, color: "#fbbf24" }}>🪑 Лава запасних <span style={{ color: "#9ca3af", fontWeight: 400 }}>{benchCards.length}/7</span></h3>
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, marginBottom: 4 }}>
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} style={{ flex: "0 0 auto" }}>
+            <TeamSlot need={null} bench cardId={(team.bench || [])[i]} cards={cards} onClick={() => setPicking({ kind: "bench", index: i, need: null })} onRemove={(team.bench || [])[i] ? () => clearSlot("bench", i) : null} />
+          </div>
+        ))}
       </div>
-      {visibleLots.length === 0 && <p style={{ fontSize: 12, color: "#6b7280", textAlign: "center", margin: "12px 0" }}>{lotOnly === "wish" ? "Позначте картки зірочкою ⭐ на лотах — і вони з'являться тут." : "Зараз немає лотів за цим фільтром — асортимент оновлюється щохвилини."}</p>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-        {visibleLots.slice(0, lotShown).map(({ wnd, lot }) => {
-          const left = wnd.end - now;
-          const lifePct = Math.max(0, Math.min(100, (left / (wnd.end - wnd.start)) * 100));
-          const diff = Math.round((lot.factor - 1) * 100);
-          const urgent = left < 60000;
-          const ex = lot.card.rarity === "Ексклюзивна";
-          const isNew = isNewCard(lot.card.id), wished = wish.includes(lot.card.id);
-          return (
-            <RainbowWrap key={lot.key} on={ex} radius={13} pad={2} block>
-              <div style={{ position: "relative", borderRadius: 11, padding: "6px 4px", background: "linear-gradient(160deg,#151b2e,#0f1420)", border: ex ? "none" : "1px solid " + RARITY_COLOR[lot.card.rarity] + (urgent ? "" : "55"), boxShadow: urgent ? "0 0 12px #f8717188" : "none", animation: urgent ? "mktPulseBox 1s ease-in-out infinite" : "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                <span onClick={() => toggleWish(lot.card.id)} style={{ position: "absolute", top: 3, right: 4, fontSize: 13, cursor: "pointer", zIndex: 3, filter: wished ? "none" : "grayscale(1) opacity(0.5)" }}>⭐</span>
-                {isNew && <span style={{ position: "absolute", top: 4, left: 4, background: "#16a34a", color: "#fff", fontSize: 7, fontWeight: 800, padding: "1px 4px", borderRadius: 4, zIndex: 3 }}>НОВА</span>}
-                <CardFace card={lot.card} small />
-                <div style={{ fontSize: 10, color: "#e5e7eb", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{lot.card.name}</div>
-                <div style={{ fontSize: 12, color: "#fbbf24", fontWeight: 800 }}>{fmtBucks(lot.price)}</div>
-                <div style={{ fontSize: 8.5, color: diff < 0 ? "#4ade80" : "#9ca3af", textAlign: "center", lineHeight: 1.2 }}>{diff === 0 ? "як у каталозі" : diff < 0 ? "−" + Math.abs(diff) + "% від каталогу" : "+" + diff + "% до каталогу"}</div>
-                <div style={{ width: "100%", height: 3, background: "#0b0f1a", borderRadius: 99, overflow: "hidden", margin: "2px 0" }}>
-                  <div style={{ width: lifePct + "%", height: "100%", background: urgent ? "#f87171" : "#22d3ee", transition: "width 1s linear" }} />
-                </div>
-                <div style={{ fontSize: 9, color: urgent ? "#f87171" : "#9ca3af", fontWeight: urgent ? 800 : 400 }}>{urgent ? "⚡ " : "⏱ "}{fmtMMSS(left)}</div>
-                <button onClick={() => buyBot(lot, wnd.end)} style={{ ...sx.smallBtn, width: "100%", padding: "4px 0", fontSize: 11, background: "linear-gradient(90deg,#16a34a,#15803d)" }}>Купити</button>
-              </div>
-            </RainbowWrap>
-          );
-        })}
-      </div>
-      {visibleLots.length > lotShown && (
-        <button onClick={() => setLotShown(lotShown + 9)} style={{ ...sx.smallBtn, width: "100%", marginTop: 8, padding: "9px 0", fontSize: 12 }}>Показати ще ({visibleLots.length - lotShown})</button>
+      {Object.keys(team.starters || {}).length > 0 && (
+        <p style={{ fontSize: 10, color: "#6b7280", marginTop: 6 }}>Торкніться гравця на полі ще раз, щоб замінити його — або натисніть ✕ на лаві, щоб звільнити місце.</p>
       )}
 
-      {/* ---- останні угоди (згорнуто) ---- */}
-      <div onClick={() => setFeedOpen(!feedOpen)} style={{ ...card, marginTop: 14, cursor: "pointer", padding: "8px 10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <b style={{ fontSize: 12, color: "#fbbf24" }}>🔔 Останні угоди</b>
-          {!feedOpen && feedShown[0] && <span style={{ flex: 1, minWidth: 0, fontSize: 10, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>· {feedShown[0].text}</span>}
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "#818cf8" }}>{feedOpen ? "▲" : "▼"}</span>
-        </div>
-        {feedOpen && (
-          <div style={{ marginTop: 6 }}>
-            {feedShown.length === 0 && <p style={{ fontSize: 11, color: "#6b7280", textAlign: "center", margin: 6 }}>Поки що тихо…</p>}
-            {feedShown.map((e, i) => (
-              <div key={e.ts + "_" + i} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", fontSize: 11, padding: "4px 6px", borderRadius: 8, background: e.mine ? "#052e1666" : "transparent", color: e.mine ? "#bbf7d0" : "#9ca3af" }}>
-                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.mine ? "🟢" : "👤"} {e.text}</span>
-                <span className={e.rarity === "Ексклюзивна" ? "rb-text" : undefined} style={{ whiteSpace: "nowrap", color: RARITY_COLOR[e.rarity] || "#fbbf24", fontWeight: 700 }}>{e.price} 💵</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </>
+      {picking && (
+        <TeamCardPicker wallet={wallet} cards={cards} need={picking.need} usedIds={usedIds}
+          onPick={assign} onClose={() => setPicking(null)} />
+      )}
+    </div>
   );
 }
 
@@ -4724,8 +4102,7 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
       if (count > 1) {
         const dup = count - 1;
         totalCopies += dup;
-        const tmp = { cheapCopies: { ...(wallet.cheapCopies || {}) }, cheapCost: { ...(wallet.cheapCost || {}) } };
-        totalBucks += salePayout(tmp, c.id, dup, Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)), count);
+        totalBucks += Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)) * dup;
       }
     });
     return { totalCopies, totalBucks };
@@ -4738,7 +4115,7 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
       const count = w.collection[c.id] || 0;
       if (count > 1) {
         const dup = count - 1;
-        gained += salePayout(w, c.id, dup, Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)), count);
+        gained += Math.round(c.price * 0.4 * bucksMult(abuseEvent, wallet)) * dup;
         w.collection[c.id] = 1;
       }
     });
@@ -4751,10 +4128,9 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
     const card = cards.find((c) => c.id === id);
     if (!card) { showToast("Цю картку більше не існує в грі", "err"); return; }
     if (card.tempEvent) { showToast("Тимчасові/подієві картки не можна продати", "err"); return; }
-    const per = Math.round(card.price * 0.4 * bucksMult(abuseEvent, wallet));
+    const price = Math.round(card.price * 0.4 * bucksMult(abuseEvent, wallet));
     const w = JSON.parse(JSON.stringify(wallet));
     if ((w.collection[id] || 0) < 1) return;
-    const price = salePayout(w, id, 1, per, w.collection[id] || 0);
     w.collection[id] -= 1; if (!w.bucksInfinite) w.bucks += price;
     await saveWallet(w);
     setDetail(null);
@@ -4986,10 +4362,6 @@ function FriendProfileModal({ friend, onClose, allCards }) {
             <CardFace card={favCard} small />
           </div>
         )}
-        <div style={{ textAlign: "center", margin: "4px 0 8px" }}>
-          <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 4px" }}>🏷 Ранг на ринку · угод: {friend.lotSold || 0}</p>
-          <RankBadge sold={friend.lotSold} size={12} />
-        </div>
         <p style={{ textAlign: "center", color: "#9ca3af", fontSize: 12 }}>{Date.now() - friend.lastSeen < 120000 ? "🟢 зараз в мережі" : "востаннє " + timeAgo(friend.lastSeen)}</p>
         <button style={{ ...sx.smallBtn, width: "100%", marginTop: 8 }} onClick={onClose}>Закрити</button>
       </div>
@@ -5335,7 +4707,7 @@ function useFriendsData(wallet, nick, allCards, intervalMs) {
         ownedCards.sort((a, b) => (rarityRank[a.rarity] ?? 9) - (rarityRank[b.rarity] ?? 9));
         favCardId = ownedCards[0] && ownedCards[0].id;
       }
-      list.push({ nick: u.nick, avatar: u.avatar, verified: u.verified, lastSeen: u.lastSeen, createdAt: u.createdAt, cardCount, nickColor: u.nickColor, duelWins, duelLosses, favCardId, lotSold: (fw && fw.lotStats && fw.lotStats.sold) || 0 });
+      list.push({ nick: u.nick, avatar: u.avatar, verified: u.verified, lastSeen: u.lastSeen, createdAt: u.createdAt, cardCount, nickColor: u.nickColor, duelWins, duelLosses, favCardId });
     }));
     setFriendsData(list);
     setIncomingRequests((await sGet("friend_requests_" + nick, true)) || []);
@@ -5417,11 +4789,10 @@ function DuelsHub({ wallet, saveWallet, nick, showToast, allCards, onEnterDuel, 
 }
 // підвкладки екрана "Крутити": Рулетка | Дуелі | Ринок
 function CasinoSubTabs({ sub, setSub, wallet }) {
-  const lots = (wallet.lots || []).length;
   const items = [
     { id: "spin", label: "🎰 Рулетка" },
     { id: "duels", label: "⚔️ Дуелі", tour: "casino-duels" },
-    { id: "market", label: "🏷 Ринок" + (lots > 0 ? " · " + lots : ""), tour: "casino-market" },
+    { id: "team", label: "⚽ Моя команда", tour: "casino-team" },
   ];
   return (
     <div style={{ ...sx.tabWrap, animation: "none" }}>
@@ -6583,6 +5954,7 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
   const [prepLaunchMinutes, setPrepLaunchMinutes] = useState(60);
   const [prepLaunchChance, setPrepLaunchChance] = useState(2);
   const [prepLaunchOrigin, setPrepLaunchOrigin] = useState("");
+  const [giveKey, setGiveKey] = useState("");
   const [cardIsTemp, setCardIsTemp] = useState(false);
   const [cardSeason, setCardSeason] = useState("");
   const [cardTempMinutes, setCardTempMinutes] = useState(60);
@@ -6930,6 +6302,20 @@ function AdminTab({ showToast, setGlobalShopNonce, setAbuseEvent, setRarityOverr
         <input type="number" placeholder="Шанс випадання, % (напр. 2)" value={prepLaunchChance} onChange={(e) => setPrepLaunchChance(e.target.value)} style={sx.input} />
         <input placeholder='Як підписати походження (напр. "SOCCER PASS 🎫")' value={prepLaunchOrigin} onChange={(e) => setPrepLaunchOrigin(e.target.value)} style={sx.input} />
         <button disabled={!prepLaunchKey} style={{ ...sx.smallBtn, opacity: prepLaunchKey ? 1 : 0.5 }} onClick={() => { launchPreparedCard(prepLaunchKey, prepLaunchMinutes, prepLaunchChance, prepLaunchOrigin); setPrepLaunchKey(""); setPrepLaunchOrigin(""); }}>🚀 Випустити</button>
+      </div>
+
+      <div style={{ background: "#1f2937", border: "1px solid #16a34a", borderRadius: 10, padding: 12, marginBottom: 14 }}>
+        <p style={{ fontSize: 12, color: "#86efac", fontWeight: 700, margin: "0 0 8px" }}>🎁 Роздати заготовлену картку всім гравцям одразу (назавжди, по 1 копії)</p>
+        <select value={giveKey} onChange={(e) => setGiveKey(e.target.value)} style={sx.input}>
+          <option value="">— оберіть картку —</option>
+          {Object.keys(PREPARED_EVENT_CARDS).filter((k) => !customCards.some((c) => c.id === PREPARED_EVENT_CARDS[k].id)).map((k) => (
+            <option key={k} value={k}>{PREPARED_EVENT_CARDS[k].name} ({PREPARED_EVENT_CARDS[k].rarity}, {PREPARED_EVENT_CARDS[k].ovr} {POS_LABEL[PREPARED_EVENT_CARDS[k].pos]})</option>
+          ))}
+        </select>
+        <button disabled={!giveKey || (giveaway6412Status && giveaway6412Status.busy)} style={{ ...sx.smallBtn, background: "#16a34a", opacity: giveKey ? 1 : 0.5 }} onClick={() => giveAwayPreparedCard(giveKey)}>
+          {giveaway6412Status && giveaway6412Status.busy ? "Роздаю…" : "🎁 Роздати всім гравцям"}
+        </button>
+        {giveaway6412Status && giveaway6412Status.done && <p style={{ fontSize: 11, color: "#4ade80", marginTop: 6 }}>Видано {giveaway6412Status.count} гравцям ✅</p>}
       </div>
 
       <button style={sx.smallBtn} onClick={forceShopRefresh}>Примусово оновити магазин акцій для всіх</button>
