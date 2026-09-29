@@ -2,11 +2,21 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spin a Soccer Card</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0f1a" />
+<meta name="color-scheme" content="dark" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+<title>Spin Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script>
+  // слабкі телефони: вимикаємо важкі нескінченні анімації (розмиті переливи тощо)
+  try { var __dm = navigator.deviceMemory, __hc = navigator.hardwareConcurrency; if ((__dm && __dm <= 4) || (__hc && __hc <= 4)) document.documentElement.className += " lite"; } catch (e) {}
+</script>
 <style>
   html,body,#root{margin:0;padding:0;height:100%;background:#0b0f1a;}
   * { box-sizing: border-box; }
@@ -56,6 +66,20 @@
   }
   @media (max-width: 360px) {
     .reel-card { width: 92px !important; }
+  }
+  /* мобільні: поля вводу ≥16px (iOS не зумить сторінку), виступи під "чубчик"/жест-панель */
+  @media (max-width: 480px) { input, select, textarea { font-size: 16px !important; } }
+  body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); overscroll-behavior-y: none; }
+  /* нижні шторки/модалки: висота з урахуванням адресного рядка телефона */
+  .sheet-safe { max-height: 86vh; max-height: 86dvh; }
+  @supports (height: 100dvh) { div[style*="max-height: 85vh"] { max-height: 85dvh !important; } }
+  /* економний режим: слабкі пристрої та "зменшити анімацію" в налаштуваннях системи */
+  .lite .rb-text, .lite [style*="flowX"], .lite .nav-glow-bar, .lite .nav-glow-label { animation: none !important; }
+  .lite .rainbow-ring::before { animation-duration: 14s; }
+  @media (prefers-reduced-motion: reduce) {
+    .rb-text, [style*="flowX"], .nav-glow-bar, .nav-glow-label { animation: none !important; }
+    .rainbow-ring::before { animation-duration: 14s; }
+    html { scroll-behavior: auto; }
   }
 </style>
 </head>
@@ -1587,7 +1611,14 @@ function App() {
     if (!w.passDailyQuests || w.passDailyQuests.date !== today) {
       w.passDailyQuests = generateDailyQuests(forNick || nick);
       changed = true;
+    } else if (w.passDailyQuests.quests.some((q) => /^market_/.test(q.id))) {
+      // залишки видаленого ринку: прибираємо старі квести й добираємо нові до трьох
+      const kept = w.passDailyQuests.quests.filter((q) => !/^market_/.test(q.id));
+      generateDailyQuests(forNick || nick).quests.forEach((q) => { if (kept.length < 3 && !kept.some((k) => k.id === q.id)) kept.push(q); });
+      w.passDailyQuests = { ...w.passDailyQuests, quests: kept };
+      changed = true;
     }
+    ["lots", "lotHistory", "mktBought", "lotStats", "lotUnseen", "lotRankClaimed", "mktWish", "cheapCopies", "cheapCost"].forEach((k) => { if (k in w) { delete w[k]; changed = true; } });
     return changed;
   }
 
@@ -2169,7 +2200,7 @@ function computeNavBadges(w, passEnded, cards) {
   if (!w) return {};
   const out = {};
   {
-    const dq = (w.passDailyQuests && w.passDailyQuests.quests) || [];
+    const dq = ((w.passDailyQuests && w.passDailyQuests.quests) || []).filter((q) => !/^market_/.test(q.id));
     const sc = w.passSeasonClaimedQuests || [], sp = w.passSeasonQuestProgress || {};
     let q = dq.some((x) => !x.claimed && x.progress >= x.target)
       || DEFAULT_SEASON_QUESTS.some((x) => (!x.premiumOnly || w.passPremium || PASS_OVER) && !sc.includes(x.id) && (sp[x.id] || 0) >= x.target);
@@ -3143,7 +3174,7 @@ function countdownColor(ms) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 function PassQuestsPane({ wallet, claimPassQuest, partyConfig, setTab, claimSuperquest, changeSuperquest, claimAbuseQuest, abuseEvent }) {
-  const daily = (wallet.passDailyQuests && wallet.passDailyQuests.quests) || [];
+  const daily = ((wallet.passDailyQuests && wallet.passDailyQuests.quests) || []).filter((q) => !/^market_/.test(q.id));
   const seasonProgress = wallet.passSeasonQuestProgress || {};
   const seasonClaimed = wallet.passSeasonClaimedQuests || [];
   const resetIn = useMidnightCountdown();
@@ -3491,9 +3522,9 @@ function DailyRouletteModal({ wallet, saveWallet, allCards, showToast, abuseEven
   );
 }
 const RARITY_EMOJI = { "Рідкісна": "🔹", "Епічна": "🔮", "Міфічна": "💠", "Легендарна": "⭐", "Ексклюзивна": "👑" };
-const HIDDEN_ORIGINS = ["Виграно в казино 🎰", "Party 🎉", "Куплено в каталозі 🛒", "Куплено на ринку гравців 🏷", "Куплено на ринку ботів 🏷"];
+const HIDDEN_ORIGINS = ["Виграно в казино 🎰", "Party 🎉", "Куплено в каталозі 🛒"];
 function originDisplayLabel(origin) {
-  if (!origin || HIDDEN_ORIGINS.includes(origin)) return null;
+  if (!origin || HIDDEN_ORIGINS.includes(origin) || /ринк/i.test(origin)) return null; // старі позначки видаленого ринку не показуємо
   if (PASS_OVER && /SOCCER PASS|Магазин ключів/.test(origin)) return null; // після завершення пасу згадки про нього зникають
   if (origin === "Магазин ключів 🔑") return "SOCCER PASS 🎫";
   return origin;
@@ -3842,22 +3873,28 @@ function ShopTab({ wallet, saveWallet, showToast, globalShopNonce, abuseEvent, r
 
 /* ============================== МОЯ КОМАНДА (конструктор складу) ============================== */
 // Позиція та "рейтинг" (OVR) картки: якщо задані на самій картці (нові картки мають ці поля) — беремо їх,
-// інакше рахуємо чесний, стабільний замінник за рідкістю/ціною — щоб фіча працювала і для старих 199 карток,
-// у яких позицій ніколи не було збережено.
+// інакше рахуємо стабільний замінник за рідкістю/ціною — щоб фіча працювала і для старих карток.
 const POS_LABEL = { GK: "ВРТ", CB: "ЦЗ", LB: "ЛЗ", RB: "ПЗ", LWB: "ЛФЗ", RWB: "ПФЗ", CDM: "ЦОП", CM: "ЦП", CAM: "ЦАП", LM: "ЛП", RM: "ПП", LW: "ЛВ", RW: "ПВ", ST: "ФРВ" };
 const POS_WEIGHTS = { GK: 7, CB: 18, LB: 8, RB: 8, LWB: 1, RWB: 1, CDM: 10, CM: 15, CAM: 8, LM: 4, RM: 4, LW: 6, RW: 6, ST: 12 };
-const POS_COMPAT = { // з ким позиція частково "сумісна" (для авто-підбору й зіграності)
+const POS_COMPAT = { // з ким позиція частково "сумісна"
   GK: [], CB: ["LB", "RB"], LB: ["LWB", "CB"], RB: ["RWB", "CB"], LWB: ["LB", "LM"], RWB: ["RB", "RM"],
   CDM: ["CM"], CM: ["CDM", "CAM"], CAM: ["CM", "LM", "RM"], LM: ["LW", "CAM"], RM: ["RW", "CAM"],
   LW: ["LM", "ST"], RW: ["RM", "ST"], ST: ["LW", "RW", "CAM"],
 };
+const POS_GROUP = { GK: "GK", CB: "DEF", LB: "DEF", RB: "DEF", LWB: "DEF", RWB: "DEF", CDM: "MID", CM: "MID", CAM: "MID", LM: "MID", RM: "MID", LW: "ATT", RW: "ATT", ST: "ATT" };
 const OVR_BAND = { "Рідкісна": [74, 83], "Епічна": [83, 90], "Міфічна": [90, 97], "Легендарна": [97, 105], "Ексклюзивна": [105, 115] };
 const PRICE_BAND = { "Рідкісна": [150, 1000], "Епічна": [800, 3000], "Міфічна": [2000, 6000], "Легендарна": [5000, 9000], "Ексклюзивна": [10000, 18000] };
 function cardPosition(card) {
   if (!card) return null;
   if (card.pos && POS_LABEL[card.pos]) return card.pos;
-  const rng = seededRandom((parseInt(simpleHash("pos_" + card.id), 16) % 2147483000) + 3);
-  return weightedPick(rng, POS_WEIGHTS);
+  // стабільний "випадковий" вибір за id картки (якісний хеш — щоб позиції розподілялись рівномірно)
+  const s = "pos_" + card.id;
+  let x = 2166136261;
+  for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); }
+  x ^= x >>> 16; x = Math.imul(x, 2246822507); x ^= x >>> 13; x = Math.imul(x, 3266489909); x ^= x >>> 16;
+  let r = ((x >>> 0) / 4294967296) * Object.values(POS_WEIGHTS).reduce((a, b) => a + b, 0);
+  for (const k of Object.keys(POS_WEIGHTS)) { if (r < POS_WEIGHTS[k]) return k; r -= POS_WEIGHTS[k]; }
+  return "CM";
 }
 function cardOVR(card) {
   if (!card) return 0;
@@ -3867,104 +3904,369 @@ function cardOVR(card) {
   const t = Math.min(1, Math.max(0, (card.price - pb[0]) / Math.max(1, pb[1] - pb[0])));
   return Math.round(band[0] + t * (band[1] - band[0]));
 }
+// 2 = своя позиція, 1 = сумісна, 0 = чужа
 function posMatchLevel(need, have) {
   if (!need) return 1; // лава запасних — вимог немає
   if (need === have) return 2;
   if ((POS_COMPAT[need] || []).includes(have)) return 1;
   return 0;
 }
-// формації: координати у % відносно поля (x: 0=лівий край, y: 0=верхній/атака, 100=низ/воротар)
-const FORMATIONS = [
-  { id: "433", name: "4-3-3", slots: [
-    { key: "GK", pos: "GK", x: 50, y: 92 },
-    { key: "LB", pos: "LB", x: 12, y: 74 }, { key: "CB1", pos: "CB", x: 36, y: 80 }, { key: "CB2", pos: "CB", x: 64, y: 80 }, { key: "RB", pos: "RB", x: 88, y: 74 },
-    { key: "CM1", pos: "CM", x: 28, y: 54 }, { key: "CDM", pos: "CDM", x: 50, y: 60 }, { key: "CM2", pos: "CM", x: 72, y: 54 },
-    { key: "LW", pos: "LW", x: 14, y: 26 }, { key: "ST", pos: "ST", x: 50, y: 18 }, { key: "RW", pos: "RW", x: 86, y: 26 },
-  ] },
-  { id: "4231", name: "4-2-3-1", slots: [
-    { key: "GK", pos: "GK", x: 50, y: 92 },
-    { key: "LB", pos: "LB", x: 12, y: 74 }, { key: "CB1", pos: "CB", x: 36, y: 80 }, { key: "CB2", pos: "CB", x: 64, y: 80 }, { key: "RB", pos: "RB", x: 88, y: 74 },
-    { key: "CDM1", pos: "CDM", x: 34, y: 60 }, { key: "CDM2", pos: "CDM", x: 66, y: 60 },
-    { key: "LM", pos: "LM", x: 16, y: 40 }, { key: "CAM", pos: "CAM", x: 50, y: 36 }, { key: "RM", pos: "RM", x: 84, y: 40 },
-    { key: "ST", pos: "ST", x: 50, y: 16 },
-  ] },
-  { id: "343", name: "3-4-3", slots: [
-    { key: "GK", pos: "GK", x: 50, y: 92 },
-    { key: "CB1", pos: "CB", x: 26, y: 78 }, { key: "CB2", pos: "CB", x: 50, y: 82 }, { key: "CB3", pos: "CB", x: 74, y: 78 },
-    { key: "LM", pos: "LM", x: 12, y: 52 }, { key: "CM1", pos: "CM", x: 38, y: 56 }, { key: "CM2", pos: "CM", x: 62, y: 56 }, { key: "RM", pos: "RM", x: 88, y: 52 },
-    { key: "LW", pos: "LW", x: 18, y: 22 }, { key: "ST", pos: "ST", x: 50, y: 16 }, { key: "RW", pos: "RW", x: 82, y: 22 },
-  ] },
-  { id: "52212", name: "5-2-2-1", slots: [
-    { key: "GK", pos: "GK", x: 50, y: 92 },
-    { key: "LWB", pos: "LWB", x: 8, y: 72 }, { key: "CB1", pos: "CB", x: 30, y: 80 }, { key: "CB2", pos: "CB", x: 50, y: 84 }, { key: "CB3", pos: "CB", x: 70, y: 80 }, { key: "RWB", pos: "RWB", x: 92, y: 72 },
-    { key: "CM1", pos: "CM", x: 36, y: 54 }, { key: "CM2", pos: "CM", x: 64, y: 54 },
-    { key: "LW", pos: "LW", x: 26, y: 26 }, { key: "RW", pos: "RW", x: 74, y: 26 },
-    { key: "ST", pos: "ST", x: 50, y: 14 },
-  ] },
-];
-function formationOf(id) { return FORMATIONS.find((f) => f.id === id) || FORMATIONS[0]; }
-function emptyTeam() { return { name: "Моя команда", formationId: "433", starters: {}, bench: [] }; }
-function teamOf(w) { const t = w.myTeam; return t && t.formationId ? t : emptyTeam(); }
+// штраф до рейтингу за неправильну позицію (воротар ↔ польовий — найбільший)
+function mismatchPenalty(need, have) {
+  if (!need || !have) return 0;
+  const lvl = posMatchLevel(need, have);
+  if (lvl === 2) return 0;
+  if (lvl === 1) return 2;
+  return (need === "GK" || have === "GK") ? 30 : 8;
+}
 
-// картка на слоті поля/лави: маленька, з підписом позиції та попередженням про невідповідність
-function TeamSlot({ need, cardId, cards, onClick, onRemove, bench }) {
-  const card = cardId ? cards.find((c) => c.id === cardId) : null;
-  const level = card ? posMatchLevel(need, cardPosition(card)) : 1;
-  const mismatch = card && level === 0;
-  const ex = card && card.rarity === "Ексклюзивна";
-  const body = card ? (
-    <div style={{ position: "relative" }}>
-      <RainbowWrap on={ex} radius={10} pad={1.5} block>
-        <div style={{ width: bench ? 52 : 58, borderRadius: 8, overflow: "hidden", border: ex ? "none" : (mismatch ? "2px solid #f97316" : "1px solid " + (RARITY_COLOR[card.rarity] || "#374151")) }}>
-          <img src={card.img} alt={card.name} style={{ width: "100%", display: "block", aspectRatio: "3/4", objectFit: "cover" }} />
-        </div>
-      </RainbowWrap>
-      <span style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", fontSize: 9, fontWeight: 800, color: "#0b0f1a", background: "#fbbf24", borderRadius: 5, padding: "0 4px", whiteSpace: "nowrap" }}>{cardOVR(card)}</span>
-      {mismatch && <span style={{ position: "absolute", top: -6, right: -6, fontSize: 12 }} title="Гравець не на своїй позиції">⚠️</span>}
-      {onRemove && <button onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ position: "absolute", top: -6, left: -6, background: "#7f1d1d", color: "#fff", border: "none", borderRadius: 99, width: 16, height: 16, fontSize: 9, lineHeight: "16px", padding: 0, cursor: "pointer" }}>✕</button>}
-    </div>
-  ) : (
-    <div style={{ width: bench ? 52 : 58, aspectRatio: "3/4", borderRadius: 8, border: "2px dashed #ffffff55", background: "#00000033", display: "flex", alignItems: "center", justifyContent: "center", color: "#e5e7eb", fontSize: 20 }}>＋</div>
-  );
+// ---- схеми: рядки від атаки (вгорі) до воротаря (внизу); sp — "розкид" рядка по ширині (1 = на всю ширину) ----
+const D4 = ["LB", "CB", "CB", "RB"], D3 = ["CB", "CB", "CB"], D5 = ["LWB", "CB", "CB", "CB", "RWB"], GKR = ["GK"];
+const FORMATION_DEFS = [
+  // рекомендовані
+  { id: "433", name: "4-3-3 Утримання", group: "rec", rows: [["LW", "ST", "RW"], ["CM", "CDM", "CM"], D4, GKR] },
+  { id: "41212n", name: "4-1-2-1-2 Вузька", group: "rec", rows: [["ST", "ST"], ["CAM"], ["CM", "CM"], ["CDM"], D4, GKR], sp: [0.5, 1, 0.55, 1, 1, 1] },
+  { id: "4231n", name: "4-2-3-1 Вузька", group: "rec", rows: [["ST"], ["CAM", "CAM", "CAM"], ["CDM", "CDM"], D4, GKR], sp: [1, 0.75, 0.5, 1, 1] },
+  { id: "442f", name: "4-4-2 У лінію", group: "rec", rows: [["ST", "ST"], ["LM", "CM", "CM", "RM"], D4, GKR], sp: [0.5, 1, 1, 1] },
+  { id: "352", name: "3-5-2", group: "rec", rows: [["ST", "ST"], ["CAM"], ["LM", "CDM", "CDM", "RM"], D3, GKR], sp: [0.5, 1, 1, 0.8, 1] },
+  { id: "5212", name: "5-2-1-2", group: "rec", rows: [["ST", "ST"], ["CAM"], ["CM", "CM"], D5, GKR], sp: [0.5, 1, 0.55, 1, 1] },
+  // усі схеми
+  { id: "433p", name: "4-3-3", group: "all", rows: [["LW", "ST", "RW"], ["CM", "CM", "CM"], D4, GKR] },
+  { id: "4331", name: "4-3-3 1 АП", group: "all", rows: [["LW", "ST", "RW"], ["CAM"], ["CM", "CM"], D4, GKR], sp: [1, 1, 0.6, 1, 1] },
+  { id: "4332", name: "4-3-3 2 ОП", group: "all", rows: [["LW", "ST", "RW"], ["CM"], ["CDM", "CDM"], D4, GKR], sp: [1, 1, 0.6, 1, 1] },
+  { id: "433f9", name: "4-3-3 Хибна дев'ятка", group: "all", rows: [["LW", "RW"], ["ST"], ["CM", "CM", "CM"], D4, GKR], sp: [0.85, 1, 1, 1, 1] },
+  { id: "4312", name: "4-3-1-2", group: "all", rows: [["ST", "ST"], ["CAM"], ["CM", "CM", "CM"], D4, GKR], sp: [0.5, 1, 1, 1, 1] },
+  { id: "4321", name: "4-3-2-1", group: "all", rows: [["ST"], ["CAM", "CAM"], ["CM", "CM", "CM"], D4, GKR], sp: [1, 0.55, 1, 1, 1] },
+  { id: "41212w", name: "4-1-2-1-2 Широка", group: "all", rows: [["ST", "ST"], ["CAM"], ["LM", "RM"], ["CDM"], D4, GKR], sp: [0.5, 1, 1, 1, 1, 1] },
+  { id: "4231", name: "4-2-3-1 Широка", group: "all", rows: [["ST"], ["LM", "CAM", "RM"], ["CDM", "CDM"], D4, GKR], sp: [1, 1, 0.5, 1, 1] },
+  { id: "451", name: "4-5-1", group: "all", rows: [["ST"], ["LM", "CAM", "CAM", "RM"], ["CDM"], D4, GKR] },
+  { id: "451f", name: "4-5-1 У лінію", group: "all", rows: [["ST"], ["LM", "CM", "CM", "CM", "RM"], D4, GKR] },
+  { id: "4222", name: "4-2-2-2", group: "all", rows: [["ST", "ST"], ["CAM", "CAM"], ["CDM", "CDM"], D4, GKR], sp: [0.5, 0.75, 0.5, 1, 1] },
+  { id: "442h", name: "4-4-2 Утримання", group: "all", rows: [["ST", "ST"], ["LM", "CDM", "CDM", "RM"], D4, GKR], sp: [0.5, 1, 1, 1] },
+  { id: "4411", name: "4-4-1-1", group: "all", rows: [["ST"], ["CAM"], ["LM", "CM", "CM", "RM"], D4, GKR] },
+  { id: "4411f", name: "4-4-1-1 У лінію", group: "all", rows: [["ST"], ["CAM"], ["LM", "CDM", "CDM", "RM"], D4, GKR] },
+  { id: "4213", name: "4-2-1-3", group: "all", rows: [["LW", "ST", "RW"], ["CAM"], ["CDM", "CDM"], D4, GKR], sp: [1, 1, 0.5, 1, 1] },
+  { id: "414", name: "4-1-4-1", group: "all", rows: [["ST"], ["LM", "CM", "CM", "RM"], ["CDM"], D4, GKR] },
+  { id: "4132", name: "4-1-3-2", group: "all", rows: [["ST", "ST"], ["LM", "CM", "RM"], ["CDM"], D4, GKR], sp: [0.5, 1, 1, 1, 1] },
+  { id: "424", name: "4-2-4", group: "all", rows: [["LW", "ST", "ST", "RW"], ["CM", "CM"], D4, GKR], sp: [1, 0.5, 1, 1] },
+  { id: "3142", name: "3-1-4-2", group: "all", rows: [["ST", "ST"], ["LM", "CM", "CM", "RM"], ["CDM"], D3, GKR], sp: [0.5, 1, 1, 0.8, 1] },
+  { id: "3511", name: "3-5-1-1", group: "all", rows: [["ST"], ["CAM"], ["LM", "CM", "CDM", "CM", "RM"], D3, GKR], sp: [1, 1, 1, 0.8, 1] },
+  { id: "3412", name: "3-4-1-2", group: "all", rows: [["ST", "ST"], ["CAM"], ["LM", "CM", "CM", "RM"], D3, GKR], sp: [0.5, 1, 1, 0.8, 1] },
+  { id: "3421", name: "3-4-2-1", group: "all", rows: [["ST"], ["CAM", "CAM"], ["LM", "CM", "CM", "RM"], D3, GKR], sp: [1, 0.55, 1, 0.8, 1] },
+  { id: "343", name: "3-4-3", group: "all", rows: [["LW", "ST", "RW"], ["LM", "CM", "CM", "RM"], D3, GKR], sp: [1, 1, 0.8, 1] },
+  { id: "343f", name: "3-4-3 У лінію", group: "all", rows: [["LW", "ST", "RW"], ["LM", "CDM", "CDM", "RM"], D3, GKR], sp: [1, 1, 0.8, 1] },
+  { id: "343r", name: "3-4-3 Ромб", group: "all", rows: [["LW", "ST", "RW"], ["CAM"], ["LM", "RM"], ["CDM"], D3, GKR], sp: [1, 1, 1, 1, 0.8, 1] },
+  { id: "52212", name: "5-2-2-1", group: "all", rows: [["ST"], ["LW", "RW"], ["CM", "CM"], D5, GKR], sp: [1, 0.7, 0.55, 1, 1] },
+  { id: "532", name: "5-3-2", group: "all", rows: [["ST", "ST"], ["CM", "CDM", "CM"], D5, GKR], sp: [0.5, 1, 1, 1] },
+  { id: "541", name: "5-4-1", group: "all", rows: [["ST"], ["LM", "CM", "CM", "RM"], D5, GKR] },
+];
+function buildFormation(def) {
+  const count = {}, seen = {};
+  def.rows.forEach((r) => r.forEach((p) => { count[p] = (count[p] || 0) + 1; }));
+  const slots = [];
+  def.rows.forEach((row, ri) => {
+    const spread = (def.sp && def.sp[ri]) || 1;
+    row.forEach((pos, ci) => {
+      seen[pos] = (seen[pos] || 0) + 1;
+      const key = count[pos] === 1 ? pos : pos + seen[pos]; // ключі збігаються зі старими збереженими складами
+      slots.push({ key, pos, row: ri, x: 50 + (((ci + 0.5) / row.length) - 0.5) * 100 * spread });
+    });
+  });
+  return { id: def.id, name: def.name, group: def.group, rows: def.rows.length, maxRow: Math.max(...def.rows.map((r) => r.length)), slots };
+}
+const FORMATIONS = FORMATION_DEFS.map(buildFormation);
+function formationOf(id) { return FORMATIONS.find((f) => f.id === id) || FORMATIONS[0]; }
+// розміри карток і поля так, щоб жодні дві картки (разом із підписами) не перекривались
+function computeLayout(form, W) {
+  const lines = form.rows, pad = 8, gap = 4, label = 34;
+  const byWidth = Math.floor(W / (form.maxRow + 0.7));
+  const byHeight = Math.floor((((620 - pad * 2) / lines) - gap - label) * 3 / 4);
+  const cardW = Math.max(38, Math.min(60, byWidth, byHeight));
+  const cardH = Math.round(cardW * 4 / 3);
+  const slotH = cardH + label;
+  const minH = pad * 2 + lines * slotH + (lines - 1) * gap;
+  const H = Math.max(minH, Math.round(W * 1.0));
+  const step = lines > 1 ? (H - pad * 2 - slotH) / (lines - 1) : 0;
+  const slotW = cardW + 6;
+  return { cardW, cardH, slotH, slotW, H, place: (s) => ({ left: Math.round(W * s.x / 100), top: Math.round(pad + s.row * step) }) };
+}
+function emptyTeam() { return { name: "Моя команда", formationId: "433", starters: {}, bench: [] }; }
+// нормалізований склад: лише слоти поточної схеми, лава рівно з 7 місць, без дублікатів карток
+function teamOf(w) {
+  const t = w.myTeam && w.myTeam.formationId ? w.myTeam : emptyTeam();
+  const form = formationOf(t.formationId);
+  const seen = new Set(), starters = {};
+  form.slots.forEach((s) => { const id = (t.starters || {})[s.key]; if (id && !seen.has(id)) { starters[s.key] = id; seen.add(id); } });
+  const bench = Array.from({ length: 7 }, (_, i) => { const id = (t.bench || [])[i]; if (id && !seen.has(id)) { seen.add(id); return id; } return null; });
+  return { name: t.name || "Моя команда", formationId: form.id, starters, bench };
+}
+// при зміні схеми гравці лишаються на своїх позиціях, решта — на лаву (якщо є місце)
+function carryOverTeam(team, newForm, cardsById) {
+  const oldForm = formationOf(team.formationId);
+  const prev = oldForm.slots.map((s) => team.starters[s.key]).filter(Boolean);
+  const used = new Set(), starters = {};
+  const passes = [(pid, s) => cardPosition(cardsById[pid]) === s.pos, (pid, s) => (POS_COMPAT[s.pos] || []).includes(cardPosition(cardsById[pid]))];
+  passes.forEach((ok) => {
+    newForm.slots.forEach((s) => {
+      if (starters[s.key]) return;
+      const id = prev.find((pid) => !used.has(pid) && cardsById[pid] && ok(pid, s));
+      if (id) { starters[s.key] = id; used.add(id); }
+    });
+  });
+  const bench = [...team.bench];
+  prev.filter((id) => !used.has(id)).forEach((id) => { const k = bench.findIndex((b) => !b); if (k >= 0) bench[k] = id; });
+  return { ...team, formationId: newForm.id, starters, bench };
+}
+// угорський алгоритм (мінімальна вартість призначень), n ≤ m
+function hungarian(cost) {
+  const n = cost.length, m = cost[0].length, INF = 1e18;
+  const u = new Array(n + 1).fill(0), v = new Array(m + 1).fill(0), p = new Array(m + 1).fill(0), way = new Array(m + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0;
+    const minv = new Array(m + 1).fill(INF), used = new Array(m + 1).fill(false);
+    do {
+      used[j0] = true;
+      const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= m; j++) {
+        if (used[j]) continue;
+        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= m; j++) { if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta; }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const ans = new Array(n).fill(-1);
+  for (let j = 1; j <= m; j++) if (p[j]) ans[p[j] - 1] = j - 1;
+  return ans;
+}
+// "Вибрати найкращих": оптимальний розподіл (а не жадібний). Воротар — лише у ворота, польові — ніколи у ворота.
+function autoBuildTeam(cards, collection, form) {
+  const owned = cards.filter((c) => (collection[c.id] || 0) > 0).map((c) => ({ c, pos: cardPosition(c), ovr: cardOVR(c) }));
+  const n = form.slots.length, BIG = 1e6;
+  const cost = form.slots.map((s) => {
+    const row = owned.map((x) => {
+      if ((x.pos === "GK") !== (s.pos === "GK")) return BIG; // воротар ↔ польовий заборонено
+      return -(x.ovr - mismatchPenalty(s.pos, x.pos) + x.c.price / 1e6);
+    });
+    for (let k = 0; k < n; k++) row.push(0); // "порожні" колонки: слот можна лишити порожнім
+    return row;
+  });
+  const ans = hungarian(cost);
+  const starters = {}, used = new Set();
+  form.slots.forEach((s, i) => {
+    const j = ans[i];
+    if (j >= 0 && j < owned.length && cost[i][j] < BIG / 2) { starters[s.key] = owned[j].c.id; used.add(owned[j].c.id); }
+  });
+  // лава: по одному воротарю, двоє захисників, двоє півзахисників, двоє нападників, решту — найкращі за рейтингом
+  const rest = owned.filter((x) => !used.has(x.c.id)).sort((a, b) => b.ovr - a.ovr || b.c.price - a.c.price);
+  const bench = [];
+  const take = (pred, k) => { for (const x of rest) { if (bench.length >= 7 || k <= 0) break; if (!used.has(x.c.id) && pred(x)) { bench.push(x.c.id); used.add(x.c.id); k--; } } };
+  take((x) => x.pos === "GK", 1);
+  take((x) => POS_GROUP[x.pos] === "DEF", 2);
+  take((x) => POS_GROUP[x.pos] === "MID", 2);
+  take((x) => POS_GROUP[x.pos] === "ATT", 2);
+  take((x) => x.pos !== "GK", 7);
+  take((x) => true, 7);
+  while (bench.length < 7) bench.push(null);
+  return { starters, bench, noGK: !owned.some((x) => x.pos === "GK") };
+}
+
+// ---- візуальні компоненти ----
+function useElementWidth() {
+  const ref = useRef(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setW(Math.round(el.getBoundingClientRect().width));
+    update();
+    let ro = null;
+    if (typeof ResizeObserver !== "undefined") { ro = new ResizeObserver(update); ro.observe(el); }
+    window.addEventListener("resize", update);
+    return () => { if (ro) ro.disconnect(); window.removeEventListener("resize", update); };
+  }, []);
+  return [ref, w];
+}
+function FormationThumb({ form }) {
+  const lines = form.rows;
   return (
-    <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" }}>
-      {body}
-      {!bench && <span style={{ fontSize: 9, color: "#e5e7eb", background: "#00000066", padding: "0 5px", borderRadius: 4 }}>{POS_LABEL[need]}</span>}
-      {card && <span style={{ fontSize: 8, color: "#d1d5db", maxWidth: bench ? 56 : 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.name}</span>}
+    <svg viewBox="0 0 100 74" style={{ width: "100%", display: "block", borderRadius: 8 }}>
+      <rect width="100" height="74" fill="#3a7a2b" />
+      <rect y="0" width="100" height="18" fill="#ffffff10" /><rect y="37" width="100" height="18" fill="#ffffff10" />
+      <rect x="5" y="3" width="90" height="68" fill="none" stroke="#ffffff66" strokeWidth="0.7" />
+      <line x1="5" x2="95" y1="37" y2="37" stroke="#ffffff66" strokeWidth="0.7" />
+      <circle cx="50" cy="37" r="8" fill="none" stroke="#ffffff66" strokeWidth="0.7" />
+      <rect x="30" y="56" width="40" height="15" fill="none" stroke="#ffffff55" strokeWidth="0.7" />
+      <rect x="30" y="3" width="40" height="15" fill="none" stroke="#ffffff55" strokeWidth="0.7" />
+      {form.slots.map((s) => (
+        <circle key={s.key} cx={5 + s.x * 0.9} cy={lines > 1 ? 10 + s.row * (56 / (lines - 1)) : 37} r="3" fill="#fff" />
+      ))}
+    </svg>
+  );
+}
+function FormationSheet({ currentId, onConfirm, onClose }) {
+  const [sel, setSel] = useState(currentId);
+  const selForm = formationOf(sel);
+  const groups = [["rec", "Рекомендовані"], ["all", "Усі схеми"]];
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000000aa", display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain" }} onClick={onClose}>
+      <div className="sheet-safe" style={{ width: "100%", maxWidth: 520, background: "linear-gradient(180deg,#111827,#0b0f1a)", border: "1px solid #374151", borderBottom: "none", borderTopLeftRadius: 18, borderTopRightRadius: 18, display: "flex", flexDirection: "column", animation: "fadeSlideUp 0.25s ease" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 8px", borderBottom: "1px solid #1f2937" }}>
+          <span style={{ color: "#4ade80", fontSize: 18 }}>↔</span>
+          <b style={{ fontSize: 15, color: "#fff", flex: 1 }}>{selForm.name}</b>
+          <button style={{ ...sx.smallBtn, minHeight: 34 }} onClick={onClose}>✕</button>
+        </div>
+        <div style={{ overflowY: "auto", padding: "8px 12px", flex: 1, overscrollBehavior: "contain" }}>
+          {groups.map(([g, title]) => (
+            <div key={g}>
+              <div style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "#9ca3af", letterSpacing: 1, margin: "10px 0 8px", textTransform: "uppercase" }}>{title}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {FORMATIONS.filter((f) => f.group === g).map((f) => {
+                  const on = sel === f.id, cur = currentId === f.id;
+                  return (
+                    <div key={f.id} onClick={() => setSel(f.id)} style={{ position: "relative", cursor: "pointer", borderRadius: 10, padding: 4, background: on ? "#0c4a6e" : "#1f2937", border: on ? "2px solid #22d3ee" : "2px solid transparent" }}>
+                      {cur && <span style={{ position: "absolute", top: 0, right: 0, background: "#16a34a", color: "#fff", fontSize: 11, fontWeight: 800, padding: "1px 7px", borderBottomLeftRadius: 8, borderTopRightRadius: 8, zIndex: 2 }}>✓</span>}
+                      <FormationThumb form={f} />
+                      <div style={{ fontSize: 11, textAlign: "center", color: "#e5e7eb", padding: "4px 0 1px", lineHeight: 1.2 }}>{f.name}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))" }}>
+          <button style={{ ...sx.primaryBtn, fontWeight: 800 }} onClick={() => onConfirm(sel)}>Підтвердити</button>
+        </div>
+      </div>
     </div>
   );
 }
-// вибір картки для слота: спершу ті, що підходять за позицією, потім усі решта
-function TeamCardPicker({ wallet, cards, need, usedIds, onPick, onClose }) {
-  const [showAll, setShowAll] = useState(false);
-  const owned = cards.filter((c) => (wallet.collection[c.id] || 0) > 0);
-  const scored = owned.map((c) => ({ c, level: posMatchLevel(need, cardPosition(c)) })).sort((a, b) => b.level - a.level || cardOVR(b.c) - cardOVR(a.c));
-  const fit = scored.filter((x) => x.level > 0 || !need);
-  const rest = scored.filter((x) => x.level === 0 && need);
-  const list = showAll ? scored : (need ? fit : scored);
+// картка на слоті: розмір задає схема (cardW), тож підписи не налазять на сусідів
+function TeamSlot({ need, cardId, cards, cardW, onClick, onRemove }) {
+  const card = cardId ? cards.find((c) => c.id === cardId) : null;
+  const have = card ? cardPosition(card) : null;
+  const pen = card ? mismatchPenalty(need, have) : 0;
+  const eff = card ? cardOVR(card) - pen : 0;
+  const ex = card && card.rarity === "Ексклюзивна";
+  const cardH = Math.round(cardW * 4 / 3);
   return (
-    <div style={sx.modalOverlay} onClick={onClose}>
-      <div style={{ ...sx.modal, maxHeight: "78vh" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 15, color: "#fbbf24" }}>{need ? "Оберіть на позицію " + POS_LABEL[need] : "Оберіть запасного"}</h3>
-          <button style={{ ...sx.smallBtn, marginLeft: "auto" }} onClick={onClose}>✕</button>
+    <div onClick={onClick} style={{ width: cardW + 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" }}>
+      {card ? (
+        <div style={{ position: "relative", width: cardW }}>
+          <RainbowWrap on={ex} radius={9} pad={1.5} block>
+            <div style={{ width: "100%", height: cardH, borderRadius: 8, overflow: "hidden", border: ex ? "none" : (pen >= 8 ? "2px solid #f97316" : "1px solid " + (RARITY_COLOR[card.rarity] || "#374151")) }}>
+              <img src={card.img} alt={card.name} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
+            </div>
+          </RainbowWrap>
+          <span style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", fontSize: 9, fontWeight: 800, color: "#0b0f1a", background: pen > 0 ? "#fb923c" : "#fbbf24", borderRadius: 5, padding: "0 4px", whiteSpace: "nowrap" }}>{eff}</span>
+          {pen >= 8 && <span style={{ position: "absolute", bottom: 3, left: 2, fontSize: 11, lineHeight: 1 }}>⚠️</span>}
+          {onRemove && <button onClick={(e) => { e.stopPropagation(); onRemove(); }} aria-label="Прибрати" style={{ position: "absolute", top: 2, right: 2, background: "#7f1d1dcc", color: "#fff", border: "none", borderRadius: 99, width: 18, height: 18, minHeight: 0, fontSize: 9, lineHeight: "18px", padding: 0, cursor: "pointer" }}>✕</button>}
         </div>
-        {need && rest.length > 0 && (
-          <button onClick={() => setShowAll(!showAll)} style={{ ...sx.smallBtn, fontSize: 10, marginBottom: 8 }}>{showAll ? "Тільки ті, хто підходить" : "Показати всіх (" + owned.length + ")"}</button>
-        )}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(78px, 1fr))", gap: 8 }}>
-          {list.length === 0 && <p style={{ gridColumn: "1 / -1", fontSize: 12, color: "#6b7280", textAlign: "center" }}>Немає карток</p>}
-          {list.map(({ c, level }) => {
-            const inTeam = usedIds.includes(c.id);
-            const cnt = wallet.collection[c.id] || 0;
-            return (
-              <div key={c.id} onClick={() => !inTeam && onPick(c.id)} style={{ position: "relative", opacity: inTeam ? 0.35 : 1, cursor: inTeam ? "not-allowed" : "pointer", textAlign: "center" }}>
-                <CardFace card={c} count={cnt} small />
-                <div style={{ fontSize: 9, color: level === 2 ? "#4ade80" : level === 1 ? "#fbbf24" : "#9ca3af" }}>{cardOVR(c)} · {POS_LABEL[cardPosition(c)]}</div>
-                {inTeam && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#e5e7eb", background: "#00000055", borderRadius: 8 }}>вже в складі</div>}
-              </div>
-            );
+      ) : (
+        <div style={{ width: cardW, height: cardH, borderRadius: 8, border: "2px dashed #ffffff55", background: "#00000033", display: "flex", alignItems: "center", justifyContent: "center", color: "#e5e7eb", fontSize: 20 }}>＋</div>
+      )}
+      {need && <span style={{ fontSize: 9, color: "#e5e7eb", background: "#00000066", padding: "0 5px", borderRadius: 4, lineHeight: "13px", marginTop: card ? 4 : 0 }}>{POS_LABEL[need]}</span>}
+      {card && <span style={{ fontSize: 8, color: "#d1d5db", maxWidth: cardW + 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "11px" }}>{card.name}</span>}
+    </div>
+  );
+}
+// вибір картки для слота: пошук, фільтр за рідкістю/позицією/улюбленими, сортування (як у колекції); порціями — швидко на телефоні
+const PICK_SORTS = [
+  { value: "best", label: "Найкращі для позиції" },
+  { value: "ovrDesc", label: "Рейтинг: спочатку вищі" },
+  { value: "ovrAsc", label: "Рейтинг: спочатку нижчі" },
+  { value: "rarity", label: "За рідкістю" },
+  { value: "priceDesc", label: "Ціна: спочатку дорогі" },
+  { value: "priceAsc", label: "Ціна: спочатку дешеві" },
+  { value: "name", label: "За назвою (А-Я)" },
+  { value: "count", label: "За кількістю копій" },
+  { value: "date", label: "Спочатку нові" },
+];
+const PICK_GROUPS = [["ALL", "Усі"], ["GK", "ВРТ"], ["DEF", "Захист"], ["MID", "Центр"], ["ATT", "Атака"]];
+function TeamCardPicker({ wallet, cards, need, currentCard, usedIds, onPick, onRemove, onClose }) {
+  const [q, setQ] = useState("");
+  const [fitOnly, setFitOnly] = useState(!!need);
+  const [rar, setRar] = useState(null);
+  const [grp, setGrp] = useState("ALL");
+  const [favOnly, setFavOnly] = useState(false);
+  const [sortBy, setSortBy] = useState(need ? "best" : "ovrDesc");
+  const [limit, setLimit] = useState(30);
+  const reset = () => setLimit(30);
+  const favSet = new Set(wallet.favoriteCards || []);
+  const rarityRank = { "Ексклюзивна": 0, "Легендарна": 1, "Міфічна": 2, "Епічна": 3, "Рідкісна": 4 };
+  const query = q.trim().toLowerCase();
+  const all = cards.filter((c) => (wallet.collection[c.id] || 0) > 0).map((c) => {
+    const pos = cardPosition(c);
+    return { c, pos, level: posMatchLevel(need, pos), fit: !need || (posMatchLevel(need, pos) > 0 && (pos === "GK") === (need === "GK")) };
+  });
+  // "область" пошуку без фільтра рідкості — за нею рахуємо лічильники на чіпах
+  const scope = all.filter((x) => (!need || !fitOnly || x.fit)
+    && (!query || x.c.name.toLowerCase().includes(query))
+    && (grp === "ALL" || POS_GROUP[x.pos] === grp)
+    && (!favOnly || favSet.has(x.c.id)));
+  const list = scope.filter((x) => !rar || x.c.rarity === rar).sort((a, b) => {
+    const byOvr = cardOVR(b.c) - cardOVR(a.c);
+    if (sortBy === "best") return (b.fit - a.fit) || (b.level - a.level) || byOvr;
+    if (sortBy === "ovrAsc") return -byOvr;
+    if (sortBy === "rarity") return (rarityRank[a.c.rarity] - rarityRank[b.c.rarity]) || byOvr;
+    if (sortBy === "priceDesc") return b.c.price - a.c.price;
+    if (sortBy === "priceAsc") return a.c.price - b.c.price;
+    if (sortBy === "name") return a.c.name.localeCompare(b.c.name, "uk");
+    if (sortBy === "count") return (wallet.collection[b.c.id] || 0) - (wallet.collection[a.c.id] || 0);
+    if (sortBy === "date") return (wallet.obtainedAt[b.c.id] || 0) - (wallet.obtainedAt[a.c.id] || 0);
+    return byOvr;
+  });
+  const shown = list.slice(0, limit);
+  const chip = (active, color) => ({ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, cursor: "pointer", fontWeight: 700, borderRadius: 999, padding: "5px 10px", userSelect: "none", color: active ? "#1a1400" : color, background: active ? color : "#111827", border: "1px solid " + color });
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000000aa", display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain" }} onClick={onClose}>
+      <div className="sheet-safe" style={{ width: "100%", maxWidth: 520, background: "linear-gradient(180deg,#111827,#0b0f1a)", border: "1px solid #374151", borderBottom: "none", borderTopLeftRadius: 18, borderTopRightRadius: 18, display: "flex", flexDirection: "column", animation: "fadeSlideUp 0.25s ease" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 6px" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ margin: 0, fontSize: 15, color: "#fbbf24" }}>{need ? "Оберіть на позицію " + POS_LABEL[need] : "Оберіть запасного"}</h3>
+            {currentCard && <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Зараз: {currentCard.name} · {cardOVR(currentCard)}</div>}
+          </div>
+          {currentCard && <button style={{ ...sx.smallBtn, color: "#fca5a5", minHeight: 34 }} onClick={onRemove}>Прибрати</button>}
+          <button style={{ ...sx.smallBtn, minHeight: 34 }} onClick={onClose}>✕</button>
+        </div>
+        <div style={{ padding: "0 14px 6px" }}>
+          <input value={q} onChange={(e) => { setQ(e.target.value); reset(); }} placeholder="🔍 Пошук за прізвищем" style={{ ...sx.input, margin: 0, padding: "9px 12px", width: "100%", boxSizing: "border-box" }} />
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "0 14px 6px" }}>
+          {RARITY_ORDER.map((r) => {
+            const n = scope.filter((x) => x.c.rarity === r).length;
+            const active = rar === r;
+            const inner = <span onClick={() => { setRar(active ? null : r); reset(); }} style={{ ...chip(active, RARITY_COLOR[r]), border: r === "Ексклюзивна" ? "none" : "1px solid " + RARITY_COLOR[r], opacity: n || active ? 1 : 0.45 }}>{RARITY_EMOJI[r]} {n}</span>;
+            return r === "Ексклюзивна" ? <span key={r} className="rainbow-ring" style={{ borderRadius: 999, padding: 1.5, display: "inline-flex" }}>{inner}</span> : <React.Fragment key={r}>{inner}</React.Fragment>;
           })}
+          <span onClick={() => { setFavOnly(!favOnly); reset(); }} style={chip(favOnly, "#fbbf24")}>⭐ Улюблені</span>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", padding: "0 14px 8px" }}>
+          {need && <span onClick={() => { setFitOnly(!fitOnly); reset(); }} style={chip(fitOnly, "#4ade80")}>✔ Лише підходящі</span>}
+          {(!need || !fitOnly) && PICK_GROUPS.map(([g, label]) => <span key={g} onClick={() => { setGrp(g); reset(); }} style={chip(grp === g, "#67e8f9")}>{label}</span>)}
+          <span style={{ marginLeft: "auto" }}><SortDropdown value={sortBy} onChange={(v) => { setSortBy(v); reset(); }} options={PICK_SORTS} /></span>
+        </div>
+        <div style={{ fontSize: 10, color: "#6b7280", padding: "0 14px 4px" }}>Знайдено: {list.length}</div>
+        <div style={{ overflowY: "auto", padding: "0 14px 12px", flex: 1, overscrollBehavior: "contain" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(78px, 1fr))", gap: 10 }}>
+            {shown.length === 0 && <p style={{ gridColumn: "1 / -1", fontSize: 12, color: "#6b7280", textAlign: "center", padding: "12px 0" }}>{need && fitOnly ? "Немає гравців на цю позицію. Вимкніть «Лише підходящі», щоб побачити всіх." : "Нічого не знайдено"}</p>}
+            {shown.map(({ c, level, pos, fit }) => {
+              const inTeam = usedIds.includes(c.id);
+              return (
+                <div key={c.id} onClick={() => !inTeam && onPick(c.id)} style={{ position: "relative", opacity: inTeam ? 0.35 : 1, cursor: inTeam ? "not-allowed" : "pointer", textAlign: "center" }}>
+                  <CardFace card={c} count={wallet.collection[c.id] || 0} small />
+                  {favSet.has(c.id) && <span style={{ position: "absolute", top: -4, left: -2, fontSize: 12 }}>⭐</span>}
+                  <div style={{ fontSize: 10, fontWeight: 700, color: !need ? "#e5e7eb" : (fit && level === 2) ? "#4ade80" : (fit && level === 1) ? "#fbbf24" : "#f87171" }}>{cardOVR(c)} · {POS_LABEL[pos]}</div>
+                  {inTeam && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#e5e7eb", background: "#00000055", borderRadius: 8 }}>у складі</div>}
+                </div>
+              );
+            })}
+          </div>
+          {list.length > limit && <button onClick={() => setLimit(limit + 30)} style={{ ...sx.smallBtn, width: "100%", marginTop: 12, padding: "11px 0" }}>Показати ще ({list.length - limit})</button>}
         </div>
       </div>
     </div>
@@ -3973,74 +4275,74 @@ function TeamCardPicker({ wallet, cards, need, usedIds, onPick, onClose }) {
 function TeamBuilder({ wallet, saveWallet, cards, showToast, busyRef }) {
   const team = teamOf(wallet);
   const form = formationOf(team.formationId);
+  const cardsById = {};
+  cards.forEach((c) => { cardsById[c.id] = c; });
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(team.name);
-  const [picking, setPicking] = useState(null); // { kind: "start"|"bench", key or index, need }
-  const usedIds = [...Object.values(team.starters || {}), ...(team.bench || [])].filter(Boolean);
-  const starterCards = form.slots.map((s) => cards.find((c) => c.id === team.starters[s.key])).filter(Boolean);
-  const benchCards = (team.bench || []).map((id) => cards.find((c) => c.id === id)).filter(Boolean);
-  const allInTeam = [...starterCards, ...benchCards];
-  const teamOVR = allInTeam.length ? Math.round(allInTeam.reduce((s, c) => s + cardOVR(c), 0) / allInTeam.length) : 0;
-  const chemPoints = form.slots.reduce((s, sl) => { const c = cards.find((x) => x.id === team.starters[sl.key]); return s + (c ? posMatchLevel(sl.pos, cardPosition(c)) : 0); }, 0);
+  const [picking, setPicking] = useState(null); // { kind: "start"|"bench", key|index, need }
+  const [formSheet, setFormSheet] = useState(false);
+  const [pitchRef, pitchW] = useElementWidth();
+  const W = pitchW || 340;
+  const L = computeLayout(form, W);
+  const usedIds = [...Object.values(team.starters), ...team.bench].filter(Boolean);
+  const eff = [];
+  form.slots.forEach((s) => { const c = cardsById[team.starters[s.key]]; if (c) eff.push(cardOVR(c) - mismatchPenalty(s.pos, cardPosition(c))); });
+  team.bench.forEach((id) => { const c = cardsById[id]; if (c) eff.push(cardOVR(c)); });
+  const teamOVR = eff.length ? Math.round(eff.reduce((a, b) => a + b, 0) / eff.length) : 0;
+  const chemPoints = form.slots.reduce((s, sl) => { const c = cardsById[team.starters[sl.key]]; return s + (c ? posMatchLevel(sl.pos, cardPosition(c)) : 0); }, 0);
   const chemistry = Math.round((chemPoints / (form.slots.length * 2)) * 100);
 
-  async function persist(next) { if (busyRef.current) return; busyRef.current = true; try { await saveWallet({ ...wallet, myTeam: next }); } finally { busyRef.current = false; } }
+  async function persist(next) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try { await saveWallet({ ...wallet, myTeam: next }); } finally { busyRef.current = false; }
+  }
   function assign(cardId) {
-    const t = { ...team, starters: { ...team.starters }, bench: [...(team.bench || [])] };
-    if (picking.kind === "start") t.starters[picking.key] = cardId;
-    else { const b = [...t.bench]; b[picking.index] = cardId; t.bench = b; }
+    const t = { ...team, starters: { ...team.starters }, bench: [...team.bench] };
+    if (picking.kind === "start") t.starters[picking.key] = cardId; else t.bench[picking.index] = cardId;
     setPicking(null); persist(t);
   }
   function clearSlot(kind, keyOrIndex) {
-    const t = { ...team, starters: { ...team.starters }, bench: [...(team.bench || [])] };
+    const t = { ...team, starters: { ...team.starters }, bench: [...team.bench] };
     if (kind === "start") delete t.starters[keyOrIndex]; else t.bench[keyOrIndex] = null;
     persist(t);
   }
   function changeFormation(id) {
+    setFormSheet(false);
     if (id === team.formationId) return;
-    if (Object.keys(team.starters || {}).length > 0 && !window.confirm("Зміна схеми звільнить розстановку на полі (лава запасних збережеться). Продовжити?")) return;
-    persist({ ...team, formationId: id, starters: {} });
+    persist(carryOverTeam(team, formationOf(id), cardsById));
   }
   function saveName() { persist({ ...team, name: (nameDraft || "Моя команда").slice(0, 24) }); setEditingName(false); }
   function autoBuild() {
-    const owned = cards.filter((c) => (wallet.collection[c.id] || 0) > 0).sort((a, b) => cardOVR(b) - cardOVR(a));
-    const used = new Set();
-    const starters = {};
-    form.slots.forEach((s) => {
-      let pick = owned.find((c) => !used.has(c.id) && cardPosition(c) === s.pos)
-        || owned.find((c) => !used.has(c.id) && (POS_COMPAT[s.pos] || []).includes(cardPosition(c)))
-        || owned.find((c) => !used.has(c.id));
-      if (pick) { starters[s.key] = pick.id; used.add(pick.id); }
-    });
-    const bench = [];
-    for (const c of owned) { if (bench.length >= 7) break; if (!used.has(c.id)) { bench.push(c.id); used.add(c.id); } }
-    persist({ ...team, starters, bench });
-    showToast("⚡ Склад підібрано автоматично!", "ok");
+    const res = autoBuildTeam(cards, wallet.collection, form);
+    persist({ ...team, starters: res.starters, bench: res.bench });
+    showToast(res.noGK ? "⚡ Склад підібрано, але у вас немає воротаря" : "⚡ Склад підібрано автоматично!", res.noGK ? "info" : "ok");
   }
+  const pickingCardId = picking ? (picking.kind === "start" ? team.starters[picking.key] : team.bench[picking.index]) : null;
 
   return (
     <div style={sx.tabWrap}>
-      <div style={{ borderRadius: 16, padding: 14, marginBottom: 12, position: "relative", overflow: "hidden", background: "linear-gradient(90deg,var(--primary-a,#22c55e),var(--primary-b,#16a34a),var(--primary-a,#22c55e))", backgroundSize: "200% 100%", animation: "flowX 9s linear infinite", border: "1px solid #ffffff33" }}>
+      <div style={{ borderRadius: 16, padding: 12, marginBottom: 12, position: "relative", overflow: "hidden", background: "linear-gradient(90deg,var(--primary-a,#22c55e),var(--primary-b,#16a34a),var(--primary-a,#22c55e))", backgroundSize: "200% 100%", animation: "flowX 9s linear infinite", border: "1px solid #ffffff33" }}>
         <span style={{ position: "absolute", right: -6, top: -12, fontSize: 60, opacity: 0.16, pointerEvents: "none" }}>⚽</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, position: "relative" }}>
           {editingName ? (
             <>
-              <input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} maxLength={24} style={{ ...sx.input, margin: 0, padding: "6px 10px", fontSize: 14, flex: 1 }} />
+              <input autoFocus value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} maxLength={24} style={{ ...sx.input, margin: 0, padding: "6px 10px", flex: 1 }} />
               <button style={{ ...sx.smallBtn, background: "#052e16", color: "#fff" }} onClick={saveName}>✓</button>
             </>
           ) : (
             <>
-              <b style={{ fontSize: 16, color: "#fff", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{team.name || "Моя команда"}</b>
-              <button onClick={() => { setNameDraft(team.name); setEditingName(true); }} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 14 }}>✏️</button>
+              <b style={{ fontSize: 16, color: "#fff", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{team.name}</b>
+              <button onClick={() => { setNameDraft(team.name); setEditingName(true); }} aria-label="Змінити назву" style={{ background: "#00000033", border: "none", color: "#fff", cursor: "pointer", fontSize: 14, borderRadius: 8, width: 34 }}>✏️</button>
             </>
           )}
         </div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-          {FORMATIONS.map((f) => (
-            <span key={f.id} onClick={() => changeFormation(f.id)} style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 999, cursor: "pointer", background: team.formationId === f.id ? "#fff" : "#00000044", color: team.formationId === f.id ? "#111827" : "#fff" }}>{f.name}</span>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setFormSheet(true)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "#00000044", border: "1px solid #ffffff44", color: "#fff", borderRadius: 12, padding: "9px 12px", cursor: "pointer", marginBottom: 8, position: "relative" }}>
+          <span style={{ color: "#bbf7d0", fontSize: 16 }}>↔</span>
+          <span style={{ fontSize: 14, fontWeight: 800, flex: 1, textAlign: "left" }}>{form.name}</span>
+          <span style={{ fontSize: 10, opacity: 0.85 }}>змінити схему ▾</span>
+        </button>
+        <div style={{ display: "flex", gap: 8, position: "relative" }}>
           <div style={{ flex: 1, background: "#00000044", borderRadius: 10, padding: "6px 10px", textAlign: "center" }}>
             <div style={{ fontSize: 9, color: "#e5e7eb" }}>ЗАГ (OVR)</div>
             <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{teamOVR || "—"}</div>
@@ -4050,39 +4352,37 @@ function TeamBuilder({ wallet, saveWallet, cards, showToast, busyRef }) {
             <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{chemistry}</div>
           </div>
         </div>
-        <button onClick={autoBuild} style={{ ...sx.smallBtn, width: "100%", marginTop: 8, background: "#fff", color: "#111827", fontWeight: 800 }}>⚡ Вибрати найкращих</button>
+        <button onClick={autoBuild} style={{ ...sx.smallBtn, width: "100%", marginTop: 8, background: "#fff", color: "#111827", fontWeight: 800, padding: "10px 0", position: "relative" }}>⚡ Вибрати найкращих</button>
       </div>
-      <p style={{ margin: "0 0 10px", fontSize: 10, color: "#6b7280", lineHeight: 1.4 }}>
-        Зіграність тут — це відповідність позиціям на полі (без клубів/ліг/країн, бо в грі це поки не зберігається). ⚠️ означає, що гравець не на своїй позиції.
-      </p>
 
-      <div style={{ position: "relative", width: "100%", aspectRatio: "0.72", borderRadius: 16, overflow: "hidden", background: "radial-gradient(ellipse at 50% 0%, #14532d, #052e16 70%)", border: "1px solid #16653499", marginBottom: 14 }}>
+      <div ref={pitchRef} style={{ position: "relative", width: "100%", height: L.H, borderRadius: 16, overflow: "hidden", background: "radial-gradient(ellipse at 50% 0%, #14532d, #052e16 75%)", border: "1px solid #16653499", marginBottom: 14 }}>
         <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 11%, #ffffff0a 11%, #ffffff0a 22%)" }} />
         <div style={{ position: "absolute", left: "50%", top: "50%", width: "34%", aspectRatio: "1", border: "1px solid #ffffff33", borderRadius: "50%", transform: "translate(-50%,-50%)" }} />
-        <div style={{ position: "absolute", left: "50%", top: 0, width: 0, height: "100%", borderLeft: "1px solid #ffffff33", transform: "translateX(-50%)" }} />
-        {form.slots.map((s) => (
-          <div key={s.key} style={{ position: "absolute", left: s.x + "%", top: s.y + "%", transform: "translate(-50%,-50%)" }}>
-            <TeamSlot need={s.pos} cardId={team.starters[s.key]} cards={cards} onClick={() => setPicking({ kind: "start", key: s.key, need: s.pos })} onRemove={team.starters[s.key] ? () => clearSlot("start", s.key) : null} />
-          </div>
-        ))}
+        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", borderTop: "1px solid #ffffff33" }} />
+        <div style={{ position: "absolute", left: "26%", right: "26%", bottom: 0, height: "14%", border: "1px solid #ffffff33", borderBottom: "none" }} />
+        <div style={{ position: "absolute", left: "26%", right: "26%", top: 0, height: "14%", border: "1px solid #ffffff33", borderTop: "none" }} />
+        {form.slots.map((s) => {
+          const pl = L.place(s);
+          return (
+            <div key={s.key} data-slot={s.key} style={{ position: "absolute", left: pl.left, top: pl.top, width: L.slotW, height: L.slotH, transform: "translateX(-50%)" }}>
+              <TeamSlot need={s.pos} cardId={team.starters[s.key]} cards={cards} cardW={L.cardW} onClick={() => setPicking({ kind: "start", key: s.key, need: s.pos })} onRemove={team.starters[s.key] ? () => clearSlot("start", s.key) : null} />
+            </div>
+          );
+        })}
       </div>
 
-      <h3 style={{ margin: "0 0 8px", fontSize: 13, color: "#fbbf24" }}>🪑 Лава запасних <span style={{ color: "#9ca3af", fontWeight: 400 }}>{benchCards.length}/7</span></h3>
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, marginBottom: 4 }}>
-        {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} style={{ flex: "0 0 auto" }}>
-            <TeamSlot need={null} bench cardId={(team.bench || [])[i]} cards={cards} onClick={() => setPicking({ kind: "bench", index: i, need: null })} onRemove={(team.bench || [])[i] ? () => clearSlot("bench", i) : null} />
-          </div>
+      <h3 style={{ margin: "0 0 8px", fontSize: 13, color: "#fbbf24" }}>🪑 Лава запасних <span style={{ color: "#9ca3af", fontWeight: 400 }}>{team.bench.filter(Boolean).length}/7</span></h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(66px, 1fr))", gap: "14px 6px", justifyItems: "center", marginBottom: 8 }}>
+        {team.bench.map((id, i) => (
+          <TeamSlot key={i} need={null} cardId={id} cards={cards} cardW={54} onClick={() => setPicking({ kind: "bench", index: i, need: null })} onRemove={id ? () => clearSlot("bench", i) : null} />
         ))}
       </div>
-      {Object.keys(team.starters || {}).length > 0 && (
-        <p style={{ fontSize: 10, color: "#6b7280", marginTop: 6 }}>Торкніться гравця на полі ще раз, щоб замінити його — або натисніть ✕ на лаві, щоб звільнити місце.</p>
-      )}
 
       {picking && (
-        <TeamCardPicker wallet={wallet} cards={cards} need={picking.need} usedIds={usedIds}
-          onPick={assign} onClose={() => setPicking(null)} />
+        <TeamCardPicker wallet={wallet} cards={cards} need={picking.need} usedIds={usedIds} currentCard={pickingCardId ? cardsById[pickingCardId] : null}
+          onPick={assign} onRemove={() => { clearSlot(picking.kind, picking.kind === "start" ? picking.key : picking.index); setPicking(null); }} onClose={() => setPicking(null)} />
       )}
+      {formSheet && <FormationSheet currentId={team.formationId} onConfirm={changeFormation} onClose={() => setFormSheet(false)} />}
     </div>
   );
 }
@@ -4713,7 +5013,7 @@ function useFriendsData(wallet, nick, allCards, intervalMs) {
     setIncomingRequests((await sGet("friend_requests_" + nick, true)) || []);
     setFriendsBusy(false);
   }, [wallet.friends, nick]);
-  useEffect(() => { loadFriends(); const t = setInterval(loadFriends, intervalMs || 3000); return () => clearInterval(t); }, [loadFriends, intervalMs]);
+  useEffect(() => { loadFriends(); const t = setInterval(() => { if (document.visibilityState === "visible") loadFriends(); }, intervalMs || 10000); return () => clearInterval(t); }, [loadFriends, intervalMs]);
   return { friendsData, incomingRequests, setIncomingRequests, friendsBusy, loadFriends };
 }
 // ============================== ДУЕЛІ (вкладка на екрані "Крутити") ==============================
@@ -4810,7 +5110,7 @@ function ProfileTab({ profile, saveProfile, wallet, saveWallet, nick, onLogout, 
   const [viewFriend, setViewFriend] = useState(null);
   const [giftTarget, setGiftTarget] = useState(null);
   const [showPassChange, setShowPassChange] = useState(false);
-  const { friendsData, incomingRequests, setIncomingRequests, friendsBusy, loadFriends } = useFriendsData(wallet, nick, allCards, 3000);
+  const { friendsData, incomingRequests, setIncomingRequests, friendsBusy, loadFriends } = useFriendsData(wallet, nick, allCards, 10000);
 
   async function sendFriendRequest() {
     const key = friendInput.trim().toLowerCase();
@@ -6390,7 +6690,7 @@ const sx = {
   topbar: { display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#111827", borderBottom: "1px solid #1f2937", position: "relative", zIndex: 5, boxShadow: "0 2px 12px #00000055" },
   bucksPill: { background: "#1f2937", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, color: "#fbbf24" },
   body: { flex: 1, overflowY: "auto", padding: "12px", position: "relative", zIndex: 5 },
-  bottomNav: { display: "flex", background: "#111827", borderTop: "1px solid #1f2937", position: "relative", zIndex: 5 },
+  bottomNav: { display: "flex", background: "#111827", borderTop: "1px solid #1f2937", position: "relative", zIndex: 5, paddingBottom: "env(safe-area-inset-bottom, 0px)" },
   navBtn: { flex: 1, background: "none", border: "none", color: "#6b7280", padding: "8px 0", cursor: "pointer" },
   navBtnActive: { color: "#4ade80" },
   tabWrap: { maxWidth: 480, margin: "0 auto", animation: "tabFadeIn 0.25s ease" },
@@ -6426,7 +6726,7 @@ const sx = {
   discountTag: { position: "absolute", top: -6, left: -6, background: "linear-gradient(135deg,#ef4444,#b91c1c)", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999, boxShadow: "0 2px 6px #0008" },
   auctionRow: { display: "flex", alignItems: "center", background: "#111827", borderRadius: 12, padding: 10, boxShadow: "0 2px 6px #0004" },
   boostTag: { marginLeft: 6, color: "#a78bfa", fontSize: 10 },
-  modalOverlay: { position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
+  modalOverlay: { position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, overscrollBehavior: "contain" },
   modal: { background: "#111827", border: "1px solid #374151", borderRadius: 14, padding: 20, width: "90%", maxWidth: 340, maxHeight: "85vh", overflowY: "auto" },
   collectionGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 12 },
   collectionCard: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "#111827", borderRadius: 10, padding: 6 },
@@ -6584,5 +6884,33 @@ class ErrorBoundary extends React.Component {
 
 ReactDOM.createRoot(document.getElementById("root")).render(<ErrorBoundary><App /></ErrorBoundary>);
 </script>
+<script>
+// Швидкий запуск: скомпільований код зберігається на пристрої, тож Babel (важкий) вантажиться лише при першому візиті
+// або після оновлення сайту. Якщо кешу немає / сховище недоступне — працює як раніше.
+(function () {
+  var KEY = "ssc_compiled_v1";
+  var node = document.querySelector('script[type="text/babel"]');
+  if (!node) return;
+  var src = node.textContent;
+  var hsh = 2166136261;
+  for (var i = 0; i < src.length; i++) { hsh ^= src.charCodeAt(i); hsh = Math.imul(hsh, 16777619); }
+  var sig = src.length + "_" + (hsh >>> 0).toString(36);
+  function run(code) { var s = document.createElement("script"); s.text = code; document.body.appendChild(s); }
+  try {
+    var c = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (c && c.sig === sig && c.code) { run(c.code); return; }
+  } catch (e) {}
+  var b = document.createElement("script");
+  b.src = "https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js";
+  b.onload = function () {
+    var code = Babel.transform(src, { presets: ["react"] }).code;
+    try { localStorage.setItem(KEY, JSON.stringify({ sig: sig, code: code })); } catch (e) {}
+    run(code);
+  };
+  b.onerror = function () { document.getElementById("root").innerHTML = '<p style="color:#f87171;padding:20px;font-family:sans-serif">Не вдалося завантажити гру. Перевірте інтернет і оновіть сторінку.</p>'; };
+  document.head.appendChild(b);
+})();
+</script>
+
 </body>
 </html>
