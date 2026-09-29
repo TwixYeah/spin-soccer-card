@@ -8,9 +8,10 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="format-detection" content="telephone=no" />
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
-<title>Spin Soccer Card</title>
+<title>Spin a Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script>
@@ -70,9 +71,13 @@
   /* мобільні: поля вводу ≥16px (iOS не зумить сторінку), виступи під "чубчик"/жест-панель */
   @media (max-width: 480px) { input, select, textarea { font-size: 16px !important; } }
   body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); overscroll-behavior-y: none; }
+  /* прибираємо сірий "спалах" при тапі та затримку подвійного тапу на телефонах */
+  * { -webkit-tap-highlight-color: transparent; }
+  button, [role="button"], a { touch-action: manipulation; }
+
   /* нижні шторки/модалки: висота з урахуванням адресного рядка телефона */
-  .sheet-safe { max-height: 86vh; max-height: 86dvh; }
-  @supports (height: 100dvh) { div[style*="max-height: 85vh"] { max-height: 85dvh !important; } }
+  .sheet-safe { max-height: 86vh; max-height: 86dvh; overflow: hidden; }
+
   /* економний режим: слабкі пристрої та "зменшити анімацію" в налаштуваннях системи */
   .lite .rb-text, .lite [style*="flowX"], .lite .nav-glow-bar, .lite .nav-glow-label { animation: none !important; }
   .lite .rainbow-ring::before { animation-duration: 14s; }
@@ -966,8 +971,6 @@ function AdBanner({ banner, wallet, saveWallet }) {
   if (!banner || !banner.active) return null;
   const dismissed = (wallet && wallet.dismissedBanners) || [];
   if (dismissed.includes(banner.id)) return null;
-  const s = (banner.text || "").toLowerCase();
-  const isHalloween = s.includes("хеллоу") || s.includes("halloween");
   async function dismiss() {
     if (!wallet || !saveWallet) return;
     const w = JSON.parse(JSON.stringify(wallet));
@@ -977,19 +980,10 @@ function AdBanner({ banner, wallet, saveWallet }) {
   return (
     <div style={{
       position: "relative", padding: "10px 34px 10px 14px", textAlign: "center", overflow: "hidden",
-      background: isHalloween
-        ? "linear-gradient(90deg,#3b0764,#7c2d12,#3b0764)"
-        : (banner.img ? `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url(${banner.img}) center/cover` : (banner.color || "linear-gradient(135deg,#1d4ed8,#7c3aed)")),
-      backgroundSize: isHalloween ? "200% auto" : undefined,
-      animation: isHalloween ? "premiumGoldShine 5s ease infinite" : "none",
-      borderBottom: `2px solid ${isHalloween ? "#f97316" : "#fbbf24"}`,
+      background: banner.img ? `linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url(${banner.img}) center/cover` : (banner.color || "linear-gradient(135deg,#1d4ed8,#7c3aed)"),
+      borderBottom: "2px solid #fbbf24",
     }}>
-      {isHalloween && (
-        <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.25, fontSize: 20, display: "flex", justifyContent: "space-around", alignItems: "center" }}>
-          <span>🎃</span><span>👻</span><span>🦇</span><span>🎃</span><span>👻</span>
-        </div>
-      )}
-      <div style={{ color: banner.textColor || "#ffffff", fontWeight: 800, fontSize: 13, position: "relative" }}>{isHalloween ? `🎃 ${banner.text} 🎃` : banner.text}</div>
+      <div style={{ color: banner.textColor || "#ffffff", fontWeight: 800, fontSize: 13, position: "relative" }}>{banner.text}</div>
       <span onClick={dismiss} style={{ position: "absolute", top: 6, right: 10, cursor: "pointer", color: "#fff", fontSize: 16, opacity: 0.9, padding: 4, fontWeight: 900 }}>✕</span>
     </div>
   );
@@ -2475,7 +2469,7 @@ const ONBOARDING_STEPS = [
   { sel: '[data-tour="casino-duels"]', goTab: "casino", icon: "⚔️", title: "Дуелі", color: "#a855f7",
     desc: "Вкладка «Дуелі» на екрані Крутити. Дуель 1 на 1: створіть кімнату й запросіть друга (або зіграйте проти бота). За відведений час обидва крутять рулетку: Міфічна дає +1, Легендарна +3, Ексклюзивна +8 очок.\nГрати можна без ставки або на бакси — переможець забирає банк." },
   { sel: '[data-tour="casino-team"]', goTab: "casino", icon: "⚽", title: "Моя команда", color: "#22c55e",
-    desc: "Вкладка «Моя команда» на екрані Крутити. Розставте своїх гравців на полі за обраною схемою (4-3-3, 4-2-3-1, 3-4-3 або 5-2-2-1) і додайте 7 запасних.\nКнопка «Вибрати найкращих» сама підбере склад із найвищим рейтингом. Позиції гравцям призначаються автоматично." },
+    desc: "Вкладка «Моя команда» на екрані Крутити. Розставте своїх гравців на полі за обраною схемою (4-3-3, 4-2-3-1, 3-4-3 або 5-2-2-1) і додайте 7 запасних.\nПозиції гравцям призначаються автоматично." },
   { navId: "shop", goTab: "shop", icon: "🛒", title: "Магазин", color: "#22d3ee",
     desc: "Тут купуєте картки за бакси. Щохвилини з'являються 10 випадкових знижок, а в каталозі можна купити будь-яку картку за її ціну.\nТам же — картки сезону за ключі зі знижкою." },
   { navId: "quests", goTab: "quests", icon: "📋", title: "Квести", color: "#a78bfa",
@@ -4017,62 +4011,6 @@ function carryOverTeam(team, newForm, cardsById) {
   prev.filter((id) => !used.has(id)).forEach((id) => { const k = bench.findIndex((b) => !b); if (k >= 0) bench[k] = id; });
   return { ...team, formationId: newForm.id, starters, bench };
 }
-// угорський алгоритм (мінімальна вартість призначень), n ≤ m
-function hungarian(cost) {
-  const n = cost.length, m = cost[0].length, INF = 1e18;
-  const u = new Array(n + 1).fill(0), v = new Array(m + 1).fill(0), p = new Array(m + 1).fill(0), way = new Array(m + 1).fill(0);
-  for (let i = 1; i <= n; i++) {
-    p[0] = i; let j0 = 0;
-    const minv = new Array(m + 1).fill(INF), used = new Array(m + 1).fill(false);
-    do {
-      used[j0] = true;
-      const i0 = p[j0]; let delta = INF, j1 = 0;
-      for (let j = 1; j <= m; j++) {
-        if (used[j]) continue;
-        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
-        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
-        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
-      }
-      for (let j = 0; j <= m; j++) { if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta; }
-      j0 = j1;
-    } while (p[j0] !== 0);
-    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
-  }
-  const ans = new Array(n).fill(-1);
-  for (let j = 1; j <= m; j++) if (p[j]) ans[p[j] - 1] = j - 1;
-  return ans;
-}
-// "Вибрати найкращих": оптимальний розподіл (а не жадібний). Воротар — лише у ворота, польові — ніколи у ворота.
-function autoBuildTeam(cards, collection, form) {
-  const owned = cards.filter((c) => (collection[c.id] || 0) > 0).map((c) => ({ c, pos: cardPosition(c), ovr: cardOVR(c) }));
-  const n = form.slots.length, BIG = 1e6;
-  const cost = form.slots.map((s) => {
-    const row = owned.map((x) => {
-      if ((x.pos === "GK") !== (s.pos === "GK")) return BIG; // воротар ↔ польовий заборонено
-      return -(x.ovr - mismatchPenalty(s.pos, x.pos) + x.c.price / 1e6);
-    });
-    for (let k = 0; k < n; k++) row.push(0); // "порожні" колонки: слот можна лишити порожнім
-    return row;
-  });
-  const ans = hungarian(cost);
-  const starters = {}, used = new Set();
-  form.slots.forEach((s, i) => {
-    const j = ans[i];
-    if (j >= 0 && j < owned.length && cost[i][j] < BIG / 2) { starters[s.key] = owned[j].c.id; used.add(owned[j].c.id); }
-  });
-  // лава: по одному воротарю, двоє захисників, двоє півзахисників, двоє нападників, решту — найкращі за рейтингом
-  const rest = owned.filter((x) => !used.has(x.c.id)).sort((a, b) => b.ovr - a.ovr || b.c.price - a.c.price);
-  const bench = [];
-  const take = (pred, k) => { for (const x of rest) { if (bench.length >= 7 || k <= 0) break; if (!used.has(x.c.id) && pred(x)) { bench.push(x.c.id); used.add(x.c.id); k--; } } };
-  take((x) => x.pos === "GK", 1);
-  take((x) => POS_GROUP[x.pos] === "DEF", 2);
-  take((x) => POS_GROUP[x.pos] === "MID", 2);
-  take((x) => POS_GROUP[x.pos] === "ATT", 2);
-  take((x) => x.pos !== "GK", 7);
-  take((x) => true, 7);
-  while (bench.length < 7) bench.push(null);
-  return { starters, bench, noGK: !owned.some((x) => x.pos === "GK") };
-}
 
 // ---- візуальні компоненти ----
 function useElementWidth() {
@@ -4119,7 +4057,7 @@ function FormationSheet({ currentId, onConfirm, onClose }) {
           <b style={{ fontSize: 15, color: "#fff", flex: 1 }}>{selForm.name}</b>
           <button style={{ ...sx.smallBtn, minHeight: 34 }} onClick={onClose}>✕</button>
         </div>
-        <div style={{ overflowY: "auto", padding: "8px 12px", flex: 1, overscrollBehavior: "contain" }}>
+        <div style={{ overflowY: "auto", padding: "8px 12px", flex: 1, minHeight: 0, overscrollBehavior: "contain" }}>
           {groups.map(([g, title]) => (
             <div key={g}>
               <div style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "#9ca3af", letterSpacing: 1, margin: "10px 0 8px", textTransform: "uppercase" }}>{title}</div>
@@ -4164,7 +4102,7 @@ function TeamSlot({ need, cardId, cards, cardW, onClick, onRemove }) {
           </RainbowWrap>
           <span style={{ position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)", fontSize: 9, fontWeight: 800, color: "#0b0f1a", background: pen > 0 ? "#fb923c" : "#fbbf24", borderRadius: 5, padding: "0 4px", whiteSpace: "nowrap" }}>{eff}</span>
           {pen >= 8 && <span style={{ position: "absolute", bottom: 3, left: 2, fontSize: 11, lineHeight: 1 }}>⚠️</span>}
-          {onRemove && <button onClick={(e) => { e.stopPropagation(); onRemove(); }} aria-label="Прибрати" style={{ position: "absolute", top: 2, right: 2, background: "#7f1d1dcc", color: "#fff", border: "none", borderRadius: 99, width: 18, height: 18, minHeight: 0, fontSize: 9, lineHeight: "18px", padding: 0, cursor: "pointer" }}>✕</button>}
+          {onRemove && <button onClick={(e) => { e.stopPropagation(); onRemove(); }} aria-label="Прибрати" style={{ position: "absolute", top: 2, right: 2, background: "#7f1d1dcc", color: "#fff", border: "none", borderRadius: 99, width: 22, height: 22, minHeight: 0, fontSize: 10, lineHeight: "20px", padding: 0, cursor: "pointer" }}>✕</button>}
         </div>
       ) : (
         <div style={{ width: cardW, height: cardH, borderRadius: 8, border: "2px dashed #ffffff55", background: "#00000033", display: "flex", alignItems: "center", justifyContent: "center", color: "#e5e7eb", fontSize: 20 }}>＋</div>
@@ -4251,7 +4189,7 @@ function TeamCardPicker({ wallet, cards, need, currentCard, usedIds, onPick, onR
           <span style={{ marginLeft: "auto" }}><SortDropdown value={sortBy} onChange={(v) => { setSortBy(v); reset(); }} options={PICK_SORTS} /></span>
         </div>
         <div style={{ fontSize: 10, color: "#6b7280", padding: "0 14px 4px" }}>Знайдено: {list.length}</div>
-        <div style={{ overflowY: "auto", padding: "0 14px 12px", flex: 1, overscrollBehavior: "contain" }}>
+        <div style={{ overflowY: "auto", padding: "0 14px 12px", flex: 1, minHeight: 0, overscrollBehavior: "contain" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(78px, 1fr))", gap: 10 }}>
             {shown.length === 0 && <p style={{ gridColumn: "1 / -1", fontSize: 12, color: "#6b7280", textAlign: "center", padding: "12px 0" }}>{need && fitOnly ? "Немає гравців на цю позицію. Вимкніть «Лише підходящі», щоб побачити всіх." : "Нічого не знайдено"}</p>}
             {shown.map(({ c, level, pos, fit }) => {
@@ -4313,11 +4251,6 @@ function TeamBuilder({ wallet, saveWallet, cards, showToast, busyRef }) {
     persist(carryOverTeam(team, formationOf(id), cardsById));
   }
   function saveName() { persist({ ...team, name: (nameDraft || "Моя команда").slice(0, 24) }); setEditingName(false); }
-  function autoBuild() {
-    const res = autoBuildTeam(cards, wallet.collection, form);
-    persist({ ...team, starters: res.starters, bench: res.bench });
-    showToast(res.noGK ? "⚡ Склад підібрано, але у вас немає воротаря" : "⚡ Склад підібрано автоматично!", res.noGK ? "info" : "ok");
-  }
   const pickingCardId = picking ? (picking.kind === "start" ? team.starters[picking.key] : team.bench[picking.index]) : null;
 
   return (
@@ -4352,7 +4285,6 @@ function TeamBuilder({ wallet, saveWallet, cards, showToast, busyRef }) {
             <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{chemistry}</div>
           </div>
         </div>
-        <button onClick={autoBuild} style={{ ...sx.smallBtn, width: "100%", marginTop: 8, background: "#fff", color: "#111827", fontWeight: 800, padding: "10px 0", position: "relative" }}>⚡ Вибрати найкращих</button>
       </div>
 
       <div ref={pitchRef} style={{ position: "relative", width: "100%", height: L.H, borderRadius: 16, overflow: "hidden", background: "radial-gradient(ellipse at 50% 0%, #14532d, #052e16 75%)", border: "1px solid #16653499", marginBottom: 14 }}>
