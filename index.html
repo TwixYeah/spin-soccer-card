@@ -11,7 +11,7 @@
 <meta name="format-detection" content="telephone=no" />
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
-<title>Spin Soccer Card</title>
+<title>Spin a Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script>
@@ -4054,7 +4054,8 @@ function FormationSheet({ currentId, onConfirm, onClose }) {
       <div className="sheet-safe" style={{ width: "100%", maxWidth: 520, background: "linear-gradient(180deg,#111827,#0b0f1a)", border: "1px solid #374151", borderBottom: "none", borderTopLeftRadius: 18, borderTopRightRadius: 18, display: "flex", flexDirection: "column", animation: "fadeSlideUp 0.25s ease" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 8px", borderBottom: "1px solid #1f2937" }}>
           <span style={{ color: "#4ade80", fontSize: 18 }}>↔</span>
-          <b style={{ fontSize: 15, color: "#fff", flex: 1 }}>{selForm.name}</b>
+          <b style={{ fontSize: 15, color: "#fff", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selForm.name}</b>
+          <button style={{ ...sx.primaryBtn, minHeight: 34, width: "auto", padding: "0 14px", fontWeight: 800, fontSize: 13 }} onClick={() => onConfirm(sel)}>✓ Зберегти</button>
           <button style={{ ...sx.smallBtn, minHeight: 34 }} onClick={onClose}>✕</button>
         </div>
         <div style={{ overflowY: "auto", padding: "8px 12px", flex: 1, minHeight: 0, overscrollBehavior: "contain" }}>
@@ -4075,9 +4076,6 @@ function FormationSheet({ currentId, onConfirm, onClose }) {
               </div>
             </div>
           ))}
-        </div>
-        <div style={{ padding: "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))" }}>
-          <button style={{ ...sx.primaryBtn, fontWeight: 800 }} onClick={() => onConfirm(sel)}>Підтвердити</button>
         </div>
       </div>
     </div>
