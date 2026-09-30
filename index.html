@@ -11,7 +11,7 @@
 <meta name="format-detection" content="telephone=no" />
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
-<title>Spin a Soccer Card</title>
+<title>Spin Soccer Card</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script>
@@ -76,7 +76,7 @@
   button, [role="button"], a { touch-action: manipulation; }
 
   /* нижні шторки/модалки: висота з урахуванням адресного рядка телефона */
-  .sheet-safe { max-height: 86vh; max-height: 86dvh; overflow: hidden; }
+  .sheet-safe { max-height: 92%; overflow: hidden; }
 
   /* економний режим: слабкі пристрої та "зменшити анімацію" в налаштуваннях системи */
   .lite .rb-text, .lite [style*="flowX"], .lite .nav-glow-bar, .lite .nav-glow-label { animation: none !important; }
@@ -4050,7 +4050,7 @@ function FormationSheet({ currentId, onConfirm, onClose }) {
   const selForm = formationOf(sel);
   const groups = [["rec", "Рекомендовані"], ["all", "Усі схеми"]];
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000000aa", display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain" }} onClick={onClose}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000000aa", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", overscrollBehavior: "contain" }} onClick={onClose}>
       <div className="sheet-safe" style={{ width: "100%", maxWidth: 520, background: "linear-gradient(180deg,#111827,#0b0f1a)", border: "1px solid #374151", borderBottom: "none", borderTopLeftRadius: 18, borderTopRightRadius: 18, display: "flex", flexDirection: "column", animation: "fadeSlideUp 0.25s ease" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 8px", borderBottom: "1px solid #1f2937" }}>
           <span style={{ color: "#4ade80", fontSize: 18 }}>↔</span>
@@ -4161,7 +4161,7 @@ function TeamCardPicker({ wallet, cards, need, currentCard, usedIds, onPick, onR
   const shown = list.slice(0, limit);
   const chip = (active, color) => ({ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, cursor: "pointer", fontWeight: 700, borderRadius: 999, padding: "5px 10px", userSelect: "none", color: active ? "#1a1400" : color, background: active ? color : "#111827", border: "1px solid " + color });
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000000aa", display: "flex", alignItems: "flex-end", justifyContent: "center", overscrollBehavior: "contain" }} onClick={onClose}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000000aa", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", overscrollBehavior: "contain" }} onClick={onClose}>
       <div className="sheet-safe" style={{ width: "100%", maxWidth: 520, background: "linear-gradient(180deg,#111827,#0b0f1a)", border: "1px solid #374151", borderBottom: "none", borderTopLeftRadius: 18, borderTopRightRadius: 18, display: "flex", flexDirection: "column", animation: "fadeSlideUp 0.25s ease" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 6px" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
