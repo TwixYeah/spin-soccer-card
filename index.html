@@ -107,6 +107,133 @@ const BASE_CARDS = [{id:"6860",name:"Людовик Жулі",rarity:"Леген
 
 /* ============================== CONSTANTS ============================== */
 const RARITY_ORDER = ["Рідкісна", "Епічна", "Міфічна", "Легендарна", "Ексклюзивна"];
+// ===== SOCCER PASS (v1) =====
+// XP, потрібний щоб дійти ДО рівня N (індекс масиву = рівень-1, тобто PASS_XP_STEPS[0] = скільки треба для рівня 1)
+const PASS_XP_STEPS = [
+  50, 200, 200, 200, 200, 200, 200, 200, 350, 350,
+  500, 950, 950, 950, 950, 950, 950, 950, 950, 950,
+  950, 950, 950, 950, 950, 950, 950, 950, 950, 950,
+  1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250, 1250,
+];
+const PASS_MAX_LEVEL = 40;
+let PASS_OVER = false; // сезон SOCCER PASS завершено: XP → бакси, мега-квести повторюються, згадування пасу зникають (оновлюється в App)
+const PASS_PRICE = 20000;
+// типи нагород: bucks(amount) | boost(boostType,mult,minutes) | card_random(rarity) | card_choice(rarity) | avatar(emoji) | key(amount) — key поки що заглушка під v2
+const PASS_LEVELS = [
+  { level: 0, free: { type: "card_random", rarity: "Міфічна" }, premium: { type: "card_choice", rarity: "Легендарна" } },
+  { level: 1, free: { type: "bucks", amount: 1000 }, premium: { type: "bucks", amount: 2000 } },
+  { level: 2, free: { type: "boost", boostType: "bucks", mult: 1.2, minutes: 5 }, premium: { type: "boost", boostType: "bucks", mult: 1.2, minutes: 15 } },
+  { level: 3, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 800 } },
+  { level: 4, free: { type: "bucks", amount: 600 }, premium: { type: "bucks", amount: 900 } },
+  { level: 5, free: { type: "boost", boostType: "chance", mult: 1.2, minutes: 5 }, premium: { type: "boost", boostType: "chance", mult: 1.2, minutes: 10 } },
+  { level: 6, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 900 } },
+  { level: 7, free: { type: "bucks", amount: 400 }, premium: { type: "bucks", amount: 950 } },
+  { level: 8, free: { type: "card_random", rarity: "Епічна" }, premium: { type: "bucks", amount: 1000 } },
+  { level: 9, free: { type: "bucks", amount: 200 }, premium: { type: "bucks", amount: 500 } },
+  { level: 10, free: { type: "bucks", amount: 500 }, premium: { type: "key", amount: 1 } }, // key — заглушка до v2 (див. redeemPassReward)
+  { level: 11, free: { type: "boost", boostType: "bucks", mult: 1.2, minutes: 5 }, premium: { type: "boost", boostType: "bucks", mult: 1.2, minutes: 10 } },
+  { level: 12, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 300 } },
+  { level: 13, free: { type: "bucks", amount: 350 }, premium: { type: "bucks", amount: 400 } },
+  { level: 14, free: { type: "card_choice", rarity: "Епічна" }, premium: { type: "card_choice", rarity: "Міфічна" } },
+  { level: 15, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 250 } },
+  { level: 16, free: { type: "bucks", amount: 200 }, premium: { type: "bucks", amount: 250 } },
+  { level: 17, free: { type: "card_choice", rarity: "Міфічна" }, premium: { type: "bucks", amount: 500 } },
+  { level: 18, free: { type: "bucks", amount: 300 }, premium: { type: "bucks", amount: 300 } },
+  { level: 19, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 350 } },
+  { level: 20, free: { type: "boost", boostType: "chance", mult: 1.2, minutes: 5 }, premium: { type: "avatar" } },
+  { level: 21, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 300 } },
+  { level: 22, free: { type: "bucks", amount: 200 }, premium: { type: "bucks", amount: 250 } },
+  { level: 23, free: { type: "card_random", rarity: "Епічна" }, premium: { type: "card_choice", rarity: "Епічна" } },
+  { level: 24, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 750 } },
+  { level: 25, free: { type: "bucks", amount: 1000 }, premium: { type: "bucks", amount: 1000 } },
+  { level: 26, free: { type: "card_choice", rarity: "Епічна" }, premium: { type: "bucks", amount: 500 } },
+  { level: 27, free: { type: "bucks", amount: 500 }, premium: { type: "card_choice", rarity: "Легендарна" } },
+  { level: 28, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 250 } },
+  { level: 29, free: { type: "card_random", rarity: "Міфічна" }, premium: { type: "bucks", amount: 450 } },
+  { level: 30, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 450 } },
+  { level: 31, free: { type: "bucks", amount: 200 }, premium: { type: "bucks", amount: 200 } },
+  { level: 32, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 250 } },
+  { level: 33, free: { type: "boost", boostType: "bucks", mult: 2, minutes: 10 }, premium: { type: "boost", boostType: "bucks", mult: 2, minutes: 20 } },
+  { level: 34, free: { type: "bucks", amount: 250 }, premium: { type: "bucks", amount: 500 } },
+  { level: 35, free: { type: "card_random", rarity: "Легендарна" }, premium: { type: "bucks", amount: 500 } },
+  { level: 36, free: { type: "bucks", amount: 400 }, premium: { type: "bucks", amount: 500 } },
+  { level: 37, free: { type: "bucks", amount: 350 }, premium: { type: "bucks", amount: 400 } },
+  { level: 38, free: { type: "bucks", amount: 500 }, premium: { type: "bucks", amount: 450 } },
+  { level: 39, free: { type: "card_fixed", id: "6860" }, premium: { type: "bucks", amount: 1000 } },
+  { level: 40, free: { type: "bucks", amount: 1500 }, premium: { type: "bucks", amount: 2000 } },
+];
+// ============================== КІНЕЦЬ СЕЗОНУ SOCCER PASS ==============================
+// Коли таймер сезону вийшов, усе, що гравець уже заробив, але не забрав (виконані квести, відкриті рівні
+// безкоштовного й преміум-треку), збирається автоматично. Картки лишаються в колекції, а сам пас зникає з ефектом.
+function settlePassSeason(w, deps) {
+  const cards = deps.cards || [];
+  const startBucks = w.bucks || 0;
+  const before = { ...(w.collection || {}) };
+  const boosts = [];
+  let avatar = false, keys = 0, levels = 0, quests = 0;
+  w.passClaimedFree = w.passClaimedFree || [];
+  w.passClaimedPremium = w.passClaimedPremium || [];
+  w.passSeasonClaimedQuests = w.passSeasonClaimedQuests || [];
+  const done = () => (w.passLevel || 0) >= PASS_MAX_LEVEL;
+  // у мить завершення XP ще зараховується як XP (щоб відкрились рівні й їхні нагороди)
+  const gain = (xp) => { w.passXP = (w.passXP || 0) + xp; w.passLevel = passLevelFromTotalXP(w.passXP); };
+  const payXp = (xp) => { if (done()) { if (!w.bucksInfinite) w.bucks += xp; } else gain(xp); };
+  if (w.passPremium) w.premiumKept = true; // градієнтний нік та ексклюзивна аватарка лишаються назавжди
+  const keepAvatar = () => { if (w.passSeasonAvatarUnlocked && !w.passAvatarEmoji && deps.avatarEmoji) w.passAvatarEmoji = deps.avatarEmoji; };
+  keepAvatar();
+  // 1) виконані, але не забрані квести
+  ((w.passDailyQuests && w.passDailyQuests.quests) || []).forEach((q) => {
+    if (!q.claimed && q.progress >= q.target) { q.claimed = true; quests++; payXp(q.xp); }
+  });
+  const sp = w.passSeasonQuestProgress || {};
+  DEFAULT_SEASON_QUESTS.forEach((qd) => {
+    if (qd.premiumOnly && !w.passPremium && !PASS_OVER) return;
+    if (w.passSeasonClaimedQuests.includes(qd.id) || (sp[qd.id] || 0) < qd.target) return;
+    w.passSeasonClaimedQuests.push(qd.id); quests++; payXp(qd.xp);
+  });
+  if (!done()) {
+    const sq = currentSuperquest(w);
+    if (sq && Math.max(0, sq.getStat(w) - (w.superQuestBaseline || 0)) >= sq.target) {
+      if (!w.bucksInfinite) w.bucks += sq.rewardBucks;
+      gain(sq.rewardXP);
+      applyBoost(w, "bucks", 2, sq.boostHours * 60);
+      boosts.push("⚡ 2x бакси на " + sq.boostHours + " год");
+      w.superQuestClaims = (w.superQuestClaims || 0) + 1;
+      w.superQuestIndex = ((w.superQuestIndex || 0) + 1) % eligibleSuperquests(w).length;
+      const next = currentSuperquest(w);
+      w.superQuestBaseline = next ? next.getStat(w) : 0;
+      quests++;
+    }
+  }
+  if (PASS_OVER) {
+    // після завершення: ключів більше немає, а мега-квести починаються з першого й далі повторюються
+    w.keys = 0;
+    w.superQuestIndex = 0;
+    const first = currentSuperquest(w);
+    w.superQuestBaseline = first ? first.getStat(w) : 0;
+  }
+  // пас, який гравець узагалі не чіпав, не рахуємо (щоб порожній пас не видавав нагороду за 0-й рівень)
+  if ((w.passXP || 0) === 0 && w.passClaimedFree.length === 0 && w.passClaimedPremium.length === 0 && quests === 0) return null;
+  // 2) усі відкриті, але не забрані рівні
+  for (let lv = 0; lv <= Math.min(w.passLevel || 0, PASS_MAX_LEVEL); lv++) {
+    const def = PASS_LEVELS[lv];
+    if (!def) continue;
+    [["free", def.free, w.passClaimedFree], ["premium", def.premium, w.passClaimedPremium]].forEach(([track, reward, list]) => {
+      if (!reward || list.includes(lv) || (track === "premium" && !w.passPremium)) return;
+      list.push(lv); levels++;
+      if (reward.type === "card_choice" || reward.type === "card_choice_ids") {
+        // вибір за гравця: із варіантів забираємо найцінніший
+        const opts = reward.type === "card_choice"
+          ? cards.filter((c) => c.rarity === reward.rarity && !c.tempEvent).sort(() => Math.random() - 0.5).slice(0, 3)
+          : (reward.ids || []).map((id) => cards.find((c) => c.id === id)).filter(Boolean);
+        const best = opts.sort((a, b) => b.price - a.price)[0];
+        if (best) {
+          w.collection[best.id] = (w.collection[best.id] || 0) + 1;
+          if (!w.obtainedAt[best.id]) w.obtainedAt[best.id] = Date.now();
+          w.maxCount[best.id] = Math.max(w.maxCount[best.id] || 0, w.collection[best.id]);
+          w.cardOrigin = w.cardOrigin || {}; w.cardOrigin[best.id] = "SOCCER PASS 🎫";
+        }
+      } else if (reward.type === "key") {
         // ключі більше не видаються
       } else {
         deps.redeemReward(w, reward);
@@ -223,15 +350,15 @@ const RESERVED_NICKS = [
 const BOT_NAMES = [
   "ShadowStriker","GoalHunter228","LuckyFox","NightRaven","TurboKick","IceViper",
   "SilentWolf99","RapidPanther","MysticFalcon","GhostRunner","CrimsonEagle","VelvetTiger",
-  "BlazeComet","FrostKnight","ZenPhoenix","EchoHawk","Зеля","QuietCobra",
-  "GoldenLynx","NovaWizard","DarkPulse","SkyRoamer","IronJackal","Максим"
+  "BlazeComet","FrostKnight","ZenPhoenix","EchoHawk","StormRider7","QuietCobra",
+  "GoldenLynx","NovaWizard","DarkPulse","SkyRoamer","IronJackal","VoidWalker42"
 ];
 const SUPERQUEST_POOL = [
-  { id: "sq_duels", icon: "⚔️", label: "Виграй 30 дуелей", target: 30, getStat: (w) => (w.duelStats && w.duelStats.wins) || 0, rewardBucks: 1500, boostHours: 24 },
-  { id: "sq_spins", icon: "🎰", label: "Зроби 1000 прокрутів", target: 1000, getStat: (w) => w.spinsLifetime || 0, rewardBucks: 1500, boostHours: 24 },
-  { id: "sq_legendary", icon: "⭐", label: "Отримай 20 Легендарних карток", target: 20, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Легендарна"]) || 0, rewardBucks: 1200, boostHours: 12 },
-  { id: "sq_exclusive", icon: "👑", label: "Отримай 3 Ексклюзивні картки", target: 3, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Ексклюзивна"]) || 0, rewardBucks: 2000, boostHours: 24, premiumOnly: true },
-  { id: "sq_mythic", icon: "💠", label: "Отримай 40 Міфічних карток", target: 40, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Міфічна"]) || 0, rewardBucks: 1000, boostHours: 12, premiumOnly: true },
+  { id: "sq_duels", icon: "⚔️", label: "Виграй 30 дуелей", target: 30, getStat: (w) => (w.duelStats && w.duelStats.wins) || 0, rewardXP: 3000, rewardBucks: 1500, boostHours: 24 },
+  { id: "sq_spins", icon: "🎰", label: "Зроби 1000 прокрутів", target: 1000, getStat: (w) => w.spinsLifetime || 0, rewardXP: 3000, rewardBucks: 1500, boostHours: 24 },
+  { id: "sq_legendary", icon: "⭐", label: "Отримай 20 Легендарних карток", target: 20, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Легендарна"]) || 0, rewardXP: 2500, rewardBucks: 1200, boostHours: 12 },
+  { id: "sq_exclusive", icon: "👑", label: "Отримай 3 Ексклюзивні картки", target: 3, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Ексклюзивна"]) || 0, rewardXP: 3500, rewardBucks: 2000, boostHours: 24, premiumOnly: true },
+  { id: "sq_mythic", icon: "💠", label: "Отримай 40 Міфічних карток", target: 40, getStat: (w) => (w.rarityLifetime && w.rarityLifetime["Міфічна"]) || 0, rewardXP: 2800, rewardBucks: 1000, boostHours: 12, premiumOnly: true },
 ];
 function eligibleSuperquests(w) { return SUPERQUEST_POOL.filter((q) => PASS_OVER || !q.premiumOnly || w.passPremium); }
 function currentSuperquest(w) {
@@ -279,7 +406,17 @@ function getStreakReward(day, seedKey) {
   return { bucks: STREAK_5_REWARDS[idx], medal: medals[idx], lucky: false };
 }
 const DISCOUNT_TABLE = [[5, 22], [10, 22], [15, 18], [25, 16], [50, 12], [75, 7], [100, 3]]; // ніколи 0%
-
+const THEME_PRESETS = {
+  default: { key: "default", a: "#22c55e", b: "#16a34a", corner: null, label: "Звичайна", particles: null, glow: null, bgTint: null },
+  halloween: { key: "halloween", a: "#f97316", b: "#7c3aed", corner: "🕸️", label: "Halloween", particles: ["🦇", "🎃", "👻"], glow: "#f97316",
+    bgTint: "radial-gradient(ellipse 120% 60% at 50% -10%, #7c2d1288 0%, transparent 55%), radial-gradient(ellipse 90% 50% at 100% 100%, #4c1d9577 0%, transparent 60%)" },
+  newyear: { key: "newyear", a: "#3b82f6", b: "#ef4444", corner: "❄️", label: "Новий рік", particles: ["❄️"], glow: "#60a5fa",
+    bgTint: "radial-gradient(ellipse 120% 60% at 50% -10%, #1e3a8a88 0%, transparent 55%), radial-gradient(ellipse 90% 50% at 100% 100%, #99f6e455 0%, transparent 60%)" },
+  valentine: { key: "valentine", a: "#ec4899", b: "#db2777", corner: "💘", label: "День закоханих", particles: ["💗", "💌", "💖"], glow: "#ec4899",
+    bgTint: "radial-gradient(ellipse 120% 60% at 50% -10%, #9f123188 0%, transparent 55%), radial-gradient(ellipse 90% 50% at 100% 100%, #db277766 0%, transparent 60%)" },
+  april: { key: "april", a: "#facc15", b: "#f97316", corner: "🤡", label: "1 квітня", particles: ["🤪", "🎭", "🃏"], glow: "#facc15",
+    bgTint: "radial-gradient(ellipse 120% 60% at 50% -10%, #a1620788 0%, transparent 55%), radial-gradient(ellipse 90% 50% at 100% 100%, #c2410c66 0%, transparent 60%)" },
+};
 let ACTIVE_THEME_KEY = "default";
 function jokeCardName(name) {
   if (!name) return name;
@@ -318,6 +455,17 @@ function updatePityCounters(w, won) {
   w.pityCountLegendary = hitLegendary2 ? 0 : (w.pityCountLegendary || 0) + 1;
   w.pityCountExclusive = hitExclusive2 ? 0 : (w.pityCountExclusive || 0) + 1;
 }
+function bumpPassQuest(w, eventId, amount) {
+  amount = amount || 1;
+  if (w.passDailyQuests && w.passDailyQuests.quests) {
+    w.passDailyQuests.quests.forEach((q) => { if (!q.claimed && q.id === eventId) q.progress = Math.min(q.target, q.progress + amount); });
+  }
+  w.passSeasonQuestProgress = w.passSeasonQuestProgress || {};
+  DEFAULT_SEASON_QUESTS.forEach((q) => {
+    if ((w.passSeasonClaimedQuests || []).includes(q.id)) return;
+    if (q.type === eventId) w.passSeasonQuestProgress[q.id] = Math.min(q.target, (w.passSeasonQuestProgress[q.id] || 0) + amount);
+  });
+}
 function simpleHash(str) {
   let h = 5381;
   for (let i = 0; i < str.length; i++) h = (h * 33) ^ str.charCodeAt(i);
@@ -327,7 +475,42 @@ function fmtBucks(n, isInfinite) {
   if (isInfinite) return "∞ 💵";
   return Math.round(n).toLocaleString("uk-UA") + " 💵";
 }
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function currentSeasonId() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+function passXPForLevel(level) { let sum = 0; for (let i = 0; i < level; i++) sum += PASS_XP_STEPS[i] || 0; return sum; }
+function passLevelFromTotalXP(xp) {
+  let lvl = 0, acc = 0;
+  for (let i = 0; i < PASS_XP_STEPS.length; i++) { if (xp < acc + PASS_XP_STEPS[i]) break; acc += PASS_XP_STEPS[i]; lvl++; }
+  return Math.min(lvl, PASS_MAX_LEVEL);
 }
+const PASS_DAILY_QUEST_POOL = [
+  { id: "spins", label: (n) => `Зроби ${n} прокрутів у казино`, min: 5, max: 15 },
+  { id: "duel_win", label: (n) => `Виграй ${n} дуел${n === 1 ? "ь" : "і"}`, min: 1, max: 2 },
+  { id: "duel_play", label: (n) => `Зіграй ${n} дуел${n === 1 ? "ь" : "і"}`, min: 1, max: 3 },
+  { id: "card_mythic", label: () => `Отримай Міфічну картку`, min: 1, max: 1 },
+];
+function generateDailyQuests(nick) {
+  const rng = seededRandom(parseInt(simpleHash(nick + "_passday_" + todayStr()), 16) % 2147483646);
+  const pool = [...PASS_DAILY_QUEST_POOL];
+  const picked = [];
+  for (let i = 0; i < 3 && pool.length > 0; i++) {
+    const idx = Math.floor(rng() * pool.length);
+    const def = pool.splice(idx, 1)[0];
+    const target = def.min + Math.floor(rng() * (def.max - def.min + 1));
+    picked.push({ id: def.id, target, progress: 0, xp: 400, claimed: false, label: def.label(target) });
+  }
+  return { date: todayStr(), quests: picked };
+}
+const DEFAULT_SEASON_QUESTS = [
+  { id: "sq1", label: "Зроби 50 прокрутів у казино", type: "spins", target: 50, xp: 700, premiumOnly: false },
+  { id: "sq2", label: "Виграй 5 дуелей", type: "duel_win", target: 5, xp: 800, premiumOnly: false },
+  { id: "sq3", label: "Отримай 3 Епічні картки", type: "card_epic", target: 3, xp: 600, premiumOnly: false },
+  { id: "sq4", label: "Зіграй 10 дуелей", type: "duel_play", target: 10, xp: 700, premiumOnly: false },
+  { id: "sq5", label: "Зроби 150 прокрутів у казино", type: "spins", target: 150, xp: 1000, premiumOnly: false },
+  { id: "sq6", label: "Виграй 15 дуелей", type: "duel_win", target: 15, xp: 1000, premiumOnly: true },
+  { id: "sq7", label: "Отримай Легендарну картку", type: "card_legendary", target: 1, xp: 900, premiumOnly: true },
+  { id: "sq8", label: "Зроби 300 прокрутів у казино", type: "spins", target: 300, xp: 1000, premiumOnly: true },
+];
 const DAILY_ROULETTE_TABLE = [
   { type: "bucks", amount: 200, weight: 26, label: "200 💵" },
   { type: "bucks", amount: 500, weight: 19, label: "500 💵" },
@@ -4332,7 +4515,7 @@ function CollectionTab({ wallet, saveWallet, showToast, allCards, abuseEvent }) 
 }
 /* ============================== PROFILE (avatar, streak modal, friends, duel) ============================== */
 const AVATAR_OPTIONS = ["⚽", "🥅", "🏆", "🐐", "🥇", "🎽", "🧤", "🚩"];
-const DEV_AVATAR = "🎃"; // спеціальна аватарка, доступна лише розробнику (SUPER_ADMIN_NICKS)
+const DEV_AVATAR = "👨‍💻"; // спеціальна аватарка, доступна лише розробнику (SUPER_ADMIN_NICKS)
 function StreakModal({ wallet, nick, claimStreakReward, onClose }) {
   const current = wallet.streak || 1;
   const pending = wallet.pendingStreakReward && !wallet.pendingStreakReward.claimed && wallet.pendingStreakReward.day === current ? wallet.pendingStreakReward : null;
